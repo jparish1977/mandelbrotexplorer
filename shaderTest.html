@@ -1,0 +1,551 @@
+<html>
+	<head>
+		<script   src="https://code.jquery.com/jquery-2.2.4.min.js"   integrity="sha256-BbhdlvQf/xTY9gja0Dq3HiwQF8LaCRTXxZKRutelT44="   crossorigin="anonymous"></script>
+		<script src='three.js'></script>
+		<script src='TrackballControls.js'></script>
+		<script src='Stats.js'></script>
+		<script src='mandelbrotexplorer.js'></script>
+		
+		<script id='mbFragmentShader' type='x-shader/x-fragment'>
+			uniform sampler2D tex;
+			uniform float scale;
+			uniform int iter;
+			uniform float startX;
+			uniform float endX;
+			uniform float startY;
+			uniform float endY;
+			
+			varying vec4 modelCoords;
+			
+			void main() {
+				vec2 z, c;
+				
+				float xRange = abs(startX - endX);
+				float yRange = abs(startY - endY);
+				float xScale = xRange / 4.0;
+				float yScale = yRange / 4.0;
+				
+				//modelCoords = modelCoords * gl_FragCoord.w;
+				
+				c.x = (modelCoords.x * xScale) - 2.0 * scale;
+				c.y = (modelCoords.y * yScale) - 2.0 * scale;
+				
+
+				int currentI = 0;
+				z = c;
+
+				for(int i=0; i < 4096; i++) {
+					currentI = i + 1;
+					if(i > iter) break;
+					float x = (z.x * z.x - z.y * z.y) + c.x;
+					float y = (z.y * z.x + z.x * z.y) + c.y;
+
+					if((x * x + y * y) > 4.0) break;
+					z.x = x;
+					z.y = y;
+				}
+
+				float baseC = (float(currentI) / float(iter));
+				
+				float r = mod(float(iter), 2.0) == 0.0 ? 1.0 - baseC : baseC;
+				float g = mod(float(iter), 3.0) == 0.0 ? 1.0 - baseC : baseC;
+				float b = mod(float(iter), 5.0) == 0.0 ? 1.0 - baseC : baseC;
+				gl_FragColor = vec4(r, g, b, 1.0);
+				 
+			}
+		</script>
+
+		<script id='mbVertexShader' type="x-shader/x-vertex">
+			varying vec4 modelCoords;
+			mat4 InverseMatrix( mat4 A ) {
+			
+				float s0 = A[0][0] * A[1][1] - A[1][0] * A[0][1];
+				float s1 = A[0][0] * A[1][2] - A[1][0] * A[0][2];
+				float s2 = A[0][0] * A[1][3] - A[1][0] * A[0][3];
+				float s3 = A[0][1] * A[1][2] - A[1][1] * A[0][2];
+				float s4 = A[0][1] * A[1][3] - A[1][1] * A[0][3];
+				float s5 = A[0][2] * A[1][3] - A[1][2] * A[0][3];
+			 
+				float c5 = A[2][2] * A[3][3] - A[3][2] * A[2][3];
+				float c4 = A[2][1] * A[3][3] - A[3][1] * A[2][3];
+				float c3 = A[2][1] * A[3][2] - A[3][1] * A[2][2];
+				float c2 = A[2][0] * A[3][3] - A[3][0] * A[2][3];
+				float c1 = A[2][0] * A[3][2] - A[3][0] * A[2][2];
+				float c0 = A[2][0] * A[3][1] - A[3][0] * A[2][1];
+			 
+				float invdet = 1.0 / (s0 * c5 - s1 * c4 + s2 * c3 + s3 * c2 - s4 * c1 + s5 * c0);
+			 
+				mat4 B;
+			 
+				B[0][0] = ( A[1][1] * c5 - A[1][2] * c4 + A[1][3] * c3) * invdet;
+				B[0][1] = (-A[0][1] * c5 + A[0][2] * c4 - A[0][3] * c3) * invdet;
+				B[0][2] = ( A[3][1] * s5 - A[3][2] * s4 + A[3][3] * s3) * invdet;
+				B[0][3] = (-A[2][1] * s5 + A[2][2] * s4 - A[2][3] * s3) * invdet;
+			 
+				B[1][0] = (-A[1][0] * c5 + A[1][2] * c2 - A[1][3] * c1) * invdet;
+				B[1][1] = ( A[0][0] * c5 - A[0][2] * c2 + A[0][3] * c1) * invdet;
+				B[1][2] = (-A[3][0] * s5 + A[3][2] * s2 - A[3][3] * s1) * invdet;
+				B[1][3] = ( A[2][0] * s5 - A[2][2] * s2 + A[2][3] * s1) * invdet;
+			 
+				B[2][0] = ( A[1][0] * c4 - A[1][1] * c2 + A[1][3] * c0) * invdet;
+				B[2][1] = (-A[0][0] * c4 + A[0][1] * c2 - A[0][3] * c0) * invdet;
+				B[2][2] = ( A[3][0] * s4 - A[3][1] * s2 + A[3][3] * s0) * invdet;
+				B[2][3] = (-A[2][0] * s4 + A[2][1] * s2 - A[2][3] * s0) * invdet;
+			 
+				B[3][0] = (-A[1][0] * c3 + A[1][1] * c1 - A[1][2] * c0) * invdet;
+				B[3][1] = ( A[0][0] * c3 - A[0][1] * c1 + A[0][2] * c0) * invdet;
+				B[3][2] = (-A[3][0] * s3 + A[3][1] * s1 - A[3][2] * s0) * invdet;
+				B[3][3] = ( A[2][0] * s3 - A[2][1] * s1 + A[2][2] * s0) * invdet;
+			 
+				return B;
+			}
+			
+			void main() {
+				gl_Position = projectionMatrix *
+							  modelViewMatrix *
+							  vec4(position,1.0);
+				//modelCoords = InverseMatrix(modelViewMatrix) * vec4(position,1.0);
+				modelCoords = InverseMatrix(modelViewMatrix) * gl_Position;
+				
+			}  
+		</script>
+		
+		<script id='helloWorldVertexShader' type="x-shader/x-vertex">
+			/**
+			 * Multiply each vertex by the model-view matrix
+			 * and the projection matrix (both provided by
+			 * Three.js) to get a final vertex position
+			 */
+			void main() {
+				gl_Position = projectionMatrix *
+							  modelViewMatrix *
+							  vec4(position,1.0);
+			}  
+		</script>
+		
+		<script id='helloWorldVertexShader2' type="x-shader/x-vertex">
+			// create a shared variable for the
+			// VS and FS containing the normal
+			varying vec3 vNormal;
+			
+			attribute float displacement;
+			
+			uniform float amplitude;
+
+			void main() {
+
+				// set the vNormal value with
+				// the attribute value passed
+				// in by Three.js
+				vNormal = normal;
+
+				// push the displacement into the three
+				// slots of a 3D vector so it can be
+				// used in operations with other 3D
+				// vectors like positions and normals
+				vec3 newPosition = position + 
+								   normal * 
+								   vec3(displacement  * amplitude);
+				
+				gl_Position = projectionMatrix *
+							  modelViewMatrix *
+							  vec4(newPosition,1.0);
+			}
+		</script>
+		
+		<script id='helloWorldFragmentShader' type="x-shader/x-fragment">
+			/**
+			 * Set the colour to a lovely pink.
+			 * Note that the color is a 4D Float
+			 * Vector, R,G,B and A and each part
+			 * runs from 0.0 to 1.0
+			 */
+			void main() {
+				gl_FragColor = vec4(1.0, 0.0, 1.0, 1.0);
+			}
+		</script>
+		
+		<script id='helloWorldFragmentShader2' type="x-shader/x-fragment">
+			// same name and type as VS
+			varying vec3 vNormal;
+
+			void main() {
+
+				// calc the dot product and clamp
+				// 0 -> 1 rather than -1 -> 1
+				vec3 light = vec3(0.5,0.2,1.0);
+				  
+				// ensure it's normalized
+				light = normalize(light);
+			  
+				// calculate the dot product of
+				// the light to the vertex normal
+				float dProd = max(0.0, dot(vNormal, light));
+			  
+				// feed into our frag colour
+				gl_FragColor = vec4(dProd, dProd, dProd, 1.0);
+			  
+			}
+		</script>
+		
+		<script>
+			var theThing = {
+				settings:{
+					width: window.innerWidth,
+					height: window.innerHeight,
+					camera: {
+						view_angle: 90,
+						near: 2,
+						far: 400,
+						get aspect(){
+							return theThing.settings.width / theThing.settings.height;
+						},
+						position: {
+							x: 0,
+							y: 0,
+							z: 12
+						},
+						zoom: 1.0
+					},
+					container: {
+						selector: 'body'
+					},
+					spheres: [
+						//[radius, segments, rings, x, y, z]
+						//[1, 16, 16, 0, 0, 0],
+						//[0.5, 16, 16, 0, 0, 0],
+						//[0.25, 16, 16, 0, 0, 0],
+						//[0.125, 16, 16, 0, 0, 0],
+						//[0.0625, 16, 16, 0, 0, 0],
+						//[1, 16, 16, 0.5, 0, 0]
+					],
+					lights: [
+						//color, x, y, z
+						[0xFFFFFF, 10, 50, 130]
+					],
+					sphereAttributes: {
+						displacement: {
+							type: 'f', // a float
+							value: [] // an empty array
+						}
+					},
+					sphereUniforms: {
+						amplitude: {
+							type: 'f', // a float
+							value: 0
+						}
+					},
+					mbUniforms:  {
+						//uniform vec2 center;
+						scale: {
+							type: 'f',
+							value: 0.5
+						},
+						iter: {
+							type: 'i',
+							value: 2048
+						},
+						tex: { 
+							type: "t", 
+							value: THREE.ImageUtils.loadTexture("shaderTest.png") 
+						},
+						startX: {
+							type: 'f',
+							value: -2.0
+						},
+						endX: {
+							type: 'f',
+							value: 2.0
+						},
+						startY: {
+							type: 'f',
+							value: -2.0
+						},
+						endY: {
+							type: 'f',
+							value: 2.0
+						},
+					}
+				},
+				scene: null,
+				camera: null,
+				renderer: null,
+				container: null,
+				constrols: null,
+				_sphereMaterial: null,
+				get sphereMaterial(){ 
+					if(!theThing._sphereMaterial){
+						theThing._sphereMaterial = new THREE.ShaderMaterial({
+							map: THREE.ImageUtils.loadTexture("shaderTest.png"),
+							uniforms: theThing.settings.mbUniforms,
+							vertexShader:   $('#mbVertexShader').text(),
+							fragmentShader: $('#mbFragmentShader').text(),
+						});
+					}
+					
+					return theThing._sphereMaterial;
+				},
+				init_renderer: function(){
+					theThing.renderer = new THREE.WebGLRenderer({alpha: true, precision: "mediump", "antialias": false});
+					theThing.renderer.setClearColor( 0x000001, 0 );	
+					theThing.renderer.setSize(theThing.settings.width, theThing.settings.height);
+				},
+				init_container: function(){
+					theThing.container = $(theThing.settings.container.selector);
+				},
+				init_camera: function(){
+					theThing.camera = new THREE.PerspectiveCamera(
+					   theThing.settings.camera.view_angle,
+					   theThing.settings.camera.aspect,
+					   theThing.settings.camera.near,
+					   theThing.settings.camera.far
+					);
+
+					theThing.camera.position.z = theThing.settings.camera.position.x;
+					theThing.camera.position.z = theThing.settings.camera.position.y;
+					theThing.camera.position.z = theThing.settings.camera.position.z;
+				},
+				init_controls: function(){
+					theThing.controls = new THREE.TrackballControls( 
+						theThing.camera, 
+						theThing.renderer.domElement
+					);
+				},
+				init_scene: function(){
+					if(!theThing.container){ theThing.init_container(); }
+					if(!theThing.renderer){ theThing.init_renderer(); }
+					if(!theThing.camera){ theThing.init_camera(); }
+					if(!theThing.controls){ theThing.init_controls(); }
+				
+					theThing.scene = new THREE.Scene();
+				},
+				addSceneToDOM(){
+					theThing.container.append(theThing.renderer.domElement);
+				},
+				addSphere(radius, segments, rings, x, y, z, sphereIndex, mbScale){
+				/*
+					var sphereMaterial = new THREE.ShaderMaterial({
+						map: THREE.ImageUtils.loadTexture("shaderTest.png"),
+						uniforms: theThing.settings.mbUniforms,
+						vertexShader:   $('#mbVertexShader').text(),
+						fragmentShader: $('#mbFragmentShader').text(),
+					});
+					*/
+					var sphereMaterial = theThing.sphereMaterial;
+					sphereMaterial.uniforms.iter.value = 255 + (sphereIndex * 255);
+					sphereMaterial.uniforms.scale.value = mbScale;
+					//sphereMaterial.uniforms.scale.value = 1.0;
+					
+					var sphere = new THREE.Mesh(
+							new THREE.SphereGeometry(
+								radius,
+								segments,
+								rings
+							),
+							sphereMaterial
+					   );
+					sphere.position.x = x;
+					sphere.position.y = y;
+					sphere.position.z = z;
+
+					// now populate the array of attributes
+					var vertices = sphere.geometry.vertices;
+					var values = theThing.settings.sphereAttributes.displacement.value
+					for(var v = 0; v < vertices.length; v++) {
+						values.push(Math.random() * 30);
+					}
+					
+					/* if updates to a mesh aren't showing up:
+					// changes to the vertices
+					sphere.geometry.__dirtyVertices = true;
+
+					// changes to the normals
+					sphere.geometry.__dirtyNormals = true;
+					*/
+					   
+					theThing.scene.add(sphere);
+				},
+				addCubes: function(){
+					//cube = new THREE.Mesh( new THREE.CubeGeometry( 200, 200, 200 ), new THREE.MeshNormalMaterial() );
+					//cube.position.y = 150;
+					//scene.addObject( cube );
+					
+					var cubeMaterial = new THREE.ShaderMaterial({
+						uniforms: theThing.settings.mbUniforms,
+						vertexShader:   $('#mbVertexShader').text(),
+						fragmentShader: $('#mbFragmentShader').text(),
+					});
+					
+					var cube = new THREE.Mesh( new THREE.CubeGeometry( 4, 4, 4 ), cubeMaterial );
+					cube.position.x = 0;
+					cube.position.y = 0;
+					cube.position.z = 0;
+					
+					theThing.scene.add(cube);
+				},
+				addSpheres: function(){
+					theThing.buildSpheres();
+					var firstSphere = null;
+					theThing.settings.spheres.forEach(function(sphereData, sphereIndex, sphereArray){
+						var mbScale = 1.0;
+						/*
+						if(firstSphere){
+							mbScale = 0.01+(sphereData[0]/firstSphere[0]);
+						}
+						else{
+							firstSphere = sphereData;
+						}
+*/
+						theThing.addSphere( sphereData[0], sphereData[1], sphereData[2], sphereData[3], sphereData[4], sphereData[5], sphereIndex, mbScale );
+					});
+				},
+				buildSpheres: function(){
+					theThing.settings.spheres = [];
+					for(var i = 0; i < 1; i+=2){
+						theThing.settings.spheres.push( [4 - i, 64, 64, 0, 0, 0] );
+					}
+				},
+				addLight: function(color, x, y, z){
+					var pointLight = new THREE.PointLight( color );
+					pointLight.position.x = x;
+					pointLight.position.y = y;
+					pointLight.position.z = z;
+
+					theThing.scene.add(pointLight);
+				},
+				addLights: function(){
+					theThing.settings.lights.forEach(function(lightData, lightIndex, lightArray){
+						theThing.addLight( lightData[0], lightData[1], lightData[2], lightData[3] );
+					});
+				},
+				animationFrameId: null,
+				frame: 0,
+				lastRandomZoom: 0,
+				animate: function() {
+					theThing.animationFrameId = requestAnimationFrame( theThing.animate );
+					
+					// update the amplitude based on
+					// the frame value
+					theThing.settings.sphereUniforms.amplitude.value = Math.sin(theThing.frame);
+					theThing.frame += 0.1;
+
+					// changes to the vertices
+//					theThing.scene.children[0].geometry.__dirtyVertices = true;
+//					theThing.scene.children[1].geometry.__dirtyVertices = true;
+//					theThing.scene.children[2].geometry.__dirtyVertices = true;
+
+					// changes to the normals
+//					theThing.scene.children[0].geometry.__dirtyNormals = true;
+//					theThing.scene.children[1].geometry.__dirtyNormals = true;
+//					theThing.scene.children[2].geometry.__dirtyNormals = true;
+					
+					if((new Date() / 1000) - theThing.lastRandomZoom > 5){
+						var randomZoomRange = 0.5;
+					
+						var randomX = Math.random(-2.0, 2.0);
+						var randomY = Math.random(-2.0, 2.0);
+						var startX = randomX - (randomZoomRange/2);
+						var endX = randomX + (randomZoomRange/2);
+						var startY = randomY - (randomZoomRange/2);
+						var endY = randomY + (randomZoomRange/2);
+						var testPath = mandelbrotExplorer.getMandelbrotEscapePath([startX, startY], 128);
+						while( testPath.length < 16 || testPath.length == 128 ){
+							randomX = Math.random(-2.0, 2.0);
+							randomY = Math.random(-2.0, 2.0);
+							startX = randomX - (randomZoomRange/2.0);
+							endX = randomX + (randomZoomRange/2.0);
+							startY = randomY - (randomZoomRange/2.0);
+							endY = randomY + (randomZoomRange/2.0);
+							
+							testPath = mandelbrotExplorer.getMandelbrotEscapePath([startX, startY], 16);
+						}
+						
+						//cancelAnimationFrame( theThing.animationFrameId );
+						
+						//theThing.camera.zoom = 4 / randomZoomRange;
+						
+						theThing._sphereMaterial.uniforms.startX.value = startX;
+						theThing._sphereMaterial.uniforms.endX.value = endX;
+						
+						theThing._sphereMaterial.uniforms.startY.value = startY;
+						theThing._sphereMaterial.uniforms.endY.value = endY;
+						
+						theThing.lastRandomZoom = (new Date() / 1000);
+					}
+					
+					
+					theThing.controls.update();
+					theThing.render();
+				},
+				render(){
+					theThing.renderer.render ( theThing.scene, theThing.camera ) ;
+				}
+			};
+		
+			var rangeTimer = null;
+			function startRangeTimer(){
+				rangeTimer = setTimeout(function(){
+					rangeTimer = null
+					
+					var randomZoomRange = 0.5;
+					
+					var randomX = Math.random(-2.0, 2.0);
+					var randomY = Math.random(-2.0, 2.0);
+					var startX = randomX - (randomZoomRange/2);
+					var endX = randomX + (randomZoomRange/2);
+					var startY = randomY - (randomZoomRange/2);
+					var endY = randomY + (randomZoomRange/2);
+					var testPath = mandelbrotExplorer.getMandelbrotEscapePath([startX, startY], 128);
+					while( testPath.length < 16 || testPath.length == 128 ){
+						randomX = Math.random(-2.0, 2.0);
+						randomY = Math.random(-2.0, 2.0);
+						startX = randomX - (randomZoomRange/2);
+						endX = randomX + (randomZoomRange/2);
+						startY = randomY - (randomZoomRange/2);
+						endY = randomY + (randomZoomRange/2);
+						
+						testPath = mandelbrotExplorer.getMandelbrotEscapePath([startX, startY], 16);
+					}
+					
+					//cancelAnimationFrame( theThing.animationFrameId );
+					
+					//theThing.camera.zoom = 4 / randomZoomRange;
+					
+					theThing.settings.mbUniforms.startX.value = startX;
+					theThing.settings.mbUniforms.endX.value = endX;
+					
+					theThing.settings.mbUniforms.startY.value = startY;
+					theThing.settings.mbUniforms.endY.value = endY;
+					
+					theThing.controls.update();
+					
+					theThing.scene.children.forEach(function(child, childIndex){
+						if(child.geometry){
+							child.geometry.__dirtyVertices = true;
+							child.geometry.__dirtyNormals = true;
+						}
+					});
+					
+					theThing.render();
+					rangeTimer = startRangeTimer();
+				}, 5000);
+			}
+			
+			function init(){
+				theThing.init_scene();
+				theThing.addSpheres();
+				//theThing.addCubes();
+				theThing.addLights();
+				theThing.render();
+				theThing.addSceneToDOM();
+				theThing.init_controls();
+
+				theThing.animate();
+				
+				//startRangeTimer();
+			}
+		</script>
+	</head>
+	<body onload='init()'>
+	</body>
+</html>
