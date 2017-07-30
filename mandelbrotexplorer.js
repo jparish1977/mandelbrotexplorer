@@ -434,7 +434,7 @@ var palettes = {
 
 var mandelbrotExplorer = {
 	"useRenderer": THREE.WebGLRenderer,
-	"onlyShortened": true,
+	"onlyShortened": false,
 	"onlyFull": false,
 	"startX": 				-2,
 	"endX": 				2,
@@ -452,7 +452,7 @@ var mandelbrotExplorer = {
 	"xScale_3d": 			null,
 	"yScale_3d": 			null,
 	"randomizeCloudStepping": false,
-	"cloudResolution":		10,
+	"cloudResolution":		150,
 	"dualZ": false,
 	"dualZMultiplier": "-1;\n//newX += escapePath[pathIndex-1][0];newY += escapePath[pathIndex-1][1];z *= -1;",//-1,
 	"particleSize": "0;//index/mandelbrotExplorer.iterationParticles.length",
