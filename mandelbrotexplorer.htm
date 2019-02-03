@@ -254,6 +254,9 @@
 		var restoreContextTimer = null;
 		
 		function generateHair(){
+			if(!confirm("Hair takes some time to grow...are you sure?")){
+				return false;
+			}
 			if(!mandelbrotExplorer.canvas_3d){
 				mandelbrotExplorer.canvas_3d = document.getElementById("mandelbrotCanvas3d");
 			}
