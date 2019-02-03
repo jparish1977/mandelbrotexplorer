@@ -469,6 +469,8 @@ var mandelbrotExplorer = {
 		},
 		"juliaC": {
 			"mandelbrot":	"[0,0]",
+			"strange1":		"[(c[0]*-1)+c[1],0]",
+			"strange2":		"[(c[0]*-1)-c[1],(c[1]*-1)-c[0]]",
 			"julia01":		"[-1.037,0.17]",
 			"julia02":		"[-0.52,0.57]",
 			"julia03":		"[0.295,0.55]",
@@ -567,14 +569,16 @@ var mandelbrotExplorer = {
 	"controls": 			null,
 	"palette":				palettes.palette2,
 	"particleFilter":		null,//"(newX > 0.24 && newX < 0.26)",
-	"initialZ":				"0;\r\n//this.getAbsoluteValueOfComplexNumber(escapePath[0]);\r\n//this.getAbsoluteValueOfComplexNumber(escapePath[escapePath.length - 1]);",
+	"initialZ":				"[0,0];\r\n//this.getAbsoluteValueOfComplexNumber(escapePath[0]);\r\n//this.getAbsoluteValueOfComplexNumber(escapePath[escapePath.length - 1]);",
 	"escapingZ":			"//[currentZLessPreviousZ_percentOfMax3D, currentZLessPreviousZ, alternatingPathOrigin, pathOriginAndSkewedByPrevious, pathOrigin, previousPathZ, pathEnd]\r\n"
 							+ "//mandelbrotExplorer.presets.mandelbrot.escapingZ.previousPathZ(escapePath, pathIndex)\r\n"
 							+ "mandelbrotExplorer.getAbsoluteValueOfComplexNumber(escapePath[pathIndex]) - mandelbrotExplorer.getAbsoluteValueOfComplexNumber(escapePath[pathIndex-1]);",
 	//"escapingZ":			"((pathIndex + 1)/this.maxIterations_3d)*(this.getAbsoluteValueOfComplexNumber(escapePath[pathIndex]) - this.getAbsoluteValueOfComplexNumber(escapePath[pathIndex-1]));\r\n//this.getAbsoluteValueOfComplexNumber(escapePath[pathIndex]) - this.getAbsoluteValueOfComplexNumber(escapePath[pathIndex-1]);\r\n//zDirection * this.getAbsoluteValueOfComplexNumber(escapePath[0]);\r\n//this.getAbsoluteValueOfComplexNumber((escapePath.length == 1 ? escapePath[0] : [escapePath[pathIndex][0] + escapePath[pathIndex-1][0],escapePath[pathIndex][1] + escapePath[pathIndex-1][1]]));\r\n//this.getAbsoluteValueOfComplexNumber(escapePath[0]);\r\n//this.getAbsoluteValueOfComplexNumber(escapePath[pathIndex - 1]);",
 	"nextCycleIteration":	1,
 	"iterationCycleTime":	parseInt(1000/30),
-	"juliaC":				  "[0,0];\r\n" 
+	"juliaC":				  "[0,0];\r\n"
+						  + "//[(c[0]*-1)+c[1],0];\r\n"
+						  + "//[(c[0]*-1)-c[1],(c[1]*-1)-c[0]];\r\n"
 						  + "//[-1.037,0.17];\r\n"
 						  + "//[-0.52,0.57];\r\n"
 						  + "//[0.295,0.55];\r\n"
@@ -607,10 +611,11 @@ var repeatCheck = function(zValues, z, lastZ){
 	});
 	return zValues.length != test.length;
 };
-		var juliaC = eval(this.juliaC);
+		//var juliaC = eval(this.juliaC);
 		for( var xValue = this.startX, imageX = 0; imageX < this.canvas_2d.width; xValue += this.xScale_2d, imageX++ ){
 			for( var yValue = this.startY, imageY = 0; imageY < this.canvas_2d.height; yValue -= this.yScale_2d, imageY++ ){
 				var c = [xValue, yValue];
+				var juliaC = eval(this.juliaC);
 				var color;
 				if( this.getAbsoluteValueOfComplexNumber( juliaC ) != 0 ){
 					color = this.getJuliaEscapePathLengthColor( juliaC, c, this.maxIterations_2d, null, true, repeatCheck );				
@@ -674,11 +679,12 @@ var repeatCheck = function(zValues, z, lastZ){
 		mandelbrotExplorer.particleSystems = [];
 		
 		// FUCKING FIX THIS
-		var juliaC = eval(mandelbrotExplorer.juliaC);
+		//var juliaC = eval(mandelbrotExplorer.juliaC);
 		console.time("drawMandelbrotCloud: Generating particles");
 		for( var x = mandelbrotExplorer.startX; x < mandelbrotExplorer.endX; x += (mandelbrotExplorer.xScale_3d) ) {
 			for( var y = mandelbrotExplorer.startY; y > mandelbrotExplorer.endY; y -= (mandelbrotExplorer.yScale_3d) ) {
 				var c = [x,y];
+				var juliaC = eval(mandelbrotExplorer.juliaC);
 				if(mandelbrotExplorer.randomizeCloudStepping){
 					var getRandomArbitrary = function(min, max) {
 					  return Math.random() * (max - min) + min;
@@ -756,6 +762,9 @@ if((mandelbrotExplorer.onlyShortened && !escapePath.shortened) ||
 					mandelbrotExplorer.iterationParticles[iterationIndex].fpe += pathValue.fpe;
 					mandelbrotExplorer.iterationParticles[iterationIndex].particles.vertices.push(particleVector);
 					if(mandelbrotExplorer.dualZ){
+						// TODO: Save this and do something about it....
+						//1;z=pathIndex == 0 ? z :  mandelbrotExplorer.getAbsoluteValueOfComplexNumber(escapePath[pathIndex-1]) - mandelbrotExplorer.getAbsoluteValueOfComplexNumber(escapePath[pathIndex]);
+						//1;z=pathIndex == 0 ? z :  mandelbrotExplorer.getAbsoluteValueOfComplexNumber(escapePath[pathIndex]) - mandelbrotExplorer.getAbsoluteValueOfComplexNumber(escapePath[pathIndex-1]);
 						var dualZMultiplier = eval(mandelbrotExplorer.dualZMultiplier);
 						var particleVector = new THREE.Vector3(dualZMultiplier * newX, dualZMultiplier * newY, dualZMultiplier * z);
 						mandelbrotExplorer.iterationParticles[iterationIndex].particles.vertices.push(particleVector);
@@ -844,11 +853,12 @@ if((mandelbrotExplorer.onlyShortened && !escapePath.shortened) ||
 		mandelbrotExplorer.lineVectors = [];
 		
 		// FUCKING FIX THIS
-		var juliaC = eval(mandelbrotExplorer.juliaC);
+		//var juliaC = eval(mandelbrotExplorer.juliaC);
 		console.time("drawMandelbrotsHair: Generating particles");
 		for( var x = mandelbrotExplorer.startX; x < mandelbrotExplorer.endX; x += (mandelbrotExplorer.xScale_3d) ) {
 			for( var y = mandelbrotExplorer.startY; y > mandelbrotExplorer.endY; y -= (mandelbrotExplorer.yScale_3d) ) {
 				var c = [x,y];
+				var juliaC = eval(mandelbrotExplorer.juliaC);
 				if(mandelbrotExplorer.randomizeCloudStepping){
 					var getRandomArbitrary = function(min, max) {
 					  return Math.random() * (max - min) + min;
