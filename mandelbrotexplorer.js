@@ -454,7 +454,11 @@ var mandelbrotExplorer = {
 	"randomizeCloudStepping": false,
 	"cloudResolution":		150,
 	"dualZ": false,
-	"dualZMultiplier": "-1;\n//newX += escapePath[pathIndex-1][0];newY += escapePath[pathIndex-1][1];z *= -1;",//-1,
+	"dualZMultiplier":      "1;newX += escapePath[0][0];newY += escapePath[0][1];z *= -1;",
+    "dualZMultiplierExamples": [
+        "-1",
+        "-1;newX += escapePath[pathIndex-1][0];newY += escapePath[pathIndex-1][1];z *= -1;"
+    ],
 	"particleSize":         "mandelbrotExplorer.xScale_3d/mandelbrotExplorer.maxIterations_3d",
     "particleSizeExamples": [
         "0",
@@ -756,11 +760,13 @@ var repeatCheck = function(zValues, z, lastZ){
             };
 */
         },
-        "processDualZMultiplier": function(pathIndex, iteration, escapePath, newX, newY) {
+        "processDualZMultiplier": function(pathIndex, iteration, escapePath, newX, newY, z) {
             // TODO: Save this and do something about it....
             //1;z=pathIndex == 0 ? z :  mandelbrotExplorer.getAbsoluteValueOfComplexNumber(escapePath[pathIndex-1]) - mandelbrotExplorer.getAbsoluteValueOfComplexNumber(escapePath[pathIndex]);
             //1;z=pathIndex == 0 ? z :  mandelbrotExplorer.getAbsoluteValueOfComplexNumber(escapePath[pathIndex]) - mandelbrotExplorer.getAbsoluteValueOfComplexNumber(escapePath[pathIndex-1]);
-            return eval(mandelbrotExplorer.dualZMultiplier);
+            var dualZMultiplier = eval(mandelbrotExplorer.dualZMultiplier);
+            var newZ = z;
+            return [newX * dualZMultiplier, newY * dualZMultiplier, newZ * dualZMultiplier];
         },
         "evalJuliaC": function(c) {
             return eval(mandelbrotExplorer.juliaC);
@@ -910,8 +916,8 @@ var repeatCheck = function(zValues, z, lastZ){
                         if(mandelbrotExplorer.dualZ){
                             var newX = particleFilterResult.newX;
                             var newY = particleFilterResult.newY;
-                            var dualZMultiplier = mandelbrotExplorer.cloudMethods_CLEANUP.processDualZMultiplier(pathIndex, iteration, escapePath, newX, newY);
-                            var particleVector = new THREE.Vector3(dualZMultiplier * newX, dualZMultiplier * newY, dualZMultiplier * z);
+                            var coords = mandelbrotExplorer.cloudMethods_CLEANUP.processDualZMultiplier(pathIndex, iteration, escapePath, newX, newY, z);
+                            var particleVector = new THREE.Vector3(coords[0], coords[1], coords[2]);
                             
                             mandelbrotExplorer.iterationParticles[iterationIndex].particles.vertices.push(particleVector);
                         }
@@ -927,11 +933,7 @@ var repeatCheck = function(zValues, z, lastZ){
         "applyMandelbrotCloudPalette": function() {
             console.time("drawMandelbrotCloud: Applying palette");
             for( var index in mandelbrotExplorer.iterationParticles ) {
-                var colorIndex = index;
-                while( colorIndex >= mandelbrotExplorer.palette.length  ) {
-                    colorIndex -= mandelbrotExplorer.palette.length;
-                }
-                var color = mandelbrotExplorer.palette[ colorIndex ];
+                var color = mandelbrotExplorer.palette[ mandelbrotExplorer.getColorIndex(index) ];
                 
                 var size = mandelbrotExplorer.particleSize ? eval(mandelbrotExplorer.particleSize): 0;//mandelbrotExplorer.xScale_3dmandelbrotExplorer.xScale_3d >= 0.1 ? 0 : mandelbrotExplorer.xScale_3d/2;//mandelbrotExplorer.iterationParticles[index].fpe / mandelbrotExplorer.xScale_3d;
                 //var pMaterial = new THREE.ParticleBasicMaterial({
@@ -1095,70 +1097,12 @@ if((mandelbrotExplorer.onlyShortened && !escapePath.shortened) ||
 		console.timeEnd("drawMandelbrotsHair: Generating particles");
 		for(var lineIndex in mandelbrotExplorer.lineVectors){
 			var currentLine = mandelbrotExplorer.lineVectors[lineIndex];
-			//console.log(currentLine.getPoints().length);
-			//var colorIndex = currentLine.length;
-			//while( colorIndex >= mandelbrotExplorer.palette.length  ) {
-			//	colorIndex -= mandelbrotExplorer.palette.length;
-			//}
-			//var color = mandelbrotExplorer.palette[ colorIndex ];
+			
+			var color = mandelbrotExplorer.palette[ mandelbrotExplorer.getColorIndex(index) ];
 
-			//var pMaterial = new THREE.LineBasicMaterial({
-			//	color: new THREE.Color( color.R / 255, color.G / 255, color.B / 255 ),
-			//	linewidth: 0,
-			//	transparent: false,
-			//	opacity: color.A/255
-			//});
-/*			
-			var geometry = new THREE.Geometry();
-			var curve = new THREE.CatmullRomCurve3(currentLine, false, 'chordal', );
-			geometry.vertices = curve.getPoints(50);
-
-			
-			//gradientline.js
-			var steps = 0.2;
-			var phase = 1.5;
-			//Create the final object to add to the scene
-			var coloredLine = getColoredBufferLine( steps, phase, geometry )
-			//var coloredLine = getColoredBufferLine_jap( mandelbrotExplorer.palette, currentLine.length, geometry );
-			
-			
-			this.scene.add(coloredLine);
-			this.lines.push(coloredLine);
-*/
-			// Create a spline....
-//			var curve = new THREE.SplineCurve( currentLine );
-
-			
-			var colorIndex = currentLine.length;
-			while( colorIndex >= mandelbrotExplorer.palette.length  ) {
-				colorIndex -= mandelbrotExplorer.palette.length;
-			}
-			var color = mandelbrotExplorer.palette[ colorIndex ];
-			//new THREE.Color( color.R / 255, color.G / 255, color.B / 255 )
-/*			
-			
-			var curve = new THREE.CatmullRomCurve3( currentLine )
-			//var path = new THREE.Path( curve.getPoints( 50 ) );		
-			//var geometry = path.createPointsGeometry( 50 );
-			var geometry = curve.getPoints( currentLine.length );
-			var material = new THREE.LineBasicMaterial( { color : new THREE.Color( color.R / 255, color.G / 255, color.B / 255 ) } );
-
-			// Create the final object to add to the scene
-			var splineObject = new THREE.Line( geometry, material );
-			
-			this.scene.add(splineObject);
-			this.lines.push(splineObject);
-*/
 			var geometry = new THREE.Geometry();
 			var curve = new THREE.CatmullRomCurve3(currentLine, false, 'chordal' );
 			geometry.vertices = curve.getPoints(50);
-//			var pMaterial = new THREE.LineBasicMaterial({
-//				color: new THREE.Color( color.R / 255, color.G / 255, color.B / 255 ),
-//				linewidth: 0,
-//				transparent: false,
-//				opacity: color.A/255
-//			});
-//			var lineObject = new THREE.Line( geometry, pMaterial );
 			
 			//gradientline.js
 			var steps = 0.2;
@@ -1454,6 +1398,13 @@ if((mandelbrotExplorer.onlyShortened && !escapePath.shortened) ||
 		zValues.shortened = fullLength - zValues.length;
 		return zValues;
 	},
+    "getColorIndex": function(index) {
+        var colorIndex = index;
+        while( colorIndex >= mandelbrotExplorer.palette.length  ) {
+            colorIndex -= mandelbrotExplorer.palette.length;
+        }
+        return colorIndex;
+    },
 	"getJuliaEscapePath_orig": function( c, z, maxIterations, bailOnRepeat, repeatCheck ){
 		if(typeof(bailOnRepeat) === "undefined"){
 			bailOnRepeat = true;
@@ -1535,71 +1486,3 @@ if((mandelbrotExplorer.onlyShortened && !escapePath.shortened) ||
 		return str;
 	}
 }
-
-/*
-Light yellow1	#FFFFCC	rgb(255,255,204)
-Light yellow2	#FFFF99	rgb(255,255,153)
-Light yellow3	#FFFF66	rgb(255,255,102)
-Light yellow4	#FFFF33	rgb(255,255,51)
-Yellow	#FFFF00	rgb(255,255,0)
-Dark yellow1	#CCCC00	rgb(204,204,0)
-Dark yellow2	#999900	rgb(153,153,0)
-Dark yellow3	#666600	rgb(102,102,0)
-Dark yellow4	#333300	rgb(51,51,0)
-lawngreen	#7CFC00	rgb(124,252,0)
-chartreuse	#7FFF00	rgb(127,255,0)
-limegreen	#32CD32	rgb(50,205,50)
-lime	#00FF00	rgb(0.255.0)
-forestgreen	#228B22	rgb(34,139,34)
-green	#008000	rgb(0,128,0)
-darkgreen	#006400	rgb(0,100,0)
-greenyellow	#ADFF2F	rgb(173,255,47)
-yellowgreen	#9ACD32	rgb(154,205,50)
-springgreen	#00FF7F	rgb(0,255,127)
-mediumspringgreen	#00FA9A	rgb(0,250,154)
-lightgreen	#90EE90	rgb(144,238,144)
-palegreen	#98FB98	rgb(152,251,152)
-darkseagreen	#8FBC8F	rgb(143,188,143)
-mediumseagreen	#3CB371	rgb(60,179,113)
-lightseagreen	#20B2AA	rgb(32,178,170)
-seagreen	#2E8B57	rgb(46,139,87)
-olive	#808000	rgb(128,128,0)
-darkolivegreen	#556B2F	rgb(85,107,47)
-olivedrab	#6B8E23	rgb(107,142,35)
-aliceblue	#F0F8FF	rgb(240,248,255)
-lavender	#E6E6FA	rgb(230,230,250)
-powderblue	#B0E0E6	rgb(176,224,230)
-lightblue	#ADD8E6	rgb(173,216,230)
-lightskyblue	#87CEFA	rgb(135,206,250)
-skyblue	#87CEEB	rgb(135,206,235)
-deepskyblue	#00BFFF	rgb(0,191,255)
-lightsteelblue	#B0C4DE	rgb(176,196,222)
-dodgerblue	#1E90FF	rgb(30,144,255)
-cornflowerblue	#6495ED	rgb(100,149,237)
-steelblue	#4682B4	rgb(70,130,180)
-cadetblue	#5F9EA0	rgb(95,158,160)
-mediumslateblue	#7B68EE	rgb(123,104,238)
-slateblue	#6A5ACD	rgb(106,90,205)
-darkslateblue	#483D8B	rgb(72,61,139)
-royalblue	#4169E1	rgb(65,105,225)
-blue	#0000FF	rgb(0,0,255)
-mediumblue	#0000CD	rgb(0,0,205)
-darkblue	#00008B	rgb(0,0,139)
-navy	#000080	rgb(0,0,128)
-midnightblue	#191970	rgb(25,25,112)
-blueviolet	#8A2BE2	rgb(138,43,226)
-indigo	#4B0082	rgb(75,0,130)
-lightsalmon	#FFA07A	rgb(255,160,122)
-salmon	#FA8072	rgb(250,128,114)
-darksalmon	#E9967A	rgb(233,150,122)
-lightcoral	#F08080	rgb(240,128,128)
-indianred	#CD5C5C	rgb(205,92,92)
-crimson	#DC143C	rgb(220,20,60)
-firebrick	#B22222	rgb(178,34,34)
-red	#FF0000	rgb(255,0,0)
-darkred	#8B0000	rgb(139,0,0)
-maroon	#800000	rgb(128,0,0)
-tomato	#FF6347	rgb(255,99,71)
-orangered	#FF4500	rgb(255,69,0)
-palevioletred	#DB7093	rgb(219,112,147)
-*/
