@@ -449,7 +449,8 @@ var vrButton = null;
 		
 		var animationFrameId;
 		function animate() {
-			animationFrameId = requestAnimationFrame( animate );
+			//animationFrameId = requestAnimationFrame( animate );
+			
 			if(mandelbrotExplorer.controls){
 				mandelbrotExplorer.controls.update();
 			}
@@ -459,7 +460,13 @@ var vrButton = null;
 
 		
 		function render() {
-			mandelbrotExplorer.renderer.render( mandelbrotExplorer.scene, mandelbrotExplorer.camera );
+		
+			mandelbrotExplorer.renderer.setAnimationLoop( function () {
+
+				renderer.render( mandelbrotExplorer.scene, mandelbrotExplorer.camera );
+
+			} );
+			//mandelbrotExplorer.renderer.render( mandelbrotExplorer.scene, mandelbrotExplorer.camera );
 		}
 		
 		function toggleColorCycle()
