@@ -452,7 +452,7 @@ var mandelbrotExplorer = {
 	"xScale_3d": 			null,
 	"yScale_3d": 			null,
 	"randomizeCloudStepping": false,
-	"cloudResolution":		860,
+	"cloudResolution":		43,
 	"dualZ": true,
 	"dualZMultiplier":      "1;newX += escapePath[0][0] * -1;newY += escapePath[0][1] * -1;z *= -1;",
     "dualZMultiplierExamples": [
