@@ -434,14 +434,14 @@ var palettes = {
 
 var mandelbrotExplorer = {
 	"useRenderer": THREE.WebGLRenderer,
-	"onlyShortened": false,
+	"onlyShortened": true,
 	"onlyFull": false,
 	"startX": 				-2,
 	"endX": 				2,
 	"startY": 				2,
 	"endY": 				-2,
 	"maxIterations_2d": 	255,
-	"maxIterations_3d": 	31,
+	"maxIterations_3d": 	256,
 	"zoomFactor": 			0.15,
 	"xOffset": 				null,
 	"yOffset": 				null,
@@ -452,19 +452,19 @@ var mandelbrotExplorer = {
 	"xScale_3d": 			null,
 	"yScale_3d": 			null,
 	"randomizeCloudStepping": false,
-	"cloudResolution":		150,
-	"dualZ": false,
-	"dualZMultiplier":      "1;newX += escapePath[0][0];newY += escapePath[0][1];z *= -1;",
+	"cloudResolution":		860,
+	"dualZ": true,
+	"dualZMultiplier":      "1;newX += escapePath[0][0] * -1;newY += escapePath[0][1] * -1;z *= -1;",
     "dualZMultiplierExamples": [
         "-1",
-        "-1;newX += escapePath[pathIndex-1][0];newY += escapePath[pathIndex-1][1];z *= -1;"
+        "1;newX += escapePath[pathIndex-1][0];newY += escapePath[pathIndex-1][1];z *= -1;"
     ],
 	"particleSize":         "mandelbrotExplorer.xScale_3d/mandelbrotExplorer.maxIterations_3d",
     "particleSizeExamples": [
         "0",
         "index/mandelbrotExplorer.iterationParticles.length"
     ],
-	"cloudLengthFilter":	"",//"escapePath.length == mandelbrotExplorer.maxIterations_3d - 1",//"escapePath.length > 8",
+	"cloudLengthFilter":	"escapePath.length > 8",//"escapePath.length == mandelbrotExplorer.maxIterations_3d - 1",//"escapePath.length > 8",
 	//"cloudLengthFilterPresets": {
 	"presets": {
 		"cloudLengthFilter": {
@@ -553,7 +553,7 @@ var mandelbrotExplorer = {
 			},
 		}
 	},
-	"cloudIterationFilter":	"",//"iteration > 8",//"iteration == mandelbrotExplorer.maxIterations_3d",//"iteration < 9",
+	"cloudIterationFilter":	"iteration > 8",//"iteration > 8",//"iteration == mandelbrotExplorer.maxIterations_3d",//"iteration < 9",
 	"particleSystems": 		[],//[iterationIndex][THREE.ParticleSystem]
 	"lines": 		[],//[iterationIndex][THREE.]
 	"iterationParticles": [],//[iterationIndex]{particles: THREE.Geometry}      
@@ -570,7 +570,7 @@ var mandelbrotExplorer = {
 	"cycleTime": 			10,
 	"continueColorCycle": 	false,
 	"continueIterationCycle": false,
-	"iterationCycleFrame":  100,
+	"iterationCycleFrame":  10,
 	"renderer": 			null,
 	"scene": 				null,
 	"camera": 				null,
