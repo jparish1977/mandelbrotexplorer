@@ -6,6 +6,7 @@
 		<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r78/three.js"></script>
 		<script src="./gradientline.js"></script>
 		<script src="./TrackballControls.js"></script>
+		<script src="./VRButton.js"></script>
 		<script src="./mandelbrotexplorer.js"></script>
 		<script language="javascript">
 		function dumpBrot(){
@@ -297,7 +298,7 @@
 			}
 			animate();
 		}
-		
+var vrButton = null;		
 		function generateCloud(){
 			if(!mandelbrotExplorer.canvas_3d){
 				mandelbrotExplorer.canvas_3d = document.getElementById("mandelbrotCanvas3d");
@@ -323,6 +324,14 @@
 			});
 			loadParameterValues();
 			if(mandelbrotExplorer.useRenderer == THREE.WebGLRenderer){
+				//document.body.appendChild( VRButton.createButton( renderer ) );
+				if(vrButton !== null){
+					vrButton.remove();
+				}
+				vrButton = VRButton.createButton( mandelbrotExplorer.renderer );
+				
+				document.getElementById("controls_maximized").appendChild( vrButton );
+			
 				mandelbrotExplorer.renderer.context.canvas.addEventListener("webglcontextlost", function(event) {
 					event.preventDefault();
 
@@ -337,6 +346,7 @@
 					restoreContextTimer = setTimeout(function(){mandelbrotExplorer.restoreContext();animate();}, 500)
 				}, false);			
 			}
+
 			animate();
 		}
 		function restoreContext(){
