@@ -2,12 +2,13 @@
 <html>
 	<head>
 		<title>Mandelbrot Explorer</title>
-		<script src="three.js"></script>
+		<script src="https://unpkg.com/magicleap-helio-webxr-polyfill@1.0.0/HelioWebXRPolyfill.js"></script>
+		<script src="./three.js"></script>
 		<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r78/three.js"></script>
-		<script src="VRButton.js"></script>
-		<script src="gradientline.js"></script>
-		<script src="trackballcontrols.js"></script>
-		<script src="mandelbrotexplorer.js"></script>
+		<script src="./gradientline.js"></script>
+		<script src="./TrackballControls.js"></script>
+		<script src="./VRButton.js"></script>
+		<script src="./mandelbrotexplorer.js"></script>
 		<script language="javascript">
 		function dumpBrot(){
 			var values =[];
@@ -76,12 +77,12 @@
 				mandelbrotExplorer.canvas_3d.height = window.innerHeight;
 			}
 			else{
-				mandelbrotExplorer.canvas_3d.style.left = window.innerWidth / 2;
+				mandelbrotExplorer.canvas_3d.style.left = window.innerWidth / 2 + "px";
 				mandelbrotExplorer.canvas_3d.width = window.innerWidth / 2;
 				mandelbrotExplorer.canvas_3d.height = window.innerHeight;
+				
+				mandelbrotExplorer.drawMandelbrot();
 			}
-			
-			mandelbrotExplorer.drawMandelbrot();
 			resizeCloud();
 		}
 		
@@ -234,7 +235,8 @@
 			var verticalRange = horizontalRange * aspect;
 			
 			mandelbrotExplorer.palette = palettes[ document.getElementById("palette").value ];
-			
+			mandelbrotExplorer.canvas_2d = canvas_2d;
+/*
 			mandelbrotExplorer.drawMandelbrot({
 				"canvas_2d": canvas_2d,
 				"startX": startX,
@@ -243,12 +245,15 @@
 				"endY": (verticalRange / -2),
 				"maxIterations_2d": document.getElementById("maxIterations_2d").value
 			});
-			
+*/
 			mandelbrotExplorer.canvas_3d =  document.getElementById("mandelbrotCanvas3d");
-			mandelbrotExplorer.canvas_3d.style.left = window.innerWidth / 2;
+			mandelbrotExplorer.canvas_3d.style.left = window.innerWidth / 2 + "px";
 			mandelbrotExplorer.canvas_3d.width = window.innerWidth / 2;
 			mandelbrotExplorer.canvas_3d.height = window.innerHeight;
 			
+			generateCloud();
+			hide2D(true);
+			toggleControls();
 			window.onresize = onWindowResize;
 		}
 
@@ -298,7 +303,7 @@
 			}
 			animate();
 		}
-var vrButton = null;		
+//var vrButton = null;		
 		function generateCloud(){
 			if(!mandelbrotExplorer.canvas_3d){
 				mandelbrotExplorer.canvas_3d = document.getElementById("mandelbrotCanvas3d");
@@ -325,12 +330,12 @@ var vrButton = null;
 			loadParameterValues();
 			if(mandelbrotExplorer.useRenderer == THREE.WebGLRenderer){
 				//document.body.appendChild( VRButton.createButton( renderer ) );
-				if(vrButton !== null){
-					vrButton.remove();
-				}
-				vrButton = VRButton.createButton( mandelbrotExplorer.renderer );
+//				if(vrButton !== null){
+//					vrButton.remove();
+//				}
+//				vrButton = VRButton.createButton( mandelbrotExplorer.renderer );
 				
-				document.getElementById("controls_maximized").appendChild( vrButton );
+//				document.getElementById("controls_maximized").appendChild( vrButton );
 			
 				mandelbrotExplorer.renderer.context.canvas.addEventListener("webglcontextlost", function(event) {
 					event.preventDefault();
@@ -449,7 +454,7 @@ var vrButton = null;
 		
 		var animationFrameId;
 		function animate() {
-			//animationFrameId = requestAnimationFrame( animate );
+			animationFrameId = requestAnimationFrame( animate );
 			
 			if(mandelbrotExplorer.controls){
 				mandelbrotExplorer.controls.update();
@@ -460,13 +465,12 @@ var vrButton = null;
 
 		
 		function render() {
-		
-			mandelbrotExplorer.renderer.setAnimationLoop( function () {
-
-				renderer.render( mandelbrotExplorer.scene, mandelbrotExplorer.camera );
-
-			} );
-			//mandelbrotExplorer.renderer.render( mandelbrotExplorer.scene, mandelbrotExplorer.camera );
+//			mandelbrotExplorer.renderer.setAnimationLoop( function () {
+//
+//				renderer.render( mandelbrotExplorer.scene, mandelbrotExplorer.camera );
+//
+//			} );
+			mandelbrotExplorer.renderer.render( mandelbrotExplorer.scene, mandelbrotExplorer.camera );
 		}
 		
 		function toggleColorCycle()
@@ -567,8 +571,9 @@ var vrButton = null;
 			mandelbrotExplorer.juliaC = document.getElementById("juliaC").value;
 		}
 		
-		function hide2D(){
-			if(document.getElementById("hide2d").checked){
+		function hide2D(forceHide){
+			if(forceHide || document.getElementById("hide2d").checked){
+				document.getElementById("hide2d").checked = true;
 				mandelbrotExplorer.canvas_2d.style.display = "none";
 				mandelbrotExplorer.canvas_3d.style.left = 0;//window.innerWidth / 2;
 				mandelbrotExplorer.canvas_3d.width = window.innerWidth;//window.innerWidth / 2;
@@ -576,7 +581,7 @@ var vrButton = null;
 			}
 			else{
 				mandelbrotExplorer.canvas_2d.style.display = "";
-				mandelbrotExplorer.canvas_3d.style.left = window.innerWidth / 2;
+				mandelbrotExplorer.canvas_3d.style.left = window.innerWidth / 2 + "px";
 				mandelbrotExplorer.canvas_3d.width = window.innerWidth / 2;
 				mandelbrotExplorer.canvas_3d.height = window.innerHeight;
 			}
