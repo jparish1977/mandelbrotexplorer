@@ -20,6 +20,15 @@
 		<script src="./VRButton.js"></script>
 		<script src="./mandelbrotexplorer.js"></script>
 		<script language="javascript">
+		function trackEvent(category, action, label, value, fieldsObject){
+			if ("ga" in window) {
+				tracker = ga.getAll()[0];
+				if (tracker)
+					//tracker.send("event", "Test", "Test GA");
+					
+					tracker.send('event', category, action, label, value, fieldsObject);
+			}
+		}
 		function dumpBrot(){
 			var values =[];
 			var tries = [];
@@ -51,7 +60,7 @@
 		}
 		
 		function setShortenedFilter(){
-			ga('send', 'event', 'usage', 'setShortenedFilter', 'setShortenedFilter');
+			trackEvent('usage', 'setShortenedFilter', 'setShortenedFilter');
 			//<input type="radio" name="shortenedFilter" id="shortenedFilter_both" value="both" onchange="setShortenedFilter()">Both</input>
 			switch(document.querySelector("input[name='shortenedFilter']:checked").value){
 				case "both":
@@ -111,7 +120,7 @@
 		
 		function zoomToDblClick( sender, evt ){
 			cancelAnimationFrame(animationFrameId); 
-			ga('send', 'event', 'usage', 'zoomToDblClick', 'Zoom from 2d');
+			trackEvent('usage', 'zoomToDblClick', 'Zoom from 2d');
 			var horizontalRange = Math.abs( mandelbrotExplorer.startX - mandelbrotExplorer.endX );
 			var horizontalRangeOffset = horizontalRange * mandelbrotExplorer.zoomFactor;
 			var verticalRange = Math.abs( mandelbrotExplorer.startY - mandelbrotExplorer.endY );
@@ -153,18 +162,18 @@
 		}
 		
 		function update2dIterations(){
-			ga('send', 'event', 'usage', 'update2dIterations', 'update2dIterations');
+			trackEvent('usage', 'update2dIterations', 'update2dIterations');
 			mandelbrotExplorer.maxIterations_2d = document.getElementById("maxIterations_2d").value;
 			mandelbrotExplorer.drawMandelbrot();
 		}
 		
 		function update3dIterations(){
-			ga('send', 'event', 'usage', 'update3dIterations', 'update3dIterations');
+			trackEvent('usage', 'update3dIterations', 'update3dIterations');
 			mandelbrotExplorer.maxIterations_3d = document.getElementById("maxIterations_3d").value;
 		}
 		
 		function updateCloudResolution(){
-			ga('send', 'event', 'usage', 'updateCloudResolution', 'updateCloudResolution');
+			trackEvent('usage', 'updateCloudResolution', 'updateCloudResolution');
 			mandelbrotExplorer.cloudResolution = document.getElementById("cloudResolution").value;
 		}
 		
@@ -172,7 +181,7 @@
 		
 		function updatePalette(){
 			cancelAnimationFrame(animationFrameId);
-			ga('send', 'event', 'usage', 'updatePalette', 'updatePalette');
+			trackEvent('usage', 'updatePalette', 'updatePalette');
 			mandelbrotExplorer.setPalette( palettes[ document.getElementById("palette").value ] );
 			animate();
 		}
@@ -275,7 +284,7 @@
 		var restoreContextTimer = null;
 		
 		function generateHair(){
-			ga('send', 'event', 'usage', 'generateHair', 'generateHair');
+			trackEvent('usage', 'generateHair', 'generateHair');
 			if(!confirm("Hair takes some time to grow...are you sure?")){
 				return false;
 			}
@@ -321,7 +330,7 @@
 		}
 //var vrButton = null;		
 		function generateCloud(){
-			ga('send', 'event', 'usage', 'generateCloud', 'generateCloud');
+			trackEvent('usage', 'generateCloud', 'generateCloud');
 			if(!mandelbrotExplorer.canvas_3d){
 				mandelbrotExplorer.canvas_3d = document.getElementById("mandelbrotCanvas3d");
 			}
@@ -492,7 +501,7 @@
 		
 		function toggleColorCycle()
 		{
-			ga('send', 'event', 'usage', 'toggleColorCycle', 'toggleColorCycle');
+			trackEvent('usage', 'toggleColorCycle', 'toggleColorCycle');
 			mandelbrotExplorer.continueColorCycle = document.getElementById("colorCycleCheckbox").checked ? true : false;
 			if( mandelbrotExplorer.continueColorCycle )
 			{
@@ -504,7 +513,7 @@
 		
 		function updateCloudLengthFilter()
 		{
-			ga('send', 'event', 'usage', 'updateCloudLengthFilter', 'updateCloudLengthFilter');
+			trackEvent('usage', 'updateCloudLengthFilter', 'updateCloudLengthFilter');
 			//cancelAnimationFrame(animationFrameId);
 			mandelbrotExplorer.cloudLengthFilter = document.getElementById("cloudLengthFilter").value;
 			//mandelbrotExplorer.drawMandelbrotCloud();
@@ -514,7 +523,7 @@
 		function updateCloudIterationFilter(){
 			mandelbrotExplorer.cloudIterationFilter = document.getElementById("cloudIterationFilter").value;;
 			cancelAnimationFrame(animationFrameId);
-			ga('send', 'event', 'usage', 'updateCloudIterationFilter', 'updateCloudIterationFilter');
+			trackEvent('usage', 'updateCloudIterationFilter', 'updateCloudIterationFilter');
 			mandelbrotExplorer.displayCloudParticles();
 			animate();
 		}
@@ -524,7 +533,7 @@
 		}
 		
 		function updateEscapingZ(){
-			ga('send', 'event', 'usage', 'updateEscapingZ', 'updateEscapingZ');
+			trackEvent('usage', 'updateEscapingZ', 'updateEscapingZ');
 			mandelbrotExplorer.escapingZ = document.getElementById("escapingZ").value;
 			//cancelAnimationFrame(animationFrameId);
 			//mandelbrotExplorer.drawMandelbrotCloud();
@@ -533,7 +542,7 @@
 		
 		function toggleIterationCycle(){
 			cancelAnimationFrame(animationFrameId);
-			ga('send', 'event', 'usage', 'toggleIterationCycle', 'toggleIterationCycle');
+			trackEvent('usage', 'toggleIterationCycle', 'toggleIterationCycle');
 			mandelbrotExplorer.continueIterationCycle = document.getElementById("iterationCycleCheckbox").checked ? true : false;
 			if( mandelbrotExplorer.continueIterationCycle ){
 				mandelbrotExplorer.cycleCloudIterations();
@@ -546,12 +555,12 @@
 		}
 		
 		function updateIterationCycleTime(){
-			ga('send', 'event', 'usage', 'updateIterationCycleTime', 'updateIterationCycleTime');
+			trackEvent('usage', 'updateIterationCycleTime', 'updateIterationCycleTime');
 			mandelbrotExplorer.iterationCycleTime = parseInt( eval( document.getElementById("iterationCycleTime").value ) );
 		}
 		
 		function updateIterationCycleFrame(){
-			ga('send', 'event', 'usage', 'updateIterationCycleFrame', 'updateIterationCycleFrame');
+			trackEvent('usage', 'updateIterationCycleFrame', 'updateIterationCycleFrame');
 			mandelbrotExplorer.iterationCycleFrame = parseInt( eval( document.getElementById("iterationCycleFrame").value ) );
 		}
 		
@@ -592,7 +601,7 @@
 		}
 		
 		function updateJuliaC(){
-			ga('send', 'event', 'usage', 'updateJuliaC', 'updateJuliaC');
+			trackEvent('usage', 'updateJuliaC', 'updateJuliaC');
 			mandelbrotExplorer.juliaC = document.getElementById("juliaC").value;
 		}
 		
@@ -615,24 +624,24 @@
 			resizeCloud();
 		}
 		function toggleBackground(){
-			ga('send', 'event', 'usage', 'toggleBackground', 'toggleBackground');
+			trackEvent('usage', 'toggleBackground', 'toggleBackground');
 			document.body.style.backgroundColor  = ( window.getComputedStyle(document.body).backgroundColor  == 'rgb(0, 0, 0)' ? 'rgb(255, 255, 255)' : 'rgb(0, 0, 0)' );
 		}
 		
 		function toggleRandomStepping(){
-			ga('send', 'event', 'usage', 'toggleRandomStepping', 'toggleRandomStepping');
+			trackEvent('usage', 'toggleRandomStepping', 'toggleRandomStepping');
 			mandelbrotExplorer.randomizeCloudStepping = document.getElementById("randomStepCheckbox").checked ? true : false;
 		}
 		
 		function updateStartX(){
-			ga('send', 'event', 'usage', 'updateStartX', 'updateStartX');
+			trackEvent('usage', 'updateStartX', 'updateStartX');
 			mandelbrotExplorer.startX = document.getElementById("startX").value;
 			mandelbrotExplorer.drawMandelbrot(); 
 			mandelbrotExplorer.drawMandelbrotCloud();
 		}
 		
 		function updateStartY(){
-			ga('send', 'event', 'usage', 'updateStartY', 'updateStartY');
+			trackEvent('usage', 'updateStartY', 'updateStartY');
 			mandelbrotExplorer.startY = document.getElementById("startY").value;
 			mandelbrotExplorer.drawMandelbrot(); 
 			mandelbrotExplorer.drawMandelbrotCloud();
@@ -719,8 +728,8 @@
 					</tr>
 					<tr>
 						<td colspan='2'>
-							startX: <input type='text' id='startX' onchange="updateStartX()" style="width: 3em;" />
-							startY: <input type='text' id='startY' onchange="updateStartY()" style="width: 3em;" />
+							startX: <input type='text' id='startX' READONLY onchange="updateStartX()" style="width: 3em;" />
+							startY: <input type='text' id='startY' READONLY onchange="updateStartY()" style="width: 3em;" />
 						</td>
 					</tr>
 					<tr>
