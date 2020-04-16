@@ -285,9 +285,11 @@
 		
 		function generateHair(){
 			trackEvent('usage', 'generateHair', 'generateHair');
-			if(!confirm("Hair takes some time to grow...are you sure?")){
-				return false;
-			}
+//			if(!confirm("Hair takes some time to grow...are you sure?")){
+//				return false;
+//			}
+alert('This is borked right now. It is at the top of my priority list of things to fix. Please try again in a few days. Entertain yourself.. try julia c set to [(c[0]*-1)-c[1],(c[1]*-1)-c[0]] with both selected for shortened escape paths');
+			return false;
 			if(!mandelbrotExplorer.canvas_3d){
 				mandelbrotExplorer.canvas_3d = document.getElementById("mandelbrotCanvas3d");
 			}
@@ -618,7 +620,7 @@
 				mandelbrotExplorer.canvas_3d.style.left = window.innerWidth / 2 + "px";
 				mandelbrotExplorer.canvas_3d.width = window.innerWidth / 2;
 				mandelbrotExplorer.canvas_3d.height = window.innerHeight;
-				
+				// TODO: Check to see if we need to regen before we actually regen...
 				mandelbrotExplorer.drawMandelbrot();
 			}
 			
