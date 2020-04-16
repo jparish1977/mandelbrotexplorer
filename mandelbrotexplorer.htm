@@ -277,7 +277,7 @@
 			
 			generateCloud();
 			hide2D(true);
-			toggleControls();
+//			toggleControls();
 			window.onresize = onWindowResize;
 		}
 
@@ -618,6 +618,8 @@
 				mandelbrotExplorer.canvas_3d.style.left = window.innerWidth / 2 + "px";
 				mandelbrotExplorer.canvas_3d.width = window.innerWidth / 2;
 				mandelbrotExplorer.canvas_3d.height = window.innerHeight;
+				
+				mandelbrotExplorer.drawMandelbrot();
 			}
 			
 			
