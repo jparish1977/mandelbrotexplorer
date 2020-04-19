@@ -241,13 +241,44 @@
 			
 		}
 		
+		function loadQueryStringParams(){
+			var params = new URLSearchParams(window.location.search);
+			
+			var useAntialiasing = params.get('antialias') === '1' ? 
+				true 
+				: params.get('antialias') === '0' ? 
+					false : 
+					mandelbrotExplorer.rendererOptions.antialias;
+			mandelbrotExplorer.rendererOptions.antialias = useAntialiasing;
+			
+			var precisionValues = [
+				'highp', 
+				'mediump', 
+				'lowp'
+			];
+			var requestedPrecision = params.get('precision');
+			var usePrecision = precisionValues.includes(requestedPrecision) ? 
+				requestedPrecision 
+				: mandelbrotExplorer.rendererOptions.precision;
+			mandelbrotExplorer.rendererOptions.precision = usePrecision;
+			
+			var show2d = params.get('show2d') === '1' ? true : false;
+			mandelbrotExplorer.rendererOptions.antialias = useAntialiasing;
+			
+			return {
+				antialias: useAntialiasing,
+				precision: usePrecision,
+				show2d: show2d
+			}
+		}
+		
 		function init()
 		{
+			var params = loadQueryStringParams();
 			dimControls();
 			loadPaletteOptions();
 			loadFilterOptions();
 			loadParameterValues();
-			
 						
 			var canvas_2d = document.getElementById("mandelbrotCanvas2d");
 			canvas_2d.width = window.innerWidth / 2;
@@ -260,24 +291,18 @@
 			
 			mandelbrotExplorer.palette = palettes[ document.getElementById("palette").value ];
 			mandelbrotExplorer.canvas_2d = canvas_2d;
-/*
-			mandelbrotExplorer.drawMandelbrot({
-				"canvas_2d": canvas_2d,
-				"startX": startX,
-				"endX": endX,
-				"startY": (verticalRange / 2),
-				"endY": (verticalRange / -2),
-				"maxIterations_2d": document.getElementById("maxIterations_2d").value
-			});
-*/
+
 			mandelbrotExplorer.canvas_3d =  document.getElementById("mandelbrotCanvas3d");
 			mandelbrotExplorer.canvas_3d.style.left = window.innerWidth / 2 + "px";
 			mandelbrotExplorer.canvas_3d.width = window.innerWidth / 2;
 			mandelbrotExplorer.canvas_3d.height = window.innerHeight;
 			
 			generateCloud();
-			hide2D(true);
-//			toggleControls();
+			if(!params.show2d){
+				hide2D(true);
+			} else {
+				mandelbrotExplorer.drawMandelbrot();
+			}
 			window.onresize = onWindowResize;
 		}
 
@@ -386,8 +411,14 @@ alert('This is borked right now. It is at the top of my priority list of things 
 			mandelbrotExplorer.restoringContext = true;
 			mandelbrotExplorer.canvas_3d =  document.getElementById("mandelbrotCanvas3d");
 			
-			//mandelbrotExplorer.renderer = new THREE.WebGLRenderer({canvas: mandelbrotExplorer.canvas_3d,  alpha: true, precision: "mediump", "antialias": false});
-			mandelbrotExplorer.renderer = new mandelbrotExplorer.useRenderer({canvas: mandelbrotExplorer.canvas_3d,  alpha: true, precision: "mediump", "antialias": false});
+			mandelbrotExplorer.renderer = new mandelbrotExplorer.useRenderer(
+				{
+					canvas: mandelbrotExplorer.canvas_3d,  
+					alpha: mandelbrotExplorer.rendererOptions.alpha, 
+					precision: mandelbrotExplorer.rendererOptions.precision, 
+					antialias: mandelbrotExplorer.rendererOptions.antialias
+				}
+			);
 			mandelbrotExplorer.renderer.setClearColor( 0x000001, 0 );	
 			mandelbrotExplorer.renderer.setSize( mandelbrotExplorer.canvas_3d.width/2, mandelbrotExplorer.canvas_3d.height/2 )
 			

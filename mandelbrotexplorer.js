@@ -434,6 +434,11 @@ var palettes = {
 
 var mandelbrotExplorer = {
 	"useRenderer": THREE.WebGLRenderer,
+	"rendererOptions": {
+		alpha: true, 
+		precision: "mediump", 
+		antialias: false
+	},
 	"onlyShortened": true,
 	"onlyFull": false,
 	"startX": 				-2,
@@ -809,8 +814,14 @@ var repeatCheck = function(zValues, z, lastZ){
         },
         "startRenderer": function() {
             if( mandelbrotExplorer.renderer == null )	{
-                //mandelbrotExplorer.renderer = new THREE.WebGLRenderer({canvas: mandelbrotExplorer.canvas_3d,  alpha: true, precision: "mediump", "antialias": false});
-                mandelbrotExplorer.renderer = new mandelbrotExplorer.useRenderer({canvas: mandelbrotExplorer.canvas_3d,  alpha: true, precision: "mediump", "antialias": false});
+                mandelbrotExplorer.renderer = new mandelbrotExplorer.useRenderer(
+					{
+						canvas: mandelbrotExplorer.canvas_3d,  
+						alpha: mandelbrotExplorer.rendererOptions.alpha, 
+						precision: mandelbrotExplorer.rendererOptions.precision, 
+						antialias: mandelbrotExplorer.rendererOptions.antialias
+					}
+				);
 //               mandelbrotExplorer.renderer.xr.enabled  = true;
  
                 mandelbrotExplorer.renderer.setClearColor( 0x000001, 0 );	
@@ -986,8 +997,14 @@ var repeatCheck = function(zValues, z, lastZ){
 		mandelbrotExplorer.continueIterationCycle = false;
 		
 		if( mandelbrotExplorer.renderer == null )	{
-			//mandelbrotExplorer.renderer = new THREE.WebGLRenderer({canvas: mandelbrotExplorer.canvas_3d,  alpha: true, precision: "mediump", "antialias": false});
-			mandelbrotExplorer.renderer = new mandelbrotExplorer.useRenderer({canvas: mandelbrotExplorer.canvas_3d,  alpha: true, precision: "mediump", "antialias": false});
+			mandelbrotExplorer.renderer = new mandelbrotExplorer.useRenderer(
+				{
+					canvas: mandelbrotExplorer.canvas_3d,  
+					alpha: mandelbrotExplorer.rendererOptions.alpha, 
+					precision: mandelbrotExplorer.rendererOptions.precision, 
+					antialias: mandelbrotExplorer.rendererOptions.antialias
+				}
+			);
 			mandelbrotExplorer.renderer.setClearColor( 0x000001, 0 );	
 		}
 		
