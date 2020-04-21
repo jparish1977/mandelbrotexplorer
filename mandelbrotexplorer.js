@@ -437,7 +437,8 @@ var mandelbrotExplorer = {
 	"rendererOptions": {
 		alpha: true, 
 		precision: "mediump", 
-		antialias: false
+		antialias: false,
+		preserveDrawingBuffer: true 
 	},
 	"onlyShortened": true,
 	"onlyFull": false,
@@ -819,7 +820,8 @@ var repeatCheck = function(zValues, z, lastZ){
 						canvas: mandelbrotExplorer.canvas_3d,  
 						alpha: mandelbrotExplorer.rendererOptions.alpha, 
 						precision: mandelbrotExplorer.rendererOptions.precision, 
-						antialias: mandelbrotExplorer.rendererOptions.antialias
+						antialias: mandelbrotExplorer.rendererOptions.antialias,
+						preserveDrawingBuffer: mandelbrotExplorer.rendererOptions.preserveDrawingBuffer
 					}
 				);
 //               mandelbrotExplorer.renderer.xr.enabled  = true;
@@ -1002,7 +1004,8 @@ var repeatCheck = function(zValues, z, lastZ){
 					canvas: mandelbrotExplorer.canvas_3d,  
 					alpha: mandelbrotExplorer.rendererOptions.alpha, 
 					precision: mandelbrotExplorer.rendererOptions.precision, 
-					antialias: mandelbrotExplorer.rendererOptions.antialias
+					antialias: mandelbrotExplorer.rendererOptions.antialias,
+					preserveDrawingBuffer: mandelbrotExplorer.rendererOptions.preserveDrawingBuffer
 				}
 			);
 			mandelbrotExplorer.renderer.setClearColor( 0x000001, 0 );	

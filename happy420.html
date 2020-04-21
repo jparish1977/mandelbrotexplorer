@@ -15,41 +15,11 @@
 		<script src="https://unpkg.com/magicleap-helio-webxr-polyfill@1.0.0/HelioWebXRPolyfill.js"></script>
 		<script src="./three.js"></script>
 		<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r78/three.js"></script>
-		<script src="./stats.js"></script>
 		<script src="./gradientline.js"></script>
 		<script src="./TrackballControls.js"></script>
 		<script src="./VRButton.js"></script>
 		<script src="./mandelbrotexplorer.js"></script>
 		<script language="javascript">
-		function openScreenCap(){
-			var newWindow = window.open("");
-			
-			var img = document.getElementById("screen_cap").cloneNode(false);
-			img.removeAttribute('height');
-			img.removeAttribute('onclick');
-			
-			newWindow.document.write(img.outerHTML);
-		}
-		function getScreenCap(){
-			var dataUrl = mandelbrotExplorer.renderer.domElement.toDataURL();
-			
-			var img = document.getElementById("screen_cap");
-			if( !img ) {
-				var table = document.getElementById("controls_table");
-				var row = document.createElement('tr');
-				var cell = document.createElement('td');
-				img = document.createElement('img');
-				img.id = 'screen_cap'
-				
-				cell.appendChild(img);
-				row.appendChild(cell);
-				table.appendChild(row);
-			}
-			
-			img.src = dataUrl;
-			img.height = 240;
-		}
-		
 		function trackEvent(category, action, label, value, fieldsObject){
 			if ("ga" in window) {
 				tracker = ga.getAll()[0];
@@ -301,13 +271,25 @@
 				show2d: show2d
 			}
 		}
-var tjStats = null;
+		
 		function init()
 		{
-			tjStats = new Stats();
-			tjStats.domElement.style.float='right';
-			document.body.appendChild( tjStats.domElement );
 			var params = loadQueryStringParams();
+			
+mandelbrotExplorer.continueIterationCycle = true;
+mandelbrotExplorer.iterationCycleFrame = 3;
+mandelbrotExplorer.iterationCycleTime = 125;
+mandelbrotExplorer.maxIterations_3d = 420;
+mandelbrotExplorer.cloudResolution = 420;
+mandelbrotExplorer.randomizeCloudStepping = true;
+mandelbrotExplorer.rendererOptions.antialias = true;
+mandelbrotExplorer.rendererOptions.precision = 'highp';
+mandelbrotExplorer.dualZMultiplier = "1;newX -= escapePath[0][0];newY -= escapePath[0][1];z *= -1;"
+mandelbrotExplorer.cloudLengthFilter = "escapePath.length == mandelbrotExplorer.maxIterations_3d";
+mandelbrotExplorer.cloudIterationFilter = '';
+mandelbrotExplorer.onlyShortened = false;
+mandelbrotExplorer.onlyFull = true;
+		
 			dimControls();
 			loadPaletteOptions();
 			loadFilterOptions();
@@ -336,6 +318,8 @@ var tjStats = null;
 			} else {
 				mandelbrotExplorer.drawMandelbrot();
 			}
+			
+toggleIterationCycle();
 			window.onresize = onWindowResize;
 		}
 
@@ -547,7 +531,7 @@ alert('This is borked right now. It is at the top of my priority list of things 
 		var animationFrameId;
 		function animate() {
 			animationFrameId = requestAnimationFrame( animate );
-			tjStats.update();
+			
 			if(mandelbrotExplorer.controls){
 				mandelbrotExplorer.controls.update();
 			}
@@ -693,21 +677,7 @@ alert('This is borked right now. It is at the top of my priority list of things 
 		}
 		function toggleBackground(){
 			trackEvent('usage', 'toggleBackground', 'toggleBackground');
-			
-			var color = new THREE.Color( 0x000000 );
-			document.body.style.backgroundColor = 'rgb(0, 0, 0)';
-			if(document.getElementById("toggleBackground").checked) {
-				color = new THREE.Color( 0xFFFFFF );
-				document.body.style.backgroundColor = 'rgb(255, 255, 255)';
-			}
-			
-			/*
-			var isBlack = window.getComputedStyle(document.body).backgroundColor  == 'rgb(0, 0, 0)';
-			document.body.style.backgroundColor  = ( isBlack ? 'rgb(255, 255, 255)' : 'rgb(0, 0, 0)' );
-			*/
-			
-			mandelbrotExplorer.scene.background =  color;
-			
+			document.body.style.backgroundColor  = ( window.getComputedStyle(document.body).backgroundColor  == 'rgb(0, 0, 0)' ? 'rgb(255, 255, 255)' : 'rgb(0, 0, 0)' );
 		}
 		
 		function toggleRandomStepping(){
@@ -795,8 +765,8 @@ alert('This is borked right now. It is at the top of my priority list of things 
 			<div class="minimized" id="controls_minimized">
 				<input type="button" onclick="toggleControls()" value="..." />
 			</div>
-			<div class="maximized" id="controls_maximized">
-				<table width="100%" style="text-align: right" id="controls_table">
+			<div class="maximized" id="controls_maximized" style='display:none;'>
+				<table width="100%" style="text-align: right">
 					<tr>
 						<td>Max Iterations (2d):<input type="text" id="maxIterations_2d" onchange="update2dIterations()" /></td>
 						<td>Max Iterations (3d):<input type="text" id="maxIterations_3d" onchange="update3dIterations()" /></td>
@@ -821,8 +791,8 @@ alert('This is borked right now. It is at the top of my priority list of things 
 
 								<span>
 									<input type="radio" name="shortenedFilter" id="shortenedFilter_both" value="both" onchange="setShortenedFilter()">Both</input>
-									<input type="radio" name="shortenedFilter" id="shortenedFilter_shortened" value="shortened" onchange="setShortenedFilter()" checked>Shortened</input>
-									<input type="radio" name="shortenedFilter" id="shortenedFilter_full" value="full" onchange="setShortenedFilter()">Full</input>
+									<input type="radio" name="shortenedFilter" id="shortenedFilter_shortened" value="shortened" onchange="setShortenedFilter()" >Shortened</input>
+									<input type="radio" name="shortenedFilter" id="shortenedFilter_full" value="full" onchange="setShortenedFilter()" checked>Full</input>
 								</span>
 							</fieldset>
 							<fieldset style="border: 1px black solid">
@@ -892,15 +862,9 @@ alert('This is borked right now. It is at the top of my priority list of things 
 					<tr>
 						<td colspan="2">
 							Color Cycle<input type="checkbox" id="colorCycleCheckbox" onchange="toggleColorCycle()" />
-							Iteration Cycle<input type="checkbox" id="iterationCycleCheckbox" onchange="toggleIterationCycle()" />
+							Iteration Cycle<input type="checkbox" CHECKED id="iterationCycleCheckbox" onchange="toggleIterationCycle()" />
 							Cycle Time<input type="text" id="iterationCycleTime" style="width:3em;" onchange="updateIterationCycleTime()" />
 							Cycle Frame<input type="text" id="iterationCycleFrame" style="width:3em;" onchange="updateIterationCycleFrame()" />
-						</td>
-					</tr>
-					<tr>
-						<td colspan='2' align='left'>
-							<button onclick="getScreenCap();return false;">Capture</button>
-							<img id='screen_cap' onclick='openScreenCap();' />
 						</td>
 					</tr>
 				</table>
