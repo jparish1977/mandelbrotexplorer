@@ -33,6 +33,12 @@ escapePath[pathIndex][0] = useX;
 escapePath[pathIndex][1] = useY;
 useZ;
 */
+
+/*
+// this is a neat flower.....
+newX = pathIndex > 0 ? newX - escapePath[0][0] : 0;
+newY = pathIndex > 0 ? newY - escapePath[0][1] : 0;
+*/
 /*
 I need to add a way of mapping the particles displayed in the current scene 
 back to their initial x,y.
@@ -440,7 +446,7 @@ var mandelbrotExplorer = {
 	"endX": 				2,
 	"startY": 				2,
 	"endY": 				-2,
-	"maxIterations_2d": 	255,
+	"maxIterations_2d": 	32,
 	"maxIterations_3d": 	31,
 	"zoomFactor": 			0.15,
 	"xOffset": 				null,
@@ -645,7 +651,6 @@ var repeatCheck = function(zValues, z, lastZ){
 		mandelbrotExplorer.continueIterationCycle = false;
 		
 		if( mandelbrotExplorer.renderer == null )	{
-			//mandelbrotExplorer.renderer = new THREE.WebGLRenderer({canvas: mandelbrotExplorer.canvas_3d,  alpha: true, precision: "mediump", "antialias": false});
 			mandelbrotExplorer.renderer = new mandelbrotExplorer.useRenderer({canvas: mandelbrotExplorer.canvas_3d,  alpha: true, precision: "mediump", "antialias": false});
 			
 			mandelbrotExplorer.renderer.setClearColor( 0x000001, 0 );	
@@ -656,10 +661,6 @@ var repeatCheck = function(zValues, z, lastZ){
 		}
 		else {
 			mandelbrotExplorer.clearMandelbrotCloud();
-
-//			for( var systemIndex in mandelbrotExplorer.particleSystems ){
-//				mandelbrotExplorer.scene.remove( mandelbrotExplorer.particleSystems[systemIndex] );
-//			}
 		}
 		
 		if(mandelbrotExplorer.camera == null){
@@ -672,135 +673,137 @@ var repeatCheck = function(zValues, z, lastZ){
 		}
 		
 		
-		mandelbrotExplorer.xScale_3d = Math.abs( mandelbrotExplorer.startX - mandelbrotExplorer.endX ) / mandelbrotExplorer.cloudResolution;
-		mandelbrotExplorer.yScale_3d = Math.abs( mandelbrotExplorer.startY - mandelbrotExplorer.endY ) / mandelbrotExplorer.cloudResolution;
-		
 		mandelbrotExplorer.iterationParticles = [];
 		mandelbrotExplorer.particleSystems = [];
 		
-		// FUCKING FIX THIS
-		//var juliaC = eval(mandelbrotExplorer.juliaC);
-		console.time("drawMandelbrotCloud: Generating particles");
-		for( var x = mandelbrotExplorer.startX; x < mandelbrotExplorer.endX; x += (mandelbrotExplorer.xScale_3d) ) {
-			for( var y = mandelbrotExplorer.startY; y > mandelbrotExplorer.endY; y -= (mandelbrotExplorer.yScale_3d) ) {
-				var c = [x,y];
-				var juliaC = eval(mandelbrotExplorer.juliaC);
-				if(mandelbrotExplorer.randomizeCloudStepping){
-					var getRandomArbitrary = function(min, max) {
-					  return Math.random() * (max - min) + min;
-					}
-					
-					c[0] = getRandomArbitrary(x - mandelbrotExplorer.xScale_3d, x + mandelbrotExplorer.xScale_3d);
-					c[1] = getRandomArbitrary(y - mandelbrotExplorer.xScale_3d, y + mandelbrotExplorer.xScale_3d);
-				}
-var repeatCheck = function(zValues, z, lastZ){
-	var test = zValues.filter(function(testZ){
-		return z[0] != testZ[0] && z[1] != testZ[1];
-	});
-	return zValues.length != test.length;
-};
-				//var escapePath = mandelbrotExplorer.getMandelbrotEscapePath( c, mandelbrotExplorer.maxIterations_3d );
-				var escapePath;
-				if( mandelbrotExplorer.getAbsoluteValueOfComplexNumber( juliaC ) != 0 ){
-					escapePath = mandelbrotExplorer.getJuliaEscapePath( juliaC, c, mandelbrotExplorer.maxIterations_3d, true, repeatCheck );				
-				}
-				else{
-					escapePath = mandelbrotExplorer.getJuliaEscapePath( c, juliaC, mandelbrotExplorer.maxIterations_3d, true, repeatCheck );				
-				}
-
-if((mandelbrotExplorer.onlyShortened && !escapePath.shortened) ||
-   (mandelbrotExplorer.onlyFull && escapePath.shortened)){continue;}
-
-				// FIX THIS STUPID SHIT
-				var z = eval(mandelbrotExplorer.initialZ);
-				var accumulatedZ = 0;
-				var averageOfAccumulatedZ = 0;
-
-				escapePath.forEach(function(pathValue, pathIndex, source){
-//console.log(pathValue.fpe)
-					accumulatedZ += mandelbrotExplorer.getAbsoluteValueOfComplexNumber(escapePath[pathIndex]);
-					averageOfAccumulatedZ = accumulatedZ / (pathIndex + 1)
-					var iteration = pathIndex + 1;
-					
-					// COME THE FUCK ON, FIX THIS SHIT!
-					if( mandelbrotExplorer.cloudLengthFilter.length > 0 && eval( mandelbrotExplorer.cloudLengthFilter ) == false ) return true;
-					if( mandelbrotExplorer.cloudIterationFilter.length > 0 && eval( mandelbrotExplorer.cloudIterationFilter ) == false ) return true;
-					var direction = [1,1];
-					if(pathIndex > 0){
-						direction[0] = escapePath[pathIndex][0] > escapePath[pathIndex-1][0] ? -1 : 1;
-						direction[1] = escapePath[pathIndex][1] > escapePath[pathIndex-1][1] ? -1 : 1;
-					}
-					// this isn't right.... zDirection...
-					var zDirection = direction[0] * direction[1];
-					
-					if( pathIndex != 0 ) {
-						// FIX THE FUCK OUT OF THIS!
-						z = eval( mandelbrotExplorer.escapingZ );
-					}
-					
-					var iterationIndex = parseInt(pathIndex);
-					
-					if( typeof mandelbrotExplorer.iterationParticles[iterationIndex] === "undefined" ) {
-						mandelbrotExplorer.iterationParticles[iterationIndex] = {"particles": new THREE.Geometry()};
-					}
-					var newX = escapePath[pathIndex][0];
-					var newY = escapePath[pathIndex][1];
-					var particleVector = new THREE.Vector3(newX, newY, z);
-					if(mandelbrotExplorer.particleFilter){
-						// FIX THE FUCK OUT OF THIS!
-						var allowed = eval( mandelbrotExplorer.particleFilter );
-						if( !allowed ){
-							return true;
+		var cloudResolutions = [];
+		if(mandelbrotExplorer.cloudResolution.toString().indexOf(",") !== -1){
+			console.log("Split the resolution....");
+			cloudResolutions = mandelbrotExplorer.cloudResolution.split(",");
+		}
+		else{
+			cloudResolutions.push(mandelbrotExplorer.cloudResolution);
+		}
+				
+		cloudResolutions.forEach(function(useResolution){
+			mandelbrotExplorer.xScale_3d = Math.abs( mandelbrotExplorer.startX - mandelbrotExplorer.endX ) / useResolution;
+			mandelbrotExplorer.yScale_3d = Math.abs( mandelbrotExplorer.startY - mandelbrotExplorer.endY ) / useResolution;
+			
+			// FUCKING FIX THIS
+			//var juliaC = eval(mandelbrotExplorer.juliaC);
+			console.time("drawMandelbrotCloud: Generating particles");
+			for( var x = mandelbrotExplorer.startX; x < mandelbrotExplorer.endX; x += (mandelbrotExplorer.xScale_3d) ) {
+				for( var y = mandelbrotExplorer.startY; y > mandelbrotExplorer.endY; y -= (mandelbrotExplorer.yScale_3d) ) {
+					var c = [x,y];
+					var juliaC = eval(mandelbrotExplorer.juliaC);
+					if(mandelbrotExplorer.randomizeCloudStepping){
+						var getRandomArbitrary = function(min, max) {
+						  return Math.random() * (max - min) + min;
 						}
+						var xAdjust = mandelbrotExplorer.xScale_3d / 2;
+						var yAdjust = mandelbrotExplorer.yScale_3d / 2;
+						c[0] = getRandomArbitrary(x - xAdjust, x + xAdjust);
+						c[1] = getRandomArbitrary(y - yAdjust, y + yAdjust);
 					}
-					
-					//particleVector.fpe = pathValue.fpe;
-					if(typeof mandelbrotExplorer.iterationParticles[iterationIndex].fpe === "undefined"){
-						mandelbrotExplorer.iterationParticles[iterationIndex].fpe = 0;
+	var repeatCheck = function(zValues, z, lastZ){
+		var test = zValues.filter(function(testZ){
+			return z[0] != testZ[0] && z[1] != testZ[1];
+		});
+		return zValues.length != test.length;
+	};
+					//var escapePath = mandelbrotExplorer.getMandelbrotEscapePath( c, mandelbrotExplorer.maxIterations_3d );
+					var escapePath;
+					if( mandelbrotExplorer.getAbsoluteValueOfComplexNumber( juliaC ) != 0 ){
+						escapePath = mandelbrotExplorer.getJuliaEscapePath( juliaC, c, mandelbrotExplorer.maxIterations_3d, true, repeatCheck );				
 					}
-					
-					mandelbrotExplorer.iterationParticles[iterationIndex].fpe += pathValue.fpe;
-					mandelbrotExplorer.iterationParticles[iterationIndex].particles.vertices.push(particleVector);
-					if(mandelbrotExplorer.dualZ){
-						// TODO: Save this and do something about it....
-						//1;z=pathIndex == 0 ? z :  mandelbrotExplorer.getAbsoluteValueOfComplexNumber(escapePath[pathIndex-1]) - mandelbrotExplorer.getAbsoluteValueOfComplexNumber(escapePath[pathIndex]);
-						//1;z=pathIndex == 0 ? z :  mandelbrotExplorer.getAbsoluteValueOfComplexNumber(escapePath[pathIndex]) - mandelbrotExplorer.getAbsoluteValueOfComplexNumber(escapePath[pathIndex-1]);
-						var dualZMultiplier = eval(mandelbrotExplorer.dualZMultiplier);
-						var particleVector = new THREE.Vector3(dualZMultiplier * newX, dualZMultiplier * newY, dualZMultiplier * z);
-						mandelbrotExplorer.iterationParticles[iterationIndex].particles.vertices.push(particleVector);
+					else{
+						escapePath = mandelbrotExplorer.getJuliaEscapePath( c, juliaC, mandelbrotExplorer.maxIterations_3d, true, repeatCheck );				
 					}
-				});
-			}
-		}
-		console.timeEnd("drawMandelbrotCloud: Generating particles");
 
-		console.time("drawMandelbrotCloud: Applying palette");
-		for( var index in mandelbrotExplorer.iterationParticles ) {
-			var colorIndex = index;
-			while( colorIndex >= mandelbrotExplorer.palette.length  ) {
-				colorIndex -= mandelbrotExplorer.palette.length;
+	if((mandelbrotExplorer.onlyShortened && !escapePath.shortened) ||
+	   (mandelbrotExplorer.onlyFull && escapePath.shortened)){continue;}
+
+					// FIX THIS STUPID SHIT
+					var z = eval(mandelbrotExplorer.initialZ);
+					var accumulatedZ = 0;
+					var averageOfAccumulatedZ = 0;
+
+					escapePath.forEach(function(pathValue, pathIndex, source){
+	//console.log(pathValue.fpe)
+						accumulatedZ += mandelbrotExplorer.getAbsoluteValueOfComplexNumber(escapePath[pathIndex]);
+						averageOfAccumulatedZ = accumulatedZ / (pathIndex + 1)
+						var iteration = pathIndex + 1;
+						
+						// COME THE FUCK ON, FIX THIS SHIT!
+						if( mandelbrotExplorer.cloudLengthFilter.length > 0 && eval( mandelbrotExplorer.cloudLengthFilter ) == false ) return true;
+						if( mandelbrotExplorer.cloudIterationFilter.length > 0 && eval( mandelbrotExplorer.cloudIterationFilter ) == false ) return true;
+						var direction = [1,1];
+						if(pathIndex > 0){
+							direction[0] = escapePath[pathIndex][0] > escapePath[pathIndex-1][0] ? -1 : 1;
+							direction[1] = escapePath[pathIndex][1] > escapePath[pathIndex-1][1] ? -1 : 1;
+						}
+						// this isn't right.... zDirection...
+						var zDirection = direction[0] * direction[1];
+						
+						if( pathIndex != 0 ) {
+							// FIX THE FUCK OUT OF THIS!
+							z = eval( mandelbrotExplorer.escapingZ );
+						}
+						
+						var iterationIndex = parseInt(pathIndex);
+						
+						if( typeof mandelbrotExplorer.iterationParticles[iterationIndex] === "undefined" ) {
+							mandelbrotExplorer.iterationParticles[iterationIndex] = {"particles": new THREE.Geometry()};
+						}
+						var newX = escapePath[pathIndex][0];
+						var newY = escapePath[pathIndex][1];
+
+						var particleVector = new THREE.Vector3(newX, newY, z);
+						if(mandelbrotExplorer.particleFilter){
+							// FIX THE FUCK OUT OF THIS!
+							var allowed = eval( mandelbrotExplorer.particleFilter );
+							if( !allowed ){
+								return true;
+							}
+						}
+
+						mandelbrotExplorer.iterationParticles[iterationIndex].particles.vertices.push(particleVector);
+						if(mandelbrotExplorer.dualZ){
+
+						var dualZMultiplier = eval(mandelbrotExplorer.dualZMultiplier);
+							var particleVector = new THREE.Vector3(dualZMultiplier * newX, dualZMultiplier * newY, dualZMultiplier * z);
+							mandelbrotExplorer.iterationParticles[iterationIndex].particles.vertices.push(particleVector);
+						}
+					});
+				}
 			}
-			var color = mandelbrotExplorer.palette[ colorIndex ];
-			
-			var size = mandelbrotExplorer.particleSize ? eval(mandelbrotExplorer.particleSize): 0;//mandelbrotExplorer.xScale_3dmandelbrotExplorer.xScale_3d >= 0.1 ? 0 : mandelbrotExplorer.xScale_3d/2;//mandelbrotExplorer.iterationParticles[index].fpe / mandelbrotExplorer.xScale_3d;
-			//var pMaterial = new THREE.ParticleBasicMaterial({
-			var pMaterial = new THREE.PointsMaterial({
-				color: new THREE.Color( color.R / 255, color.G / 255, color.B / 255 ),
-				size: size,//0,
-				transparent: false,
-				opacity: color.A/255
-			});
-			
-			//mandelbrotExplorer.particleSystems[index] = new THREE.ParticleSystem(
-			mandelbrotExplorer.particleSystems[index] = new THREE.Points(
-				mandelbrotExplorer.iterationParticles[parseInt(index)].particles,
-				pMaterial);
-			
-			mandelbrotExplorer.iterationParticles[parseInt(index)] = null;
-		}
+			console.timeEnd("drawMandelbrotCloud: Generating particles");
+
+			console.time("drawMandelbrotCloud: Applying palette");
+			for( var index in mandelbrotExplorer.iterationParticles ) {
+				var colorIndex = index;
+				while( colorIndex >= mandelbrotExplorer.palette.length  ) {
+					colorIndex -= mandelbrotExplorer.palette.length;
+				}
+				var color = mandelbrotExplorer.palette[ colorIndex ];
+				
+				var size = mandelbrotExplorer.particleSize ? eval(mandelbrotExplorer.particleSize): 0;//mandelbrotExplorer.xScale_3dmandelbrotExplorer.xScale_3d >= 0.1 ? 0 : mandelbrotExplorer.xScale_3d/2;//mandelbrotExplorer.iterationParticles[index].fpe / mandelbrotExplorer.xScale_3d;
+
+				var pMaterial = new THREE.PointsMaterial({
+					color: new THREE.Color( color.R / 255, color.G / 255, color.B / 255 ),
+					size: size,//0,
+					transparent: false,
+					opacity: color.A/255
+				});
+
+				mandelbrotExplorer.particleSystems[index] = new THREE.Points(
+					mandelbrotExplorer.iterationParticles[parseInt(index)].particles,
+					pMaterial);
+			}
+		});
 		console.timeEnd("drawMandelbrotCloud: Applying palette");
 		mandelbrotExplorer.iterationParticles = null;
-		
+
 		mandelbrotExplorer.displayCloudParticles();
 		mandelbrotExplorer.continueIterationCycle = resumeIterationCycle;
 		console.timeEnd("drawMandelbrotCloud");
@@ -844,170 +847,184 @@ if((mandelbrotExplorer.onlyShortened && !escapePath.shortened) ||
 		}
 		
 		
-		mandelbrotExplorer.xScale_3d = Math.abs( mandelbrotExplorer.startX - mandelbrotExplorer.endX ) / mandelbrotExplorer.cloudResolution;
-		mandelbrotExplorer.yScale_3d = Math.abs( mandelbrotExplorer.startY - mandelbrotExplorer.endY ) / mandelbrotExplorer.cloudResolution;
-		
 		mandelbrotExplorer.iterationParticles = [];
 		//mandelbrotExplorer.particleSystems = [];
 		mandelbrotExplorer.lines = [];
 		mandelbrotExplorer.lineVectors = [];
+
+		var cloudResolutions = [];
+		if(mandelbrotExplorer.cloudResolution.toString().indexOf(",") !== -1){
+			console.log("Split the resolution....");
+			cloudResolutions = mandelbrotExplorer.cloudResolution.split(",");
+		}
+		else{
+			cloudResolutions.push(mandelbrotExplorer.cloudResolution);
+		}
 		
-		// FUCKING FIX THIS
-		//var juliaC = eval(mandelbrotExplorer.juliaC);
-		console.time("drawMandelbrotsHair: Generating particles");
-		for( var x = mandelbrotExplorer.startX; x < mandelbrotExplorer.endX; x += (mandelbrotExplorer.xScale_3d) ) {
-			for( var y = mandelbrotExplorer.startY; y > mandelbrotExplorer.endY; y -= (mandelbrotExplorer.yScale_3d) ) {
-				var c = [x,y];
-				var juliaC = eval(mandelbrotExplorer.juliaC);
-				if(mandelbrotExplorer.randomizeCloudStepping){
-					var getRandomArbitrary = function(min, max) {
-					  return Math.random() * (max - min) + min;
-					}
-					
-					c[0] = getRandomArbitrary(x - mandelbrotExplorer.xScale_3d, x + mandelbrotExplorer.xScale_3d);
-					c[1] = getRandomArbitrary(y - mandelbrotExplorer.xScale_3d, y + mandelbrotExplorer.xScale_3d);
-				}
-var repeatCheck = function(zValues, z, lastZ){
-	var test = zValues.filter(function(testZ){
-		return z[0] != testZ[0] && z[1] != testZ[1];
-	});
-	return zValues.length != test.length;
-};
-				//var escapePath = mandelbrotExplorer.getMandelbrotEscapePath( c, mandelbrotExplorer.maxIterations_3d );
-				var escapePath;
-				if( mandelbrotExplorer.getAbsoluteValueOfComplexNumber( juliaC ) != 0 ){
-					escapePath = mandelbrotExplorer.getJuliaEscapePath( juliaC, c, mandelbrotExplorer.maxIterations_3d, true, repeatCheck );				
-				}
-				else{
-					escapePath = mandelbrotExplorer.getJuliaEscapePath( c, juliaC, mandelbrotExplorer.maxIterations_3d, true, repeatCheck );				
-				}
-if((mandelbrotExplorer.onlyShortened && !escapePath.shortened) ||
-   (mandelbrotExplorer.onlyFull && escapePath.shortened)){continue;}
-				// FIX THIS STUPID SHIT
-				var z = eval(mandelbrotExplorer.initialZ);
-				var accumulatedZ = 0;
-				var averageOfAccumulatedZ = 0;
-				
-				var lineVectors = [];
-				escapePath.forEach(function(pathValue, pathIndex, source){
-					var iteration = pathIndex + 1;
-					
-					// COME THE FUCK ON, FIX THIS SHIT!
-					if( mandelbrotExplorer.cloudLengthFilter.length > 0 && eval( mandelbrotExplorer.cloudLengthFilter ) == false ) return true;
-					if( mandelbrotExplorer.cloudIterationFilter.length > 0 && eval( mandelbrotExplorer.cloudIterationFilter ) == false ) return true;
-					var direction = [1,1];
-					if(pathIndex > 0){
-						direction[0] = escapePath[pathIndex][0] > escapePath[pathIndex-1][0] ? -1 : 1;
-						direction[1] = escapePath[pathIndex][1] > escapePath[pathIndex-1][1] ? -1 : 1;
-					}
-					// this isn't right.... zDirection...
-					var zDirection = direction[0] * direction[1];
-					
-					if( pathIndex != 0 ) {
-						// FIX THE FUCK OUT OF THIS!
-						z = eval( mandelbrotExplorer.escapingZ );
-					}
-					
-					var iterationIndex = parseInt(pathIndex);
-					
-					if( typeof mandelbrotExplorer.iterationParticles[iterationIndex] === "undefined" ) {
-						mandelbrotExplorer.iterationParticles[iterationIndex] = {"particles": new THREE.Geometry()};
-					}
-					var newX = escapePath[pathIndex][0];
-					var newY = escapePath[pathIndex][1];
-					var particleVector = new THREE.Vector3(newX, newY, z);
-					if(mandelbrotExplorer.particleFilter){
-						// FIX THE FUCK OUT OF THIS!
-						var allowed = eval( mandelbrotExplorer.particleFilter );
-						if( !allowed ){
-							return true;
+		cloudResolutions.forEach(function(useResolution){
+			mandelbrotExplorer.xScale_3d = Math.abs( mandelbrotExplorer.startX - mandelbrotExplorer.endX ) / cloudResolution;
+			mandelbrotExplorer.yScale_3d = Math.abs( mandelbrotExplorer.startY - mandelbrotExplorer.endY ) / cloudResolution;
+			
+			// FUCKING FIX THIS
+			//var juliaC = eval(mandelbrotExplorer.juliaC);
+			console.time("drawMandelbrotsHair: Generating particles");
+			for( var x = mandelbrotExplorer.startX; x < mandelbrotExplorer.endX; x += (mandelbrotExplorer.xScale_3d) ) {
+				for( var y = mandelbrotExplorer.startY; y > mandelbrotExplorer.endY; y -= (mandelbrotExplorer.yScale_3d) ) {
+					var c = [x,y];
+					var juliaC = eval(mandelbrotExplorer.juliaC);
+					if(mandelbrotExplorer.randomizeCloudStepping){
+						var getRandomArbitrary = function(min, max) {
+						  return Math.random() * (max - min) + min;
 						}
+						
+						c[0] = getRandomArbitrary(x - mandelbrotExplorer.xScale_3d, x + mandelbrotExplorer.xScale_3d);
+						c[1] = getRandomArbitrary(y - mandelbrotExplorer.xScale_3d, y + mandelbrotExplorer.xScale_3d);
 					}
-					lineVectors.push(particleVector);
-				});
-				if(lineVectors.length > 1){
-					mandelbrotExplorer.lineVectors.push(lineVectors);
+	var repeatCheck = function(zValues, z, lastZ){
+		var test = zValues.filter(function(testZ){
+			return z[0] != testZ[0] && z[1] != testZ[1];
+		});
+		return zValues.length != test.length;
+	};
+					//var escapePath = mandelbrotExplorer.getMandelbrotEscapePath( c, mandelbrotExplorer.maxIterations_3d );
+					var escapePath;
+					if( mandelbrotExplorer.getAbsoluteValueOfComplexNumber( juliaC ) != 0 ){
+						escapePath = mandelbrotExplorer.getJuliaEscapePath( juliaC, c, mandelbrotExplorer.maxIterations_3d, true, repeatCheck );				
+					}
+					else{
+						escapePath = mandelbrotExplorer.getJuliaEscapePath( c, juliaC, mandelbrotExplorer.maxIterations_3d, true, repeatCheck );				
+					}
+	if((mandelbrotExplorer.onlyShortened && !escapePath.shortened) ||
+	   (mandelbrotExplorer.onlyFull && escapePath.shortened)){continue;}
+					// FIX THIS STUPID SHIT
+					var z = eval(mandelbrotExplorer.initialZ);
+					var accumulatedZ = 0;
+					var averageOfAccumulatedZ = 0;
+					
+					var lineVectors = [];
+					escapePath.forEach(function(pathValue, pathIndex, source){
+						var iteration = pathIndex + 1;
+						
+						// COME THE FUCK ON, FIX THIS SHIT!
+						if( mandelbrotExplorer.cloudLengthFilter.length > 0 && eval( mandelbrotExplorer.cloudLengthFilter ) == false ) return true;
+						if( mandelbrotExplorer.cloudIterationFilter.length > 0 && eval( mandelbrotExplorer.cloudIterationFilter ) == false ) return true;
+						var direction = [1,1];
+						if(pathIndex > 0){
+							direction[0] = escapePath[pathIndex][0] > escapePath[pathIndex-1][0] ? -1 : 1;
+							direction[1] = escapePath[pathIndex][1] > escapePath[pathIndex-1][1] ? -1 : 1;
+						}
+						// this isn't right.... zDirection...
+						var zDirection = direction[0] * direction[1];
+						
+						if( pathIndex != 0 ) {
+							// FIX THE FUCK OUT OF THIS!
+							z = eval( mandelbrotExplorer.escapingZ );
+						}
+						
+						var iterationIndex = parseInt(pathIndex);
+						
+						if( typeof mandelbrotExplorer.iterationParticles[iterationIndex] === "undefined" ) {
+							mandelbrotExplorer.iterationParticles[iterationIndex] = {"particles": new THREE.Geometry()};
+						}
+						var newX = escapePath[pathIndex][0];
+						var newY = escapePath[pathIndex][1];
+						var particleVector = new THREE.Vector3(newX, newY, z);
+						if(mandelbrotExplorer.particleFilter){
+							// FIX THE FUCK OUT OF THIS!
+							var allowed = eval( mandelbrotExplorer.particleFilter );
+							if( !allowed ){
+								return true;
+							}
+						}
+						lineVectors.push(particleVector);
+					});
+					if(lineVectors.length > 1){
+						mandelbrotExplorer.lineVectors.push(lineVectors);
+					}
 				}
 			}
-		}
-		console.timeEnd("drawMandelbrotsHair: Generating particles");
-		for(var lineIndex in mandelbrotExplorer.lineVectors){
-			var currentLine = mandelbrotExplorer.lineVectors[lineIndex];
-			//console.log(currentLine.getPoints().length);
-			//var colorIndex = currentLine.length;
-			//while( colorIndex >= mandelbrotExplorer.palette.length  ) {
-			//	colorIndex -= mandelbrotExplorer.palette.length;
-			//}
-			//var color = mandelbrotExplorer.palette[ colorIndex ];
+			console.timeEnd("drawMandelbrotsHair: Generating particles");
+			for(var lineIndex in mandelbrotExplorer.lineVectors){
+				var currentLine = mandelbrotExplorer.lineVectors[lineIndex];
+				//console.log(currentLine.getPoints().length);
+				//var colorIndex = currentLine.length;
+				//while( colorIndex >= mandelbrotExplorer.palette.length  ) {
+				//	colorIndex -= mandelbrotExplorer.palette.length;
+				//}
+				//var color = mandelbrotExplorer.palette[ colorIndex ];
 
-			//var pMaterial = new THREE.LineBasicMaterial({
-			//	color: new THREE.Color( color.R / 255, color.G / 255, color.B / 255 ),
-			//	linewidth: 0,
-			//	transparent: false,
-			//	opacity: color.A/255
-			//});
-/*			
-			var geometry = new THREE.Geometry();
-			var curve = new THREE.CatmullRomCurve3(currentLine, false, 'chordal', );
-			geometry.vertices = curve.getPoints(50);
+				//var pMaterial = new THREE.LineBasicMaterial({
+				//	color: new THREE.Color( color.R / 255, color.G / 255, color.B / 255 ),
+				//	linewidth: 0,
+				//	transparent: false,
+				//	opacity: color.A/255
+				//});
+	/*			
+				var geometry = new THREE.Geometry();
+				var curve = new THREE.CatmullRomCurve3(currentLine, false, 'chordal', );
+				geometry.vertices = curve.getPoints(50);
 
-			
-			//gradientline.js
-			var steps = 0.2;
-			var phase = 1.5;
-			//Create the final object to add to the scene
-			var coloredLine = getColoredBufferLine( steps, phase, geometry )
-			//var coloredLine = getColoredBufferLine_jap( mandelbrotExplorer.palette, currentLine.length, geometry );
-			
-			
-			this.scene.add(coloredLine);
-			this.lines.push(coloredLine);
-*/
-			// Create a spline....
-//			var curve = new THREE.SplineCurve( currentLine );
+				
+				//gradientline.js
+				var steps = 0.2;
+				var phase = 1.5;
+				//Create the final object to add to the scene
+				var coloredLine = getColoredBufferLine( steps, phase, geometry )
+				//var coloredLine = getColoredBufferLine_jap( mandelbrotExplorer.palette, currentLine.length, geometry );
+				
+				
+				this.scene.add(coloredLine);
+				this.lines.push(coloredLine);
+	*/
+				// Create a spline....
+	//			var curve = new THREE.SplineCurve( currentLine );
 
-			
-			var colorIndex = currentLine.length;
-			while( colorIndex >= mandelbrotExplorer.palette.length  ) {
-				colorIndex -= mandelbrotExplorer.palette.length;
+				
+				var colorIndex = currentLine.length;
+				while( colorIndex >= mandelbrotExplorer.palette.length  ) {
+					colorIndex -= mandelbrotExplorer.palette.length;
+				}
+				var color = mandelbrotExplorer.palette[ colorIndex ];
+				//new THREE.Color( color.R / 255, color.G / 255, color.B / 255 )
+	/*			
+				
+				var curve = new THREE.CatmullRomCurve3( currentLine )
+				//var path = new THREE.Path( curve.getPoints( 50 ) );		
+				//var geometry = path.createPointsGeometry( 50 );
+				var geometry = curve.getPoints( currentLine.length );
+				var material = new THREE.LineBasicMaterial( { color : new THREE.Color( color.R / 255, color.G / 255, color.B / 255 ) } );
+
+				// Create the final object to add to the scene
+				var splineObject = new THREE.Line( geometry, material );
+				
+				this.scene.add(splineObject);
+				this.lines.push(splineObject);
+	*/
+				var geometry = new THREE.Geometry();
+				var curve = new THREE.CatmullRomCurve3(currentLine, false, 'chordal' );
+				geometry.vertices = curve.getPoints(50);
+	//			var pMaterial = new THREE.LineBasicMaterial({
+	//				color: new THREE.Color( color.R / 255, color.G / 255, color.B / 255 ),
+	//				linewidth: 0,
+	//				transparent: false,
+	//				opacity: color.A/255
+	//			});
+	//			var lineObject = new THREE.Line( geometry, pMaterial );
+				
+				//gradientline.js
+				var steps = 0.2;
+				var phase = 1.5;
+				//Create the final object to add to the scene
+				var coloredLine = getColoredBufferLine_2( steps, phase, geometry, color );
+				var coloredLine = getColoredBufferLine_3(geometry, mandelbrotExplorer.palette );
+				
+				this.scene.add(coloredLine);
+				this.lines.push(coloredLine);
 			}
-			var color = mandelbrotExplorer.palette[ colorIndex ];
-			//new THREE.Color( color.R / 255, color.G / 255, color.B / 255 )
-/*			
-			
-			var curve = new THREE.CatmullRomCurve3( currentLine )
-			//var path = new THREE.Path( curve.getPoints( 50 ) );		
-			//var geometry = path.createPointsGeometry( 50 );
-			var geometry = curve.getPoints( currentLine.length );
-			var material = new THREE.LineBasicMaterial( { color : new THREE.Color( color.R / 255, color.G / 255, color.B / 255 ) } );
-
-			// Create the final object to add to the scene
-			var splineObject = new THREE.Line( geometry, material );
-			
-			this.scene.add(splineObject);
-			this.lines.push(splineObject);
-*/
-			var geometry = new THREE.Geometry();
-			var curve = new THREE.CatmullRomCurve3(currentLine, false, 'chordal' );
-			geometry.vertices = curve.getPoints(50);
-//			var pMaterial = new THREE.LineBasicMaterial({
-//				color: new THREE.Color( color.R / 255, color.G / 255, color.B / 255 ),
-//				linewidth: 0,
-//				transparent: false,
-//				opacity: color.A/255
-//			});
-//			var lineObject = new THREE.Line( geometry, pMaterial );
-			
-			//gradientline.js
-			var steps = 0.2;
-			var phase = 1.5;
-			//Create the final object to add to the scene
-			var coloredLine = getColoredBufferLine_2( steps, phase, geometry, color );
-			var coloredLine = getColoredBufferLine_3(geometry, mandelbrotExplorer.palette );
-			
-			this.scene.add(coloredLine);
-			this.lines.push(coloredLine);
-		}
+		});
+		//var useResolution = mandelbrotExplorer.cloudResolution;
+		
+		
 		console.timeEnd("drawMandelbrotsHair");
 	},
 	"displayCloudParticles": function() {
