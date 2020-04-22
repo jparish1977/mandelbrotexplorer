@@ -434,14 +434,20 @@ var palettes = {
 
 var mandelbrotExplorer = {
 	"useRenderer": THREE.WebGLRenderer,
+	"rendererOptions": {
+		alpha: true, 
+		precision: "mediump", 
+		antialias: false,
+		preserveDrawingBuffer: true 
+	},
 	"onlyShortened": true,
 	"onlyFull": false,
 	"startX": 				-2,
 	"endX": 				2,
 	"startY": 				2,
 	"endY": 				-2,
-	"maxIterations_2d": 	255,
-	"maxIterations_3d": 	256,
+	"maxIterations_2d": 	32,
+	"maxIterations_3d": 	128,
 	"zoomFactor": 			0.15,
 	"xOffset": 				null,
 	"yOffset": 				null,
@@ -452,9 +458,9 @@ var mandelbrotExplorer = {
 	"xScale_3d": 			null,
 	"yScale_3d": 			null,
 	"randomizeCloudStepping": false,
-	"cloudResolution":		43,
+	"cloudResolution":		430,//774,
 	"dualZ": true,
-	"dualZMultiplier":      "1;newX += escapePath[0][0] * -1;newY += escapePath[0][1] * -1;z *= -1;",
+	"dualZMultiplier":      "1;newX += escapePath[pathIndex > 1 ? pathIndex - 1 : 0][0] * -1;newY += escapePath[pathIndex > 1 ? pathIndex - 1 : 0][1] * -1;z *= -1;",
     "dualZMultiplierExamples": [
         "-1",
         "1;newX += escapePath[pathIndex-1][0];newY += escapePath[pathIndex-1][1];z *= -1;"
@@ -809,9 +815,17 @@ var repeatCheck = function(zValues, z, lastZ){
         },
         "startRenderer": function() {
             if( mandelbrotExplorer.renderer == null )	{
-                //mandelbrotExplorer.renderer = new THREE.WebGLRenderer({canvas: mandelbrotExplorer.canvas_3d,  alpha: true, precision: "mediump", "antialias": false});
-                mandelbrotExplorer.renderer = new mandelbrotExplorer.useRenderer({canvas: mandelbrotExplorer.canvas_3d,  alpha: true, precision: "mediump", "antialias": false});
-                
+                mandelbrotExplorer.renderer = new mandelbrotExplorer.useRenderer(
+					{
+						canvas: mandelbrotExplorer.canvas_3d,  
+						alpha: mandelbrotExplorer.rendererOptions.alpha, 
+						precision: mandelbrotExplorer.rendererOptions.precision, 
+						antialias: mandelbrotExplorer.rendererOptions.antialias,
+						preserveDrawingBuffer: mandelbrotExplorer.rendererOptions.preserveDrawingBuffer
+					}
+				);
+//               mandelbrotExplorer.renderer.xr.enabled  = true;
+ 
                 mandelbrotExplorer.renderer.setClearColor( 0x000001, 0 );	
             }
             
@@ -985,8 +999,15 @@ var repeatCheck = function(zValues, z, lastZ){
 		mandelbrotExplorer.continueIterationCycle = false;
 		
 		if( mandelbrotExplorer.renderer == null )	{
-			//mandelbrotExplorer.renderer = new THREE.WebGLRenderer({canvas: mandelbrotExplorer.canvas_3d,  alpha: true, precision: "mediump", "antialias": false});
-			mandelbrotExplorer.renderer = new mandelbrotExplorer.useRenderer({canvas: mandelbrotExplorer.canvas_3d,  alpha: true, precision: "mediump", "antialias": false});
+			mandelbrotExplorer.renderer = new mandelbrotExplorer.useRenderer(
+				{
+					canvas: mandelbrotExplorer.canvas_3d,  
+					alpha: mandelbrotExplorer.rendererOptions.alpha, 
+					precision: mandelbrotExplorer.rendererOptions.precision, 
+					antialias: mandelbrotExplorer.rendererOptions.antialias,
+					preserveDrawingBuffer: mandelbrotExplorer.rendererOptions.preserveDrawingBuffer
+				}
+			);
 			mandelbrotExplorer.renderer.setClearColor( 0x000001, 0 );	
 		}
 		
