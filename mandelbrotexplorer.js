@@ -1127,7 +1127,7 @@ var repeatCheck = function(zValues, z, lastZ){
 				mandelbrotExplorer.scene.add(coloredLine);
 				mandelbrotExplorer.lines.push(coloredLine);
 			}
-			console.timeEnd("drawMandelbrotsHair");
+			//console.timeEnd("drawMandelbrotsHair");
 		}
     },
 	"drawMandelbrotCloud": function( params ) {
@@ -1285,7 +1285,7 @@ if((mandelbrotExplorer.onlyShortened && !escapePath.shortened) ||
 		for(var lineIndex in mandelbrotExplorer.lineVectors){
 			var currentLine = mandelbrotExplorer.lineVectors[lineIndex];
 			
-			var color = mandelbrotExplorer.palette[ mandelbrotExplorer.getColorIndex(index) ];
+			var color = mandelbrotExplorer.palette[ mandelbrotExplorer.getColorIndex(lineIndex) ];
 
 			var geometry = new THREE.Geometry();
 			var curve = new THREE.CatmullRomCurve3(currentLine, false, 'chordal' );
@@ -1301,6 +1301,7 @@ if((mandelbrotExplorer.onlyShortened && !escapePath.shortened) ||
 			this.scene.add(coloredLine);
 			this.lines.push(coloredLine);
 		}
+		//console.timeEnd("drawMandelbrotsHair");
 		console.timeEnd("drawMandelbrotsHair");
 	},
 	"displayCloudParticles": function() {
