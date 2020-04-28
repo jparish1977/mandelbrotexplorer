@@ -2,12 +2,33 @@
 <html>
 	<head>
 		<title>Mandelbrot Explorer</title>
-		<script src="three.js"></script>
+		<!-- Global site tag (gtag.js) - Google Analytics -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=UA-163810510-1"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'UA-163810510-1');
+</script>
+
+		<script src="https://unpkg.com/magicleap-helio-webxr-polyfill@1.0.0/HelioWebXRPolyfill.js"></script>
+		<script src="./three.js"></script>
 		<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r78/three.js"></script>
-		<script src="gradientline.js"></script>
-		<script src="trackballcontrols.js"></script>
-		<script src="mandelbrotexplorer.js"></script>
+		<script src="./gradientline.js"></script>
+		<script src="./TrackballControls.js"></script>
+		<script src="./VRButton.js"></script>
+		<script src="./mandelbrotexplorer.js"></script>
 		<script language="javascript">
+		function trackEvent(category, action, label, value, fieldsObject){
+			if ("ga" in window) {
+				tracker = ga.getAll()[0];
+				if (tracker)
+					//tracker.send("event", "Test", "Test GA");
+					
+					tracker.send('event', category, action, label, value, fieldsObject);
+			}
+		}
 		function dumpBrot(){
 			var values =[];
 			var tries = [];
@@ -39,6 +60,7 @@
 		}
 		
 		function setShortenedFilter(){
+			trackEvent('usage', 'setShortenedFilter', 'setShortenedFilter');
 			//<input type="radio" name="shortenedFilter" id="shortenedFilter_both" value="both" onchange="setShortenedFilter()">Both</input>
 			switch(document.querySelector("input[name='shortenedFilter']:checked").value){
 				case "both":
@@ -75,12 +97,12 @@
 				mandelbrotExplorer.canvas_3d.height = window.innerHeight;
 			}
 			else{
-				mandelbrotExplorer.canvas_3d.style.left = window.innerWidth / 2;
+				mandelbrotExplorer.canvas_3d.style.left = window.innerWidth / 2 + "px";
 				mandelbrotExplorer.canvas_3d.width = window.innerWidth / 2;
 				mandelbrotExplorer.canvas_3d.height = window.innerHeight;
+				
+				mandelbrotExplorer.drawMandelbrot();
 			}
-			
-			mandelbrotExplorer.drawMandelbrot();
 			resizeCloud();
 		}
 		
@@ -98,6 +120,7 @@
 		
 		function zoomToDblClick( sender, evt ){
 			cancelAnimationFrame(animationFrameId); 
+			trackEvent('usage', 'zoomToDblClick', 'Zoom from 2d');
 			var horizontalRange = Math.abs( mandelbrotExplorer.startX - mandelbrotExplorer.endX );
 			var horizontalRangeOffset = horizontalRange * mandelbrotExplorer.zoomFactor;
 			var verticalRange = Math.abs( mandelbrotExplorer.startY - mandelbrotExplorer.endY );
@@ -139,15 +162,18 @@
 		}
 		
 		function update2dIterations(){
+			trackEvent('usage', 'update2dIterations', 'update2dIterations');
 			mandelbrotExplorer.maxIterations_2d = document.getElementById("maxIterations_2d").value;
 			mandelbrotExplorer.drawMandelbrot();
 		}
 		
 		function update3dIterations(){
+			trackEvent('usage', 'update3dIterations', 'update3dIterations');
 			mandelbrotExplorer.maxIterations_3d = document.getElementById("maxIterations_3d").value;
 		}
 		
 		function updateCloudResolution(){
+			trackEvent('usage', 'updateCloudResolution', 'updateCloudResolution');
 			mandelbrotExplorer.cloudResolution = document.getElementById("cloudResolution").value;
 		}
 		
@@ -155,7 +181,7 @@
 		
 		function updatePalette(){
 			cancelAnimationFrame(animationFrameId);
-			
+			trackEvent('usage', 'updatePalette', 'updatePalette');
 			mandelbrotExplorer.setPalette( palettes[ document.getElementById("palette").value ] );
 			animate();
 		}
@@ -215,13 +241,44 @@
 			
 		}
 		
+		function loadQueryStringParams(){
+			var params = new URLSearchParams(window.location.search);
+			
+			var useAntialiasing = params.get('antialias') === '1' ? 
+				true 
+				: params.get('antialias') === '0' ? 
+					false : 
+					mandelbrotExplorer.rendererOptions.antialias;
+			mandelbrotExplorer.rendererOptions.antialias = useAntialiasing;
+			
+			var precisionValues = [
+				'highp', 
+				'mediump', 
+				'lowp'
+			];
+			var requestedPrecision = params.get('precision');
+			var usePrecision = precisionValues.includes(requestedPrecision) ? 
+				requestedPrecision 
+				: mandelbrotExplorer.rendererOptions.precision;
+			mandelbrotExplorer.rendererOptions.precision = usePrecision;
+			
+			var show2d = params.get('show2d') === '1' ? true : false;
+			mandelbrotExplorer.rendererOptions.antialias = useAntialiasing;
+			
+			return {
+				antialias: useAntialiasing,
+				precision: usePrecision,
+				show2d: show2d
+			}
+		}
+		
 		function init()
 		{
+			var params = loadQueryStringParams();
 			dimControls();
 			loadPaletteOptions();
 			loadFilterOptions();
 			loadParameterValues();
-			
 						
 			var canvas_2d = document.getElementById("mandelbrotCanvas2d");
 			canvas_2d.width = window.innerWidth / 2;
@@ -233,30 +290,31 @@
 			var verticalRange = horizontalRange * aspect;
 			
 			mandelbrotExplorer.palette = palettes[ document.getElementById("palette").value ];
-			
-			mandelbrotExplorer.drawMandelbrot({
-				"canvas_2d": canvas_2d,
-				"startX": startX,
-				"endX": endX,
-				"startY": (verticalRange / 2),
-				"endY": (verticalRange / -2),
-				"maxIterations_2d": document.getElementById("maxIterations_2d").value
-			});
-			
+			mandelbrotExplorer.canvas_2d = canvas_2d;
+
 			mandelbrotExplorer.canvas_3d =  document.getElementById("mandelbrotCanvas3d");
-			mandelbrotExplorer.canvas_3d.style.left = window.innerWidth / 2;
+			mandelbrotExplorer.canvas_3d.style.left = window.innerWidth / 2 + "px";
 			mandelbrotExplorer.canvas_3d.width = window.innerWidth / 2;
 			mandelbrotExplorer.canvas_3d.height = window.innerHeight;
 			
+			generateCloud();
+			if(!params.show2d){
+				hide2D(true);
+			} else {
+				mandelbrotExplorer.drawMandelbrot();
+			}
 			window.onresize = onWindowResize;
 		}
 
 		var restoreContextTimer = null;
 		
 		function generateHair(){
+			trackEvent('usage', 'generateHair', 'generateHair');
 			if(!confirm("Hair takes some time to grow...are you sure?")){
 				return false;
 			}
+//alert('This is borked right now. It is at the top of my priority list of things to fix. Please try again in a few days. Entertain yourself.. try julia c set to [(c[0]*-1)-c[1],(c[1]*-1)-c[0]] with both selected for shortened escape paths');
+//			return false;
 			if(!mandelbrotExplorer.canvas_3d){
 				mandelbrotExplorer.canvas_3d = document.getElementById("mandelbrotCanvas3d");
 			}
@@ -299,6 +357,7 @@
 		}
 		
 		function generateCloud(){
+			trackEvent('usage', 'generateCloud', 'generateCloud');
 			if(!mandelbrotExplorer.canvas_3d){
 				mandelbrotExplorer.canvas_3d = document.getElementById("mandelbrotCanvas3d");
 			}
@@ -343,8 +402,14 @@
 			mandelbrotExplorer.restoringContext = true;
 			mandelbrotExplorer.canvas_3d =  document.getElementById("mandelbrotCanvas3d");
 			
-			//mandelbrotExplorer.renderer = new THREE.WebGLRenderer({canvas: mandelbrotExplorer.canvas_3d,  alpha: true, precision: "mediump", "antialias": false});
-			mandelbrotExplorer.renderer = new mandelbrotExplorer.useRenderer({canvas: mandelbrotExplorer.canvas_3d,  alpha: true, precision: "mediump", "antialias": false});
+			mandelbrotExplorer.renderer = new mandelbrotExplorer.useRenderer(
+				{
+					canvas: mandelbrotExplorer.canvas_3d,  
+					alpha: mandelbrotExplorer.rendererOptions.alpha, 
+					precision: mandelbrotExplorer.rendererOptions.precision, 
+					antialias: mandelbrotExplorer.rendererOptions.antialias
+				}
+			);
 			mandelbrotExplorer.renderer.setClearColor( 0x000001, 0 );	
 			mandelbrotExplorer.renderer.setSize( mandelbrotExplorer.canvas_3d.width/2, mandelbrotExplorer.canvas_3d.height/2 )
 			
@@ -454,6 +519,7 @@
 		
 		function toggleColorCycle()
 		{
+			trackEvent('usage', 'toggleColorCycle', 'toggleColorCycle');
 			mandelbrotExplorer.continueColorCycle = document.getElementById("colorCycleCheckbox").checked ? true : false;
 			if( mandelbrotExplorer.continueColorCycle )
 			{
@@ -465,6 +531,7 @@
 		
 		function updateCloudLengthFilter()
 		{
+			trackEvent('usage', 'updateCloudLengthFilter', 'updateCloudLengthFilter');
 			//cancelAnimationFrame(animationFrameId);
 			mandelbrotExplorer.cloudLengthFilter = document.getElementById("cloudLengthFilter").value;
 			//mandelbrotExplorer.drawMandelbrotCloud();
@@ -474,6 +541,7 @@
 		function updateCloudIterationFilter(){
 			mandelbrotExplorer.cloudIterationFilter = document.getElementById("cloudIterationFilter").value;;
 			cancelAnimationFrame(animationFrameId);
+			trackEvent('usage', 'updateCloudIterationFilter', 'updateCloudIterationFilter');
 			mandelbrotExplorer.displayCloudParticles();
 			animate();
 		}
@@ -483,6 +551,7 @@
 		}
 		
 		function updateEscapingZ(){
+			trackEvent('usage', 'updateEscapingZ', 'updateEscapingZ');
 			mandelbrotExplorer.escapingZ = document.getElementById("escapingZ").value;
 			//cancelAnimationFrame(animationFrameId);
 			//mandelbrotExplorer.drawMandelbrotCloud();
@@ -491,6 +560,7 @@
 		
 		function toggleIterationCycle(){
 			cancelAnimationFrame(animationFrameId);
+			trackEvent('usage', 'toggleIterationCycle', 'toggleIterationCycle');
 			mandelbrotExplorer.continueIterationCycle = document.getElementById("iterationCycleCheckbox").checked ? true : false;
 			if( mandelbrotExplorer.continueIterationCycle ){
 				mandelbrotExplorer.cycleCloudIterations();
@@ -503,10 +573,12 @@
 		}
 		
 		function updateIterationCycleTime(){
+			trackEvent('usage', 'updateIterationCycleTime', 'updateIterationCycleTime');
 			mandelbrotExplorer.iterationCycleTime = parseInt( eval( document.getElementById("iterationCycleTime").value ) );
 		}
 		
 		function updateIterationCycleFrame(){
+			trackEvent('usage', 'updateIterationCycleFrame', 'updateIterationCycleFrame');
 			mandelbrotExplorer.iterationCycleFrame = parseInt( eval( document.getElementById("iterationCycleFrame").value ) );
 		}
 		
@@ -547,11 +619,13 @@
 		}
 		
 		function updateJuliaC(){
+			trackEvent('usage', 'updateJuliaC', 'updateJuliaC');
 			mandelbrotExplorer.juliaC = document.getElementById("juliaC").value;
 		}
 		
-		function hide2D(){
-			if(document.getElementById("hide2d").checked){
+		function hide2D(forceHide){
+			if(forceHide || document.getElementById("hide2d").checked){
+				document.getElementById("hide2d").checked = true;
 				mandelbrotExplorer.canvas_2d.style.display = "none";
 				mandelbrotExplorer.canvas_3d.style.left = 0;//window.innerWidth / 2;
 				mandelbrotExplorer.canvas_3d.width = window.innerWidth;//window.innerWidth / 2;
@@ -559,29 +633,35 @@
 			}
 			else{
 				mandelbrotExplorer.canvas_2d.style.display = "";
-				mandelbrotExplorer.canvas_3d.style.left = window.innerWidth / 2;
+				mandelbrotExplorer.canvas_3d.style.left = window.innerWidth / 2 + "px";
 				mandelbrotExplorer.canvas_3d.width = window.innerWidth / 2;
 				mandelbrotExplorer.canvas_3d.height = window.innerHeight;
+				// TODO: Check to see if we need to regen before we actually regen...
+				mandelbrotExplorer.drawMandelbrot();
 			}
 			
 			
 			resizeCloud();
 		}
 		function toggleBackground(){
+			trackEvent('usage', 'toggleBackground', 'toggleBackground');
 			document.body.style.backgroundColor  = ( window.getComputedStyle(document.body).backgroundColor  == 'rgb(0, 0, 0)' ? 'rgb(255, 255, 255)' : 'rgb(0, 0, 0)' );
 		}
 		
 		function toggleRandomStepping(){
+			trackEvent('usage', 'toggleRandomStepping', 'toggleRandomStepping');
 			mandelbrotExplorer.randomizeCloudStepping = document.getElementById("randomStepCheckbox").checked ? true : false;
 		}
 		
 		function updateStartX(){
+			trackEvent('usage', 'updateStartX', 'updateStartX');
 			mandelbrotExplorer.startX = document.getElementById("startX").value;
 			mandelbrotExplorer.drawMandelbrot(); 
 			mandelbrotExplorer.drawMandelbrotCloud();
 		}
 		
 		function updateStartY(){
+			trackEvent('usage', 'updateStartY', 'updateStartY');
 			mandelbrotExplorer.startY = document.getElementById("startY").value;
 			mandelbrotExplorer.drawMandelbrot(); 
 			mandelbrotExplorer.drawMandelbrotCloud();
@@ -668,8 +748,8 @@
 					</tr>
 					<tr>
 						<td colspan='2'>
-							startX: <input type='text' id='startX' onchange="updateStartX()" style="width: 3em;" />
-							startY: <input type='text' id='startY' onchange="updateStartY()" style="width: 3em;" />
+							startX: <input type='text' id='startX' READONLY onchange="updateStartX()" style="width: 3em;" />
+							startY: <input type='text' id='startY' READONLY onchange="updateStartY()" style="width: 3em;" />
 						</td>
 					</tr>
 					<tr>

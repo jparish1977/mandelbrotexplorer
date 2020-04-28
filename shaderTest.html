@@ -34,7 +34,7 @@
 				int currentI = 0;
 				z = c;
 
-				for(int i=0; i < 4096; i++) {
+				for(int i=0; i < 20000; i++) {
 					currentI = i + 1;
 					if(i > iter) break;
 					float x = (z.x * z.x - z.y * z.y) + c.x;
@@ -45,11 +45,12 @@
 					z.y = y;
 				}
 
+				
 				float baseC = (float(currentI) / float(iter));
 				
-				float r = mod(float(iter), 2.0) == 0.0 ? 1.0 - baseC : baseC;
-				float g = mod(float(iter), 3.0) == 0.0 ? 1.0 - baseC : baseC;
-				float b = mod(float(iter), 5.0) == 0.0 ? 1.0 - baseC : baseC;
+				float r = baseC;
+				float g = baseC;
+				float b = baseC;
 				gl_FragColor = vec4(r, g, b, 1.0);
 				 
 			}
@@ -212,12 +213,12 @@
 					},
 					spheres: [
 						//[radius, segments, rings, x, y, z]
-						//[1, 16, 16, 0, 0, 0],
-						//[0.5, 16, 16, 0, 0, 0],
-						//[0.25, 16, 16, 0, 0, 0],
-						//[0.125, 16, 16, 0, 0, 0],
-						//[0.0625, 16, 16, 0, 0, 0],
-						//[1, 16, 16, 0.5, 0, 0]
+						[1, 16, 16, 0, 0.5, 1, 1],
+						[0.5, 16, 16, 1, 0, 0.5],
+						[0.25, 16, 16, 2, 0, -2, 2],
+						[0.125, 16, 16, 0, 0, 0],
+						[0.0625, 16, 16, 0, 0, 0],
+						[1, 16, 16, 0.5, 0, 0]
 					],
 					lights: [
 						//color, x, y, z
@@ -239,11 +240,13 @@
 						//uniform vec2 center;
 						scale: {
 							type: 'f',
-							value: 0.5
+							//value: 0.5
+							//value: 0.25
+							value: 0.025
 						},
 						iter: {
 							type: 'i',
-							value: 2048
+							value: 3
 						},
 						tex: { 
 							type: "t", 
@@ -251,11 +254,13 @@
 						},
 						startX: {
 							type: 'f',
-							value: -2.0
+							//value: -2.0
+							value: -1.75
 						},
 						endX: {
 							type: 'f',
-							value: 2.0
+							//value: 2.0
+							value: -1.5
 						},
 						startY: {
 							type: 'f',
@@ -438,8 +443,8 @@
 //					theThing.scene.children[0].geometry.__dirtyNormals = true;
 //					theThing.scene.children[1].geometry.__dirtyNormals = true;
 //					theThing.scene.children[2].geometry.__dirtyNormals = true;
-					
-					if((new Date() / 1000) - theThing.lastRandomZoom > 5){
+/*
+					if((new Date() / 1000) - theThing.lastRandomZoom > 50000){
 						var randomZoomRange = 0.5;
 					
 						var randomX = Math.random(-2.0, 2.0);
@@ -448,6 +453,7 @@
 						var endX = randomX + (randomZoomRange/2);
 						var startY = randomY - (randomZoomRange/2);
 						var endY = randomY + (randomZoomRange/2);
+						// WTF is this doing??
 						var testPath = mandelbrotExplorer.getMandelbrotEscapePath([startX, startY], 128);
 						while( testPath.length < 16 || testPath.length == 128 ){
 							randomX = Math.random(-2.0, 2.0);
@@ -472,8 +478,7 @@
 						
 						theThing.lastRandomZoom = (new Date() / 1000);
 					}
-					
-					
+*/
 					theThing.controls.update();
 					theThing.render();
 				},
@@ -528,7 +533,7 @@
 					
 					theThing.render();
 					rangeTimer = startRangeTimer();
-				}, 5000);
+				}, 500);
 			}
 			
 			function init(){
