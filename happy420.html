@@ -1,0 +1,874 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<title>Mandelbrot Explorer</title>
+		<!-- Global site tag (gtag.js) - Google Analytics -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=UA-163810510-1"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'UA-163810510-1');
+</script>
+
+		<script src="https://unpkg.com/magicleap-helio-webxr-polyfill@1.0.0/HelioWebXRPolyfill.js"></script>
+		<script src="./three.js"></script>
+		<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r78/three.js"></script>
+		<script src="./gradientline.js"></script>
+		<script src="./TrackballControls.js"></script>
+		<script src="./VRButton.js"></script>
+		<script src="./mandelbrotexplorer.js"></script>
+		<script language="javascript">
+		function trackEvent(category, action, label, value, fieldsObject){
+			if ("ga" in window) {
+				tracker = ga.getAll()[0];
+				if (tracker)
+					//tracker.send("event", "Test", "Test GA");
+					
+					tracker.send('event', category, action, label, value, fieldsObject);
+			}
+		}
+		function dumpBrot(){
+			var values =[];
+			var tries = [];
+			for(var i = 0; i < 1000; i++){
+			
+				for(var i2 = 0;i2 < 2; i2++){
+					var useX = Math.random() * 2;
+					var useY = Math.random() * 2;
+					while(tries.indexOf(useX + "," + useY) > -1){
+						useX = Math.random() * 2;
+						useY = Math.random() * 2;
+					}
+					
+					tries.push(useX + "," + useY);
+					tries.push((-useX) + "," + (-useY));
+					
+					var escapePaths = getSymetricalEscapePaths(useX, useY, 1024);
+					if(escapePaths[0].length == 1024){
+						values.push(useX + "," + useY);
+					}
+					
+					if(escapePaths[1].length == 1024){
+						values.push((-useX) + "," + (-useY));
+					}
+				}
+			}
+			
+			console.log("[" + values.length + "]\n" + values.join('\n'));
+		}
+		
+		function setShortenedFilter(){
+			trackEvent('usage', 'setShortenedFilter', 'setShortenedFilter');
+			//<input type="radio" name="shortenedFilter" id="shortenedFilter_both" value="both" onchange="setShortenedFilter()">Both</input>
+			switch(document.querySelector("input[name='shortenedFilter']:checked").value){
+				case "both":
+					mandelbrotExplorer.onlyFull = false;
+					mandelbrotExplorer.onlyShortened = false;
+					break;
+				case "shortened":
+					mandelbrotExplorer.onlyFull = false;
+					mandelbrotExplorer.onlyShortened = true;
+					break;
+				case "full":
+					mandelbrotExplorer.onlyFull = true;
+					mandelbrotExplorer.onlyShortened = false;
+					break;
+			}
+		}
+		
+		function getSymetricalEscapePaths(x, y, maxIterations){
+			var result = [];
+			
+			result.push(mandelbrotExplorer.getJuliaEscapePath([x,y], [0,0], maxIterations));
+			result.push(mandelbrotExplorer.getJuliaEscapePath([-x,-y], [0,0], maxIterations));
+			
+			return result;
+		}
+		
+		function onWindowResize( event ) {
+			mandelbrotExplorer.canvas_2d.width = window.innerWidth / 2;
+			mandelbrotExplorer.canvas_2d.height = window.innerHeight;
+
+			if(document.getElementById("hide2d").checked){
+				mandelbrotExplorer.canvas_3d.style.left = 0;
+				mandelbrotExplorer.canvas_3d.width = window.innerWidth;
+				mandelbrotExplorer.canvas_3d.height = window.innerHeight;
+			}
+			else{
+				mandelbrotExplorer.canvas_3d.style.left = window.innerWidth / 2 + "px";
+				mandelbrotExplorer.canvas_3d.width = window.innerWidth / 2;
+				mandelbrotExplorer.canvas_3d.height = window.innerHeight;
+				
+				mandelbrotExplorer.drawMandelbrot();
+			}
+			resizeCloud();
+		}
+		
+		function resizeCloud(){
+			cancelAnimationFrame(animationFrameId); 
+			
+			mandelbrotExplorer.renderer.setSize( mandelbrotExplorer.canvas_3d.width, mandelbrotExplorer.canvas_3d.height );
+
+			mandelbrotExplorer.camera.aspect = mandelbrotExplorer.canvas_3d.width / mandelbrotExplorer.canvas_3d.height;
+			mandelbrotExplorer.camera.updateProjectionMatrix();
+
+			//mandelbrotExplorer.drawMandelbrotCloud();
+			animate();
+		}
+		
+		function zoomToDblClick( sender, evt ){
+			cancelAnimationFrame(animationFrameId); 
+			trackEvent('usage', 'zoomToDblClick', 'Zoom from 2d');
+			var horizontalRange = Math.abs( mandelbrotExplorer.startX - mandelbrotExplorer.endX );
+			var horizontalRangeOffset = horizontalRange * mandelbrotExplorer.zoomFactor;
+			var verticalRange = Math.abs( mandelbrotExplorer.startY - mandelbrotExplorer.endY );
+			var verticalRangeOffset = verticalRange * mandelbrotExplorer.zoomFactor;
+			
+			if( evt.ctrlKey ){
+				// zoom out
+				horizontalRange += horizontalRangeOffset;
+				verticalRange += verticalRangeOffset;
+			}
+			else if(!evt.altKey && !evt.shiftKey){
+				// zoom in
+				horizontalRange -= horizontalRangeOffset;
+				verticalRange -= verticalRangeOffset;
+			}
+			
+			var canvasX = evt.pageX - sender.offsetLeft;
+			var canvasY = evt.pageY - sender.offsetTop;
+
+			var selectedC = [(( canvasX - mandelbrotExplorer.xOffset ) * mandelbrotExplorer.xScale_2d ), (( mandelbrotExplorer.yOffset - canvasY ) * mandelbrotExplorer.yScale_2d )];
+			var startX = (( canvasX - mandelbrotExplorer.xOffset ) * mandelbrotExplorer.xScale_2d ) - (horizontalRange / 2);
+			var startY = (( mandelbrotExplorer.yOffset - canvasY ) * mandelbrotExplorer.yScale_2d ) + (verticalRange / 2);
+			
+			if(evt.shiftKey){
+				mandelbrotExplorer.juliaC = "["+ selectedC[0] + "," + selectedC[1] +"]";
+				document.getElementById("juliaC").value = mandelbrotExplorer.juliaC;
+			}
+			else{
+				mandelbrotExplorer.startX = startX;
+				mandelbrotExplorer.endX = startX + horizontalRange;
+				mandelbrotExplorer.startY = startY;
+				mandelbrotExplorer.endY = startY - verticalRange;
+			}
+			mandelbrotExplorer.drawMandelbrot(); 
+			mandelbrotExplorer.drawMandelbrotCloud();
+			
+			loadParameterValues();
+			animate();
+		}
+		
+		function update2dIterations(){
+			trackEvent('usage', 'update2dIterations', 'update2dIterations');
+			mandelbrotExplorer.maxIterations_2d = document.getElementById("maxIterations_2d").value;
+			mandelbrotExplorer.drawMandelbrot();
+		}
+		
+		function update3dIterations(){
+			trackEvent('usage', 'update3dIterations', 'update3dIterations');
+			mandelbrotExplorer.maxIterations_3d = document.getElementById("maxIterations_3d").value;
+		}
+		
+		function updateCloudResolution(){
+			trackEvent('usage', 'updateCloudResolution', 'updateCloudResolution');
+			mandelbrotExplorer.cloudResolution = document.getElementById("cloudResolution").value;
+		}
+		
+		
+		
+		function updatePalette(){
+			cancelAnimationFrame(animationFrameId);
+			trackEvent('usage', 'updatePalette', 'updatePalette');
+			mandelbrotExplorer.setPalette( palettes[ document.getElementById("palette").value ] );
+			animate();
+		}
+		
+		
+		function drawPlanes(){
+			var width = 4;
+			var height = 4;
+			var widthSegments = 32;
+			var heightSegments = 32;
+		
+			var geometry = new THREE.PlaneGeometry( width, height, widthSegments, heightSegments );
+			var material = new THREE.MeshBasicMaterial( {color: {"R": 255, "G": 0, "B": 0, "A": 0.25}, side: THREE.DoubleSide} );
+			var plane1 = new THREE.Mesh( geometry, material );
+			var plane2 = new THREE.Mesh( geometry, material );
+			plane2.rotation.x = Math.PI / 2;
+			var plane3 = new THREE.Mesh( geometry, material );
+			plane3.rotation.y = Math.PI / 2;
+			mandelbrotExplorer.scene.add( plane1 );
+			mandelbrotExplorer.scene.add( plane2 );
+			mandelbrotExplorer.scene.add( plane3 );
+		}
+		
+		function loadParameterValues(){
+			
+			document.getElementById("startX").value = mandelbrotExplorer.startX;
+			document.getElementById("startY").value = mandelbrotExplorer.startY;
+			
+			document.getElementById("maxIterations_2d").value = mandelbrotExplorer.maxIterations_2d;
+			document.getElementById("maxIterations_3d").value = mandelbrotExplorer.maxIterations_3d;
+			document.getElementById("cloudResolution").value = mandelbrotExplorer.cloudResolution;
+			document.getElementById("randomStepCheckbox").checked = mandelbrotExplorer.randomizeCloudStepping;
+			document.getElementById("initialZ").value = mandelbrotExplorer.initialZ;
+			document.getElementById("escapingZ").value = mandelbrotExplorer.escapingZ;
+			document.getElementById("iterationCycleTime").value = mandelbrotExplorer.iterationCycleTime;
+			document.getElementById("iterationCycleFrame").value = mandelbrotExplorer.iterationCycleFrame;
+			document.getElementById("cloudLengthFilter").value = mandelbrotExplorer.cloudLengthFilter;
+			document.getElementById("cloudIterationFilter").value = mandelbrotExplorer.cloudIterationFilter;
+			document.getElementById("juliaC").value = mandelbrotExplorer.juliaC;
+			
+			document.getElementById("shortenedFilter_shortened").checked = false;
+			document.getElementById("shortenedFilter_both").checked = false;
+			document.getElementById("shortenedFilter_full").checked = false;
+			if(mandelbrotExplorer.onlyShortened){
+				document.getElementById("shortenedFilter_shortened").checked = true;
+			}
+			else if(mandelbrotExplorer.onlyFull){
+				document.getElementById("shortenedFilter_full").checked = true;
+			}
+			else{
+				document.getElementById("shortenedFilter_both").checked = true;
+			}
+			
+			document.getElementById("dualZEnabled").checked = mandelbrotExplorer.dualZ;
+			document.getElementById("dualZMultiplier").value = mandelbrotExplorer.dualZMultiplier;
+			document.getElementById("particleSize").value = mandelbrotExplorer.particleSize;
+			
+		}
+		
+		function loadQueryStringParams(){
+			var params = new URLSearchParams(window.location.search);
+			
+			var useAntialiasing = params.get('antialias') === '1' ? 
+				true 
+				: params.get('antialias') === '0' ? 
+					false : 
+					mandelbrotExplorer.rendererOptions.antialias;
+			mandelbrotExplorer.rendererOptions.antialias = useAntialiasing;
+			
+			var precisionValues = [
+				'highp', 
+				'mediump', 
+				'lowp'
+			];
+			var requestedPrecision = params.get('precision');
+			var usePrecision = precisionValues.includes(requestedPrecision) ? 
+				requestedPrecision 
+				: mandelbrotExplorer.rendererOptions.precision;
+			mandelbrotExplorer.rendererOptions.precision = usePrecision;
+			
+			var show2d = params.get('show2d') === '1' ? true : false;
+			mandelbrotExplorer.rendererOptions.antialias = useAntialiasing;
+			
+			return {
+				antialias: useAntialiasing,
+				precision: usePrecision,
+				show2d: show2d
+			}
+		}
+		
+		function init()
+		{
+			var params = loadQueryStringParams();
+			
+mandelbrotExplorer.continueIterationCycle = true;
+mandelbrotExplorer.iterationCycleFrame = 3;
+mandelbrotExplorer.iterationCycleTime = 125;
+mandelbrotExplorer.maxIterations_3d = 420;
+mandelbrotExplorer.cloudResolution = 420;
+mandelbrotExplorer.randomizeCloudStepping = true;
+mandelbrotExplorer.rendererOptions.antialias = true;
+mandelbrotExplorer.rendererOptions.precision = 'highp';
+mandelbrotExplorer.dualZMultiplier = "1;newX -= escapePath[0][0];newY -= escapePath[0][1];z *= -1;"
+mandelbrotExplorer.cloudLengthFilter = "escapePath.length == mandelbrotExplorer.maxIterations_3d";
+mandelbrotExplorer.cloudIterationFilter = '';
+mandelbrotExplorer.onlyShortened = false;
+mandelbrotExplorer.onlyFull = true;
+		
+			dimControls();
+			loadPaletteOptions();
+			loadFilterOptions();
+			loadParameterValues();
+						
+			var canvas_2d = document.getElementById("mandelbrotCanvas2d");
+			canvas_2d.width = window.innerWidth / 2;
+			canvas_2d.height = window.innerHeight;
+			var aspect = canvas_2d.height / canvas_2d.width;
+			var startX = -2;
+			var endX = 2;
+			var horizontalRange = Math.abs( startX - endX );
+			var verticalRange = horizontalRange * aspect;
+			
+			mandelbrotExplorer.palette = palettes[ document.getElementById("palette").value ];
+			mandelbrotExplorer.canvas_2d = canvas_2d;
+
+			mandelbrotExplorer.canvas_3d =  document.getElementById("mandelbrotCanvas3d");
+			mandelbrotExplorer.canvas_3d.style.left = window.innerWidth / 2 + "px";
+			mandelbrotExplorer.canvas_3d.width = window.innerWidth / 2;
+			mandelbrotExplorer.canvas_3d.height = window.innerHeight;
+			
+			generateCloud();
+			if(!params.show2d){
+				hide2D(true);
+			} else {
+				mandelbrotExplorer.drawMandelbrot();
+			}
+			
+toggleIterationCycle();
+			window.onresize = onWindowResize;
+		}
+
+		var restoreContextTimer = null;
+		
+		function generateHair(){
+			trackEvent('usage', 'generateHair', 'generateHair');
+//			if(!confirm("Hair takes some time to grow...are you sure?")){
+//				return false;
+//			}
+alert('This is borked right now. It is at the top of my priority list of things to fix. Please try again in a few days. Entertain yourself.. try julia c set to [(c[0]*-1)-c[1],(c[1]*-1)-c[0]] with both selected for shortened escape paths');
+			return false;
+			if(!mandelbrotExplorer.canvas_3d){
+				mandelbrotExplorer.canvas_3d = document.getElementById("mandelbrotCanvas3d");
+			}
+			
+			
+			var aspect = mandelbrotExplorer.canvas_3d.height / mandelbrotExplorer.canvas_3d.width;
+			var startX = mandelbrotExplorer.startX == null ? -2 : mandelbrotExplorer.startX;
+			var endX = mandelbrotExplorer.endX == null ? 2 : mandelbrotExplorer.endX;
+			var horizontalRange = Math.abs( startX - endX );
+			var verticalRange = horizontalRange * aspect;
+			
+			var startY = mandelbrotExplorer.startY == null ? (verticalRange / 2) : mandelbrotExplorer.startY;
+			var endY = mandelbrotExplorer.endY == null ? (verticalRange / -2) : mandelbrotExplorer.endY;
+
+			mandelbrotExplorer.drawMandelbrotsHair({
+				"startX": startX,
+				"endX": endX,
+				"startY": startY,
+				"endY": endY,
+				"maxIterations_3d": document.getElementById("maxIterations_3d").value,
+				"cloudResolution": document.getElementById("cloudResolution").value
+			});
+			loadParameterValues();
+			if(mandelbrotExplorer.useRenderer == THREE.WebGLRenderer){
+				mandelbrotExplorer.renderer.context.canvas.addEventListener("webglcontextlost", function(event) {
+					event.preventDefault();
+
+					// animationID would have been set by your call to requestAnimationFrame
+					cancelAnimationFrame(animationFrameId); 
+				}, false);
+
+				mandelbrotExplorer.renderer.context.canvas.addEventListener("webglcontextrestored", function(event) {
+					if(restoreContextTimer != null){
+						cancelTimeout(restoreContextTimer);
+					}
+					restoreContextTimer = setTimeout(function(){mandelbrotExplorer.restoreContext();animate();}, 500)
+				}, false);			
+			}
+			animate();
+		}
+//var vrButton = null;		
+		function generateCloud(){
+			trackEvent('usage', 'generateCloud', 'generateCloud');
+			if(!mandelbrotExplorer.canvas_3d){
+				mandelbrotExplorer.canvas_3d = document.getElementById("mandelbrotCanvas3d");
+			}
+			
+			
+			var aspect = mandelbrotExplorer.canvas_3d.height / mandelbrotExplorer.canvas_3d.width;
+			var startX = mandelbrotExplorer.startX == null ? -2 : mandelbrotExplorer.startX;
+			var endX = mandelbrotExplorer.endX == null ? 2 : mandelbrotExplorer.endX;
+			var horizontalRange = Math.abs( startX - endX );
+			var verticalRange = horizontalRange * aspect;
+			
+			var startY = mandelbrotExplorer.startY == null ? (verticalRange / 2) : mandelbrotExplorer.startY;
+			var endY = mandelbrotExplorer.endY == null ? (verticalRange / -2) : mandelbrotExplorer.endY;
+
+			mandelbrotExplorer.drawMandelbrotCloud({
+				"startX": startX,
+				"endX": endX,
+				"startY": startY,
+				"endY": endY,
+				"maxIterations_3d": document.getElementById("maxIterations_3d").value,
+				"cloudResolution": document.getElementById("cloudResolution").value
+			});
+			loadParameterValues();
+			if(mandelbrotExplorer.useRenderer == THREE.WebGLRenderer){
+				//document.body.appendChild( VRButton.createButton( renderer ) );
+//				if(vrButton !== null){
+//					vrButton.remove();
+//				}
+//				vrButton = VRButton.createButton( mandelbrotExplorer.renderer );
+				
+//				document.getElementById("controls_maximized").appendChild( vrButton );
+			
+				mandelbrotExplorer.renderer.context.canvas.addEventListener("webglcontextlost", function(event) {
+					event.preventDefault();
+
+					// animationID would have been set by your call to requestAnimationFrame
+					cancelAnimationFrame(animationFrameId); 
+				}, false);
+
+				mandelbrotExplorer.renderer.context.canvas.addEventListener("webglcontextrestored", function(event) {
+					if(restoreContextTimer != null){
+						cancelTimeout(restoreContextTimer);
+					}
+					restoreContextTimer = setTimeout(function(){mandelbrotExplorer.restoreContext();animate();}, 500)
+				}, false);			
+			}
+
+			animate();
+		}
+		function restoreContext(){
+			mandelbrotExplorer.restoringContext = true;
+			mandelbrotExplorer.canvas_3d =  document.getElementById("mandelbrotCanvas3d");
+			
+			mandelbrotExplorer.renderer = new mandelbrotExplorer.useRenderer(
+				{
+					canvas: mandelbrotExplorer.canvas_3d,  
+					alpha: mandelbrotExplorer.rendererOptions.alpha, 
+					precision: mandelbrotExplorer.rendererOptions.precision, 
+					antialias: mandelbrotExplorer.rendererOptions.antialias
+				}
+			);
+			mandelbrotExplorer.renderer.setClearColor( 0x000001, 0 );	
+			mandelbrotExplorer.renderer.setSize( mandelbrotExplorer.canvas_3d.width/2, mandelbrotExplorer.canvas_3d.height/2 )
+			
+			mandelbrotExplorer.scene = new THREE.Scene();
+			for( var systemIndex in mandelbrotExplorer.particleSystems ){
+				var colorIndex = systemIndex;
+				while( colorIndex >= mandelbrotExplorer.palette.length  ) {
+					colorIndex -= mandelbrotExplorer.palette.length;
+				}
+				var color = mandelbrotExplorer.palette[ colorIndex ];
+				
+				var pMaterial = new THREE.ParticleBasicMaterial({
+					color: new THREE.Color( color.R / 255, color.G / 255, color.B / 255 ),
+					size: 0,
+					transparent: false,
+					opacity: color.A/255
+				});
+				
+				mandelbrotExplorer.particleSystems[systemIndex] = new THREE.ParticleSystem(
+					mandelbrotExplorer.particleSystems[parseInt(systemIndex)].geometry.verticies,
+					pMaterial);
+				
+				mandelbrotExplorer.scene.add( mandelbrotExplorer.particleSystems[systemIndex] );
+			}
+			
+			mandelbrotExplorer.camera = new THREE.PerspectiveCamera( 45, Math.abs(mandelbrotExplorer.startX - mandelbrotExplorer.endX) / Math.abs(mandelbrotExplorer.startY - mandelbrotExplorer.endY), .1, 1000 );
+			mandelbrotExplorer.camera.position.z = 5;
+			
+			mandelbrotExplorer.controls = new THREE.TrackballControls( mandelbrotExplorer.camera, mandelbrotExplorer.renderer.domElement );
+			
+			mandelbrotExplorer.displayCloudParticles();
+			mandelbrotExplorer.restoringContext = false;
+		}
+			
+		function loadPaletteOptions()
+		{
+			clearSelectOptions(document.getElementById("palette"));
+			for( var name in palettes )
+			{
+				if( Array.isArray(palettes[name]) )
+				{
+					var option = document.createElement("option");
+					option.text = name;
+					option.value = name;
+					if( palettes[name] == mandelbrotExplorer.palette )
+					{
+						option.selected = true;
+					}
+					document.getElementById("palette").add(option);
+				}
+			}
+		}
+		
+		function loadFilterOptions()
+		{
+			clearSelectOptions(document.getElementById("cloudLengthFilterPresets"));
+			//clearSelectOptions(document.getElementById("cloudIterationFilter"));
+			
+			var lengthOption = document.createElement("option");
+			lengthOption.text = "----";
+			lengthOption.value = "";
+				
+			document.getElementById("cloudLengthFilterPresets").add(lengthOption);
+			
+			for( var presetName in mandelbrotExplorer.presets.cloudLengthFilter )
+			{
+				lengthOption = document.createElement("option");
+				lengthOption.text = presetName;
+				lengthOption.value = mandelbrotExplorer.presets.cloudLengthFilter[presetName];
+				
+				document.getElementById("cloudLengthFilterPresets").add(lengthOption);
+				
+				//var iterationOption = document.createElement("option");
+				//iterationOption.text = i;
+				//iterationOption.value = i;
+				//if(mandelbrotExplorer.cloudIterationFilter.indexOf(i) > -1)
+				//{
+				//	iterationOption.selected = true;
+				//}
+				//document.getElementById("cloudIterationFilter").add(iterationOption);
+			}
+		}
+		
+		function clearSelectOptions( selectObj )
+		{
+			var i;
+			for(i=selectObj.options.length-1;i>=0;i--)
+			{
+				selectObj.remove(i);
+			}
+		}
+		
+		var animationFrameId;
+		function animate() {
+			animationFrameId = requestAnimationFrame( animate );
+			
+			if(mandelbrotExplorer.controls){
+				mandelbrotExplorer.controls.update();
+			}
+			
+			render();
+		}
+
+		
+		function render() {
+//			mandelbrotExplorer.renderer.setAnimationLoop( function () {
+//
+//				renderer.render( mandelbrotExplorer.scene, mandelbrotExplorer.camera );
+//
+//			} );
+			mandelbrotExplorer.renderer.render( mandelbrotExplorer.scene, mandelbrotExplorer.camera );
+		}
+		
+		function toggleColorCycle()
+		{
+			trackEvent('usage', 'toggleColorCycle', 'toggleColorCycle');
+			mandelbrotExplorer.continueColorCycle = document.getElementById("colorCycleCheckbox").checked ? true : false;
+			if( mandelbrotExplorer.continueColorCycle )
+			{
+				mandelbrotExplorer.cycle2dColors();
+				mandelbrotExplorer.cycleCloudColors();
+			}
+			
+		}
+		
+		function updateCloudLengthFilter()
+		{
+			trackEvent('usage', 'updateCloudLengthFilter', 'updateCloudLengthFilter');
+			//cancelAnimationFrame(animationFrameId);
+			mandelbrotExplorer.cloudLengthFilter = document.getElementById("cloudLengthFilter").value;
+			//mandelbrotExplorer.drawMandelbrotCloud();
+			//animate();
+		}
+		
+		function updateCloudIterationFilter(){
+			mandelbrotExplorer.cloudIterationFilter = document.getElementById("cloudIterationFilter").value;;
+			cancelAnimationFrame(animationFrameId);
+			trackEvent('usage', 'updateCloudIterationFilter', 'updateCloudIterationFilter');
+			mandelbrotExplorer.displayCloudParticles();
+			animate();
+		}
+		
+		function updateInitialZ(){
+			mandelbrotExplorer.initialZ = document.getElementById("initialZ").value;
+		}
+		
+		function updateEscapingZ(){
+			trackEvent('usage', 'updateEscapingZ', 'updateEscapingZ');
+			mandelbrotExplorer.escapingZ = document.getElementById("escapingZ").value;
+			//cancelAnimationFrame(animationFrameId);
+			//mandelbrotExplorer.drawMandelbrotCloud();
+			//animate();
+		}
+		
+		function toggleIterationCycle(){
+			cancelAnimationFrame(animationFrameId);
+			trackEvent('usage', 'toggleIterationCycle', 'toggleIterationCycle');
+			mandelbrotExplorer.continueIterationCycle = document.getElementById("iterationCycleCheckbox").checked ? true : false;
+			if( mandelbrotExplorer.continueIterationCycle ){
+				mandelbrotExplorer.cycleCloudIterations();
+			}
+			else{
+				clearTimeout(mandelbrotExplorer._cloudIterationCyclerId);
+				mandelbrotExplorer.displayCloudParticles();
+			}
+			animate();
+		}
+		
+		function updateIterationCycleTime(){
+			trackEvent('usage', 'updateIterationCycleTime', 'updateIterationCycleTime');
+			mandelbrotExplorer.iterationCycleTime = parseInt( eval( document.getElementById("iterationCycleTime").value ) );
+		}
+		
+		function updateIterationCycleFrame(){
+			trackEvent('usage', 'updateIterationCycleFrame', 'updateIterationCycleFrame');
+			mandelbrotExplorer.iterationCycleFrame = parseInt( eval( document.getElementById("iterationCycleFrame").value ) );
+		}
+		
+		
+		function toggleControls(){
+			if( document.getElementById("controls_maximized").style.display == "none" ){
+				document.getElementById("controls_maximized").style.display = "";
+				document.getElementById("controls_minimized").style.opacity = document.getElementById("controls").style.opacity;
+				document.getElementById("controls_minimized").style["border-bottom-right-radius"] = "0em";
+				document.getElementById("controls_minimized").style["border-bottom-left-radius"] = "0em";
+			}
+			else{
+				document.getElementById("controls_maximized").style.display = "none";
+				document.getElementById("controls_minimized").style.opacity = .25;//document.getElementById("controls").style.opacity * .5;
+				document.getElementById("controls_minimized").style["border-bottom-right-radius"] = "1em";
+				document.getElementById("controls_minimized").style["border-bottom-left-radius"] = "1em";
+			}
+		}
+		
+		function setCloudLengthFilterFromPreset(){
+			document.getElementById("cloudLengthFilter").value = document.getElementById("cloudLengthFilterPresets").value;
+			updateCloudLengthFilter();
+		}
+		
+		function highliteControls(){
+			document.getElementById("controls").style.opacity = 1;
+			document.getElementById("controls_minimized").style.opacity = 1;
+			document.getElementById("controls_maximized").style.opacity = 1;
+		}
+		
+		function dimControls(){
+			document.getElementById("controls").style.opacity = 0.5;
+			document.getElementById("controls_minimized").style.opacity = 0.5;
+			if( document.getElementById("controls_maximized").style.display == "none" ){
+				document.getElementById("controls_minimized").style.opacity = 0.25;
+			}
+			document.getElementById("controls_maximized").style.opacity = 0.5;
+		}
+		
+		function updateJuliaC(){
+			trackEvent('usage', 'updateJuliaC', 'updateJuliaC');
+			mandelbrotExplorer.juliaC = document.getElementById("juliaC").value;
+		}
+		
+		function hide2D(forceHide){
+			if(forceHide || document.getElementById("hide2d").checked){
+				document.getElementById("hide2d").checked = true;
+				mandelbrotExplorer.canvas_2d.style.display = "none";
+				mandelbrotExplorer.canvas_3d.style.left = 0;//window.innerWidth / 2;
+				mandelbrotExplorer.canvas_3d.width = window.innerWidth;//window.innerWidth / 2;
+				mandelbrotExplorer.canvas_3d.height = window.innerHeight;
+			}
+			else{
+				mandelbrotExplorer.canvas_2d.style.display = "";
+				mandelbrotExplorer.canvas_3d.style.left = window.innerWidth / 2 + "px";
+				mandelbrotExplorer.canvas_3d.width = window.innerWidth / 2;
+				mandelbrotExplorer.canvas_3d.height = window.innerHeight;
+				// TODO: Check to see if we need to regen before we actually regen...
+				mandelbrotExplorer.drawMandelbrot();
+			}
+			
+			
+			resizeCloud();
+		}
+		function toggleBackground(){
+			trackEvent('usage', 'toggleBackground', 'toggleBackground');
+			document.body.style.backgroundColor  = ( window.getComputedStyle(document.body).backgroundColor  == 'rgb(0, 0, 0)' ? 'rgb(255, 255, 255)' : 'rgb(0, 0, 0)' );
+		}
+		
+		function toggleRandomStepping(){
+			trackEvent('usage', 'toggleRandomStepping', 'toggleRandomStepping');
+			mandelbrotExplorer.randomizeCloudStepping = document.getElementById("randomStepCheckbox").checked ? true : false;
+		}
+		
+		function updateStartX(){
+			trackEvent('usage', 'updateStartX', 'updateStartX');
+			mandelbrotExplorer.startX = document.getElementById("startX").value;
+			mandelbrotExplorer.drawMandelbrot(); 
+			mandelbrotExplorer.drawMandelbrotCloud();
+		}
+		
+		function updateStartY(){
+			trackEvent('usage', 'updateStartY', 'updateStartY');
+			mandelbrotExplorer.startY = document.getElementById("startY").value;
+			mandelbrotExplorer.drawMandelbrot(); 
+			mandelbrotExplorer.drawMandelbrotCloud();
+		}
+		</script>
+		<style>
+			body{
+				background: black;
+			}
+			#mandelbrotCanvas2d {
+				padding:0px;
+				margin:0px;
+				position:absolute;
+				top:0;
+				left:0;
+				z-index: 0;
+			}
+			#mandelbrotCanvas3d {
+				padding:0px;
+				margin:0px;
+				z-index: 0;
+				position:absolute;
+				top: 0;
+				left: 50%;
+			}
+			.controls {
+				padding:0px;
+				margin:0px;
+				z-index: 10;
+				position:absolute;
+				top: 0;
+			}
+			.controls .maximized {
+				background-color: #FFFFFF;
+				border-top-right-radius:2em;
+				border-bottom-right-radius:2em;
+				border-bottom-left-radius:2em;
+				padding-right:1em;
+				padding-left:1em;
+			}
+			.controls .minimized{
+				background-color: #FFFFFF;
+				text-align: left;
+				border-top-right-radius:1em;
+				border-top-left-radius:1em;
+				width: 3em;
+				text-align: center;
+			}
+			
+			.controls textarea{
+				width: 100%;
+			}
+			
+			.controls div{
+				text-align: right;
+			}
+			
+			.longBox{
+				text-align: left;
+			}
+		</style>
+	</head>
+	<body onload="init()">
+		<div>
+			<canvas id="mandelbrotCanvas2d" ondblclick="zoomToDblClick(this, event)"></canvas>
+			<canvas id="mandelbrotCanvas3d"></canvas>
+		</div>
+		<div class="controls" id="controls" onmouseover="highliteControls()" onmouseout="dimControls()">
+			<div class="minimized" id="controls_minimized">
+				<input type="button" onclick="toggleControls()" value="..." />
+			</div>
+			<div class="maximized" id="controls_maximized" style='display:none;'>
+				<table width="100%" style="text-align: right">
+					<tr>
+						<td>Max Iterations (2d):<input type="text" id="maxIterations_2d" onchange="update2dIterations()" /></td>
+						<td>Max Iterations (3d):<input type="text" id="maxIterations_3d" onchange="update3dIterations()" /></td>
+					</tr>
+					<tr>
+						<td>
+							Cloud Resolution: <input type="text" id="cloudResolution" style="width:3em;"onchange="updateCloudResolution()" />
+							Random Step <input type="checkbox" id="randomStepCheckbox" onchange="toggleRandomStepping()" />
+						</td>
+						<td>Palette:<select id="palette" onchange="updatePalette()"></select></td>
+					</tr>
+					<tr>
+						<td colspan='2'>
+							startX: <input type='text' id='startX' READONLY onchange="updateStartX()" style="width: 3em;" />
+							startY: <input type='text' id='startY' READONLY onchange="updateStartY()" style="width: 3em;" />
+						</td>
+					</tr>
+					<tr>
+						<td>
+							<fieldset style="border: 1px black solid">
+								<legend style="border: 1px black dotted;">Shortened Escape Paths</legend>
+
+								<span>
+									<input type="radio" name="shortenedFilter" id="shortenedFilter_both" value="both" onchange="setShortenedFilter()">Both</input>
+									<input type="radio" name="shortenedFilter" id="shortenedFilter_shortened" value="shortened" onchange="setShortenedFilter()" >Shortened</input>
+									<input type="radio" name="shortenedFilter" id="shortenedFilter_full" value="full" onchange="setShortenedFilter()" checked>Full</input>
+								</span>
+							</fieldset>
+							<fieldset style="border: 1px black solid">
+								<legend style="border: 1px black dotted;">Particles</legend>
+
+								<fieldset style="border: 1px black dotted">
+									<legend>Size</legend>
+									<textarea type="text" name="particleSize"  id="particleSize" onchange="mandelbrotExplorer.particleSize = this.value;"></textarea>
+								</fieldset>
+							</fieldset>
+						</td>
+						<td>
+							<fieldset style="border: 1px black solid;text-align: left;">
+								<legend>Dual Z</legend>
+
+								<input type="checkbox" name="dualZEnabled" id="dualZEnabled" onchange="mandelbrotExplorer.dualZ = this.checked;">Enabled</input>
+								
+								<fieldset style="border: 1px black dotted">
+									<legend>Multiplier</legend>
+									<textarea type="text" name="dualZMultiplier"  id="dualZMultiplier" onchange="mandelbrotExplorer.dualZMultiplier = this.value;">
+									
+									</textarea>
+								</fieldset>
+							</fieldset>
+						</td>
+					</tr>
+					<tr>
+						<td colspan="2">
+							<button onclick='mandelbrotExplorer.controls.reset()'>Reset Camera</button>
+							<input type='checkbox' id="hide2d" onchange='hide2D()' /><label for='hide2d'>Hide 2D</label>
+							<input type='checkbox' id="toggleBackground" onchange='toggleBackground()' /><label for='toggleBackground'>Toggle Background</label>
+						</td>
+					</tr>
+					<tr>
+						<td>
+							Cloud Length Filter:<select id="cloudLengthFilterPresets" onchange="setCloudLengthFilterFromPreset()"></select>
+						</td>
+						<td>
+							<input type='button' onclick="generateHair();" value='Generate Hair' /><input type='button' onclick="generateCloud()" value='Generate Cloud' />
+						</td>
+					</tr>
+					<tr>
+						<td colspan="2" class="longBox">
+							<textarea id="cloudLengthFilter" onchange="updateCloudLengthFilter()"></textarea>
+						</td>
+					</tr>
+					<tr>
+						<td colspan="2" class="longBox">
+							Cloud Iteration Filter:<textarea id="cloudIterationFilter" onchange="updateCloudIterationFilter()"></textarea>
+						</td>
+					</tr>
+					<tr>
+						<td colspan="2" class="longBox">
+							Julia C:<textarea id="juliaC" onchange="updateJuliaC()"></textarea>
+						</td>
+					</tr>
+					<tr>
+						<td colspan="2" class="longBox">
+							Initial Z:<textarea id="initialZ" onchange="updateInitialZ()"></textarea>
+						</td>
+					</tr>
+					<tr>
+						<td colspan="2" class="longBox">
+							Escaping Z:<textarea id="escapingZ" onchange="updateEscapingZ()"></textarea>
+						</td>
+					</tr>
+					<tr>
+						<td colspan="2">
+							Color Cycle<input type="checkbox" id="colorCycleCheckbox" onchange="toggleColorCycle()" />
+							Iteration Cycle<input type="checkbox" CHECKED id="iterationCycleCheckbox" onchange="toggleIterationCycle()" />
+							Cycle Time<input type="text" id="iterationCycleTime" style="width:3em;" onchange="updateIterationCycleTime()" />
+							Cycle Frame<input type="text" id="iterationCycleFrame" style="width:3em;" onchange="updateIterationCycleFrame()" />
+						</td>
+					</tr>
+				</table>
+			</div>
+		</div>
+	</body>
+</html>

@@ -2,6 +2,7 @@
 <html>
 	<head>
 		<title>Mandelbrot Explorer</title>
+		<script src="./three.js"></script>
 		<!-- Global site tag (gtag.js) - Google Analytics -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=UA-163810510-1"></script>
 <script>
@@ -12,14 +13,41 @@
   gtag('config', 'UA-163810510-1');
 </script>
 
-		<script src="https://unpkg.com/magicleap-helio-webxr-polyfill@1.0.0/HelioWebXRPolyfill.js"></script>
-		<script src="./three.js"></script>
 		<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r78/three.js"></script>
+		<script src="./Stats.js"></script>
 		<script src="./gradientline.js"></script>
 		<script src="./TrackballControls.js"></script>
-		<script src="./VRButton.js"></script>
 		<script src="./mandelbrotexplorer.js"></script>
 		<script language="javascript">
+		function openScreenCap(){
+			var newWindow = window.open("");
+			
+			var img = document.getElementById("screen_cap").cloneNode(false);
+			img.removeAttribute('height');
+			img.removeAttribute('onclick');
+			
+			newWindow.document.write(img.outerHTML);
+		}
+		function getScreenCap(){
+			var dataUrl = mandelbrotExplorer.renderer.domElement.toDataURL();
+			
+			var img = document.getElementById("screen_cap");
+			if( !img ) {
+				var table = document.getElementById("controls_table");
+				var row = document.createElement('tr');
+				var cell = document.createElement('td');
+				img = document.createElement('img');
+				img.id = 'screen_cap'
+				
+				cell.appendChild(img);
+				row.appendChild(cell);
+				table.appendChild(row);
+			}
+			
+			img.src = dataUrl;
+			img.height = 240;
+		}
+		
 		function trackEvent(category, action, label, value, fieldsObject){
 			if ("ga" in window) {
 				tracker = ga.getAll()[0];
@@ -271,9 +299,12 @@
 				show2d: show2d
 			}
 		}
-		
+var tjStats = null;
 		function init()
 		{
+			tjStats = new Stats();
+			tjStats.domElement.style.float='right';
+			document.body.appendChild( tjStats.domElement );
 			var params = loadQueryStringParams();
 			dimControls();
 			loadPaletteOptions();
@@ -505,6 +536,7 @@
 		var animationFrameId;
 		function animate() {
 			animationFrameId = requestAnimationFrame( animate );
+			tjStats.update();
 			if(mandelbrotExplorer.controls){
 				mandelbrotExplorer.controls.update();
 			}
@@ -645,7 +677,21 @@
 		}
 		function toggleBackground(){
 			trackEvent('usage', 'toggleBackground', 'toggleBackground');
-			document.body.style.backgroundColor  = ( window.getComputedStyle(document.body).backgroundColor  == 'rgb(0, 0, 0)' ? 'rgb(255, 255, 255)' : 'rgb(0, 0, 0)' );
+			
+			var color = new THREE.Color( 0x000000 );
+			document.body.style.backgroundColor = 'rgb(0, 0, 0)';
+			if(document.getElementById("toggleBackground").checked) {
+				color = new THREE.Color( 0xFFFFFF );
+				document.body.style.backgroundColor = 'rgb(255, 255, 255)';
+			}
+			
+			/*
+			var isBlack = window.getComputedStyle(document.body).backgroundColor  == 'rgb(0, 0, 0)';
+			document.body.style.backgroundColor  = ( isBlack ? 'rgb(255, 255, 255)' : 'rgb(0, 0, 0)' );
+			*/
+			
+			mandelbrotExplorer.scene.background =  color;
+			
 		}
 		
 		function toggleRandomStepping(){
@@ -734,7 +780,7 @@
 				<input type="button" onclick="toggleControls()" value="..." />
 			</div>
 			<div class="maximized" id="controls_maximized">
-				<table width="100%" style="text-align: right">
+				<table width="100%" style="text-align: right" id="controls_table">
 					<tr>
 						<td>Max Iterations (2d):<input type="text" id="maxIterations_2d" onchange="update2dIterations()" /></td>
 						<td>Max Iterations (3d):<input type="text" id="maxIterations_3d" onchange="update3dIterations()" /></td>
@@ -833,6 +879,12 @@
 							Iteration Cycle<input type="checkbox" id="iterationCycleCheckbox" onchange="toggleIterationCycle()" />
 							Cycle Time<input type="text" id="iterationCycleTime" style="width:3em;" onchange="updateIterationCycleTime()" />
 							Cycle Frame<input type="text" id="iterationCycleFrame" style="width:3em;" onchange="updateIterationCycleFrame()" />
+						</td>
+					</tr>
+					<tr>
+						<td colspan='2' align='left'>
+							<button onclick="getScreenCap();return false;">Capture</button>
+							<img id='screen_cap' onclick='openScreenCap();' />
 						</td>
 					</tr>
 				</table>
