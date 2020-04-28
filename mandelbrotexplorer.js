@@ -454,7 +454,7 @@ var mandelbrotExplorer = {
 	"startY": 				2,
 	"endY": 				-2,
 	"maxIterations_2d": 	32,
-	"maxIterations_3d": 	128,
+	"maxIterations_3d": 	512,
 	"zoomFactor": 			0.15,
 	"xOffset": 				null,
 	"yOffset": 				null,
@@ -466,12 +466,12 @@ var mandelbrotExplorer = {
 	"yScale_3d": 			null,
 	"scales_3d":			[],
 	"randomizeCloudStepping": false,
-	"cloudResolution":		430,//774,
+	"cloudResolution":		"43,101",//774,
 	"dualZ": true,
-	"dualZMultiplier":      "1;newX += escapePath[pathIndex > 1 ? pathIndex - 1 : 0][0] * -1;newY += escapePath[pathIndex > 1 ? pathIndex - 1 : 0][1] * -1;z *= -1;",
+	"dualZMultiplier":      "newX = escapePath[pathIndex][0];\nnewY = escapePath[pathIndex][1];\nnewZ = z * -1;",
     "dualZMultiplierExamples": [
-        "-1",
-        "1;newX += escapePath[pathIndex-1][0];newY += escapePath[pathIndex-1][1];z *= -1;"
+        "newX += escapePath[pathIndex-1][0];\nnewY += escapePath[pathIndex-1][1];\nnewZ = z * -1;",
+		"newX += escapePath[pathIndex > 1 ? pathIndex - 1 : 0][0] * -1;\nnewY += escapePath[pathIndex > 1 ? pathIndex - 1 : 0][1] * -1;\nnewZ = z * -1;",
     ],
 	"particleSize":         "mandelbrotExplorer.xScale_3d/mandelbrotExplorer.maxIterations_3d",
     "particleSizeExamples": [
