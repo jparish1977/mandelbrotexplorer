@@ -484,7 +484,7 @@ var mandelbrotExplorer = {
 		"cloudLengthFilter": {
 			"iteration8": 			"escapePath.length == 8",
 			"iterationDecimation":	"escapePath.length % 10 == 0",
-			"maxIterations":		"escapePath.length == mandelbrotExplorer.maxIterations_3d",
+			"maxIterations":		"escapePath.length == mandelbrotExplorer.maxIterations_3d || escapePath.shortened",
 			"theMeat":				"escapePath.length > parseInt( mandelbrotExplorer.maxIterations_3d * .1 )"
 							   + "&& escapePath.length < parseInt( mandelbrotExplorer.maxIterations_3d * .9 )"
 							   + "&& escapePath.length  > 5"
