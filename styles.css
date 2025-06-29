@@ -1,0 +1,54 @@
+body{
+	background: black;
+}
+#mandelbrotCanvas2d {
+	padding:0px;
+	margin:0px;
+	position:absolute;
+	top:0;
+	left:0;
+	z-index: 0;
+}
+#mandelbrotCanvas3d {
+	padding:0px;
+	margin:0px;
+	z-index: 0;
+	position:absolute;
+	top: 0;
+	left: 50%;
+}
+.controls {
+	padding:0px;
+	margin:0px;
+	z-index: 10;
+	position:absolute;
+	top: 0;
+}
+.controls .maximized {
+	background-color: #FFFFFF;
+	border-top-right-radius:2em;
+	border-bottom-right-radius:2em;
+	border-bottom-left-radius:2em;
+	padding-right:1em;
+	padding-left:1em;
+}
+.controls .minimized{
+	background-color: #FFFFFF;
+	text-align: left;
+	border-top-right-radius:1em;
+	border-top-left-radius:1em;
+	width: 3em;
+	text-align: center;
+}
+
+.controls textarea{
+	width: 100%;
+}
+
+.controls div{
+	text-align: right;
+}
+
+.longBox{
+	text-align: left;
+} 
