@@ -9,6 +9,7 @@
 		<script src="./gradientline.js"></script>
 		<script src="./TrackballControls.js"></script>
 		<script src="./palettes.js"></script>
+		<script src="./presets.js"></script>
 		<script src="./mandelbrotexplorer.js"></script>
 		<script src="./ui.js"></script>
 	</head>
@@ -56,7 +57,10 @@
 
 								<fieldset style="border: 1px black dotted">
 									<legend>Size</legend>
-									<textarea type="text" name="particleSize"  id="particleSize" onchange="mandelbrotExplorer.particleSize = this.value;"></textarea>
+									<textarea type="text" name="particleSize"  id="particleSize" onchange="updateParticleSize();"></textarea>
+									<select id="particleSizePresets" onchange="setParticleSizeFromPreset()">
+										<option value="">----</option>
+									</select>
 								</fieldset>
 							</fieldset>
 						</td>
@@ -64,13 +68,16 @@
 							<fieldset style="border: 1px black solid;text-align: left;">
 								<legend>Dual Z</legend>
 
-								<input type="checkbox" name="dualZEnabled" id="dualZEnabled" onchange="mandelbrotExplorer.dualZ = this.checked;">Enabled</input>
+								<input type="checkbox" name="dualZEnabled" id="dualZEnabled" onchange="updateDualZEnabled();">Enabled</input>
 								
 								<fieldset style="border: 1px black dotted">
 									<legend>Multiplier</legend>
-									<textarea type="text" name="dualZMultiplier"  id="dualZMultiplier" onchange="mandelbrotExplorer.dualZMultiplier = this.value;">
+									<textarea type="text" name="dualZMultiplier"  id="dualZMultiplier" onchange="updateDualZMultiplier();">
 									
 									</textarea>
+									<select id="dualZMultiplierPresets" onchange="setDualZMultiplierFromPreset()">
+										<option value="">----</option>
+									</select>
 								</fieldset>
 							</fieldset>
 						</td>
@@ -98,6 +105,9 @@
 					<tr>
 						<td colspan="2" class="longBox">
 							Cloud Iteration Filter:<textarea id="cloudIterationFilter" onchange="updateCloudIterationFilter()"></textarea>
+							<select id="cloudIterationFilterPresets" onchange="setCloudIterationFilterFromPreset()">
+								<option value="">----</option>
+							</select>
 						</td>
 					</tr>
 					<tr>
@@ -108,11 +118,25 @@
 					<tr>
 						<td colspan="2" class="longBox">
 							Initial Z:<textarea id="initialZ" onchange="updateInitialZ()"></textarea>
+							<select id="initialZPresets" onchange="setInitialZFromPreset()">
+								<option value="">----</option>
+							</select>
 						</td>
 					</tr>
 					<tr>
 						<td colspan="2" class="longBox">
 							Escaping Z:<textarea id="escapingZ" onchange="updateEscapingZ()"></textarea>
+							<select id="escapingZPresets" onchange="setEscapingZFromPreset()">
+								<option value="">----</option>
+							</select>
+						</td>
+					</tr>
+					<tr>
+						<td colspan="2" class="longBox">
+							Particle Filter:<textarea id="particleFilter" onchange="updateParticleFilter()"></textarea>
+							<select id="particleFilterPresets" onchange="setParticleFilterFromPreset()">
+								<option value="">----</option>
+							</select>
 						</td>
 					</tr>
 					<tr>
@@ -121,12 +145,20 @@
 							Iteration Cycle<input type="checkbox" id="iterationCycleCheckbox" onchange="toggleIterationCycle()" />
 							Cycle Time<input type="text" id="iterationCycleTime" style="width:3em;" onchange="updateIterationCycleTime()" />
 							Cycle Frame<input type="text" id="iterationCycleFrame" style="width:3em;" onchange="updateIterationCycleFrame()" />
+							Target FPS: <input type="text" id="targetFrameRate" value="60" style="width:3em;" onchange="updateTargetFrameRate()" />
 						</td>
 					</tr>
 					<tr>
 						<td colspan='2' align='left'>
 							<button onclick="getScreenCap();return false;">Capture</button>
 							<img id='screen_cap' onclick='openScreenCap();' />
+						</td>
+					</tr>
+					<tr>
+						<td colspan='2' align='left'>
+							<button onclick="mandelbrotExplorer.saveSettings();">Save Settings</button>
+							<button onclick="loadSettingsFromStorage();">Load Settings</button>
+							<button onclick="mandelbrotExplorer.clearSettings();">Clear Settings</button>
 						</td>
 					</tr>
 				</table>

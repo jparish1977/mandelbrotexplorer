@@ -171,12 +171,12 @@ function zoomToDblClick( sender, evt ){
 
 // Parameter update functions
 function update2dIterations(){
-    mandelbrotExplorer.maxIterations_2d = document.getElementById("maxIterations_2d").value;
+    mandelbrotExplorer.maxIterations_2d = parseInt(document.getElementById("maxIterations_2d").value);
     mandelbrotExplorer.drawMandelbrot();
 }
 
 function update3dIterations(){
-    mandelbrotExplorer.maxIterations_3d = document.getElementById("maxIterations_3d").value;
+    mandelbrotExplorer.maxIterations_3d = parseInt(document.getElementById("maxIterations_3d").value);
 }
 
 function updateCloudResolution(){
@@ -217,6 +217,14 @@ function updateIterationCycleFrame(){
     mandelbrotExplorer.iterationCycleFrame = parseInt( eval( document.getElementById("iterationCycleFrame").value ) );
 }
 
+function updateTargetFrameRate(){
+    mandelbrotExplorer.targetFrameRate = parseInt(document.getElementById("targetFrameRate").value);
+    // Ensure the frame rate is reasonable (between 1 and 120)
+    if (mandelbrotExplorer.targetFrameRate < 1) mandelbrotExplorer.targetFrameRate = 1;
+    if (mandelbrotExplorer.targetFrameRate > 120) mandelbrotExplorer.targetFrameRate = 120;
+    document.getElementById("targetFrameRate").value = mandelbrotExplorer.targetFrameRate;
+}
+
 function updateJuliaC(){
     mandelbrotExplorer.juliaC = document.getElementById("juliaC").value;
 }
@@ -231,6 +239,22 @@ function updateStartY(){
     mandelbrotExplorer.startY = document.getElementById("startY").value;
     mandelbrotExplorer.drawMandelbrot(); 
     mandelbrotExplorer.drawMandelbrotCloud();
+}
+
+function updateParticleSize(){
+    mandelbrotExplorer.particleSize = document.getElementById("particleSize").value;
+}
+
+function updateDualZEnabled(){
+    mandelbrotExplorer.dualZ = document.getElementById("dualZEnabled").checked;
+}
+
+function updateDualZMultiplier(){
+    mandelbrotExplorer.dualZMultiplier = document.getElementById("dualZMultiplier").value;
+}
+
+function updateParticleFilter(){
+    mandelbrotExplorer.particleFilter = document.getElementById("particleFilter").value;
 }
 
 // Toggle functions
@@ -284,7 +308,7 @@ function toggleBackground(){
 }
 
 function toggleRandomStepping(){
-    mandelbrotExplorer.randomizeCloudStepping = document.getElementById("randomStepCheckbox").checked ? true : false;
+    mandelbrotExplorer.randomizeCloudStepping = document.getElementById("randomStepCheckbox").checked;
 }
 
 // Control visibility functions
@@ -354,6 +378,7 @@ function loadParameterValues(){
     document.getElementById("escapingZ").value = mandelbrotExplorer.escapingZ;
     document.getElementById("iterationCycleTime").value = mandelbrotExplorer.iterationCycleTime;
     document.getElementById("iterationCycleFrame").value = mandelbrotExplorer.iterationCycleFrame;
+    document.getElementById("targetFrameRate").value = mandelbrotExplorer.targetFrameRate;
     document.getElementById("cloudLengthFilter").value = mandelbrotExplorer.cloudLengthFilter;
     document.getElementById("cloudIterationFilter").value = mandelbrotExplorer.cloudIterationFilter;
     document.getElementById("juliaC").value = mandelbrotExplorer.juliaC;
@@ -374,6 +399,7 @@ function loadParameterValues(){
     document.getElementById("dualZEnabled").checked = mandelbrotExplorer.dualZ;
     document.getElementById("dualZMultiplier").value = mandelbrotExplorer.dualZMultiplier;
     document.getElementById("particleSize").value = mandelbrotExplorer.particleSize;
+    document.getElementById("particleFilter").value = mandelbrotExplorer.particleFilter;
 }
 
 function loadQueryStringParams(){
@@ -440,9 +466,111 @@ function loadFilterOptions()
     {
         lengthOption = document.createElement("option");
         lengthOption.text = presetName;
-        lengthOption.value = mandelbrotExplorer.presets.cloudLengthFilter[presetName];
+        lengthOption.value = presetName;
         
         document.getElementById("cloudLengthFilterPresets").add(lengthOption);
+    }
+    
+    // Load escapingZ presets
+    clearSelectOptions(document.getElementById("escapingZPresets"));
+    
+    var escapingZOption = document.createElement("option");
+    escapingZOption.text = "----";
+    escapingZOption.value = "";
+    document.getElementById("escapingZPresets").add(escapingZOption);
+    
+    for( var presetName in mandelbrotExplorer.presets.mandelbrot.escapingZ )
+    {
+        escapingZOption = document.createElement("option");
+        escapingZOption.text = presetName;
+        escapingZOption.value = presetName;
+        
+        document.getElementById("escapingZPresets").add(escapingZOption);
+    }
+    
+    // Load particle filter presets
+    clearSelectOptions(document.getElementById("particleFilterPresets"));
+    
+    var particleFilterOption = document.createElement("option");
+    particleFilterOption.text = "----";
+    particleFilterOption.value = "";
+    document.getElementById("particleFilterPresets").add(particleFilterOption);
+    
+    for( var presetName in mandelbrotExplorer.presets.particleFilter )
+    {
+        particleFilterOption = document.createElement("option");
+        particleFilterOption.text = presetName;
+        particleFilterOption.value = presetName;
+        
+        document.getElementById("particleFilterPresets").add(particleFilterOption);
+    }
+    
+    // Load dualZ multiplier presets
+    clearSelectOptions(document.getElementById("dualZMultiplierPresets"));
+    
+    var dualZMultiplierOption = document.createElement("option");
+    dualZMultiplierOption.text = "----";
+    dualZMultiplierOption.value = "";
+    document.getElementById("dualZMultiplierPresets").add(dualZMultiplierOption);
+    
+    for( var presetName in mandelbrotExplorer.presets.dualZMultiplier )
+    {
+        dualZMultiplierOption = document.createElement("option");
+        dualZMultiplierOption.text = presetName;
+        dualZMultiplierOption.value = presetName;
+        
+        document.getElementById("dualZMultiplierPresets").add(dualZMultiplierOption);
+    }
+    
+    // Load particle size presets
+    clearSelectOptions(document.getElementById("particleSizePresets"));
+    
+    var particleSizeOption = document.createElement("option");
+    particleSizeOption.text = "----";
+    particleSizeOption.value = "";
+    document.getElementById("particleSizePresets").add(particleSizeOption);
+    
+    for( var presetName in mandelbrotExplorer.presets.particleSize )
+    {
+        particleSizeOption = document.createElement("option");
+        particleSizeOption.text = presetName;
+        particleSizeOption.value = presetName;
+        
+        document.getElementById("particleSizePresets").add(particleSizeOption);
+    }
+    
+    // Load cloud iteration filter presets
+    clearSelectOptions(document.getElementById("cloudIterationFilterPresets"));
+    
+    var cloudIterationFilterOption = document.createElement("option");
+    cloudIterationFilterOption.text = "----";
+    cloudIterationFilterOption.value = "";
+    document.getElementById("cloudIterationFilterPresets").add(cloudIterationFilterOption);
+    
+    for( var presetName in mandelbrotExplorer.presets.cloudIterationFilter )
+    {
+        cloudIterationFilterOption = document.createElement("option");
+        cloudIterationFilterOption.text = presetName;
+        cloudIterationFilterOption.value = presetName;
+        
+        document.getElementById("cloudIterationFilterPresets").add(cloudIterationFilterOption);
+    }
+    
+    // Load initialZ presets
+    clearSelectOptions(document.getElementById("initialZPresets"));
+    
+    var initialZOption = document.createElement("option");
+    initialZOption.text = "----";
+    initialZOption.value = "";
+    document.getElementById("initialZPresets").add(initialZOption);
+    
+    for( var presetName in mandelbrotExplorer.presets.initialZ )
+    {
+        initialZOption = document.createElement("option");
+        initialZOption.text = presetName;
+        initialZOption.value = presetName;
+        
+        document.getElementById("initialZPresets").add(initialZOption);
     }
 }
 
@@ -456,8 +584,131 @@ function clearSelectOptions( selectObj )
 }
 
 function setCloudLengthFilterFromPreset(){
-    document.getElementById("cloudLengthFilter").value = document.getElementById("cloudLengthFilterPresets").value;
-    updateCloudLengthFilter();
+    var selectedPreset = document.getElementById("cloudLengthFilterPresets").value;
+    if (selectedPreset && mandelbrotExplorer.presets.cloudLengthFilter[selectedPreset]) {
+        var preset = mandelbrotExplorer.presets.cloudLengthFilter[selectedPreset];
+        if (typeof preset === 'object' && preset.getCodeString) {
+            // For object presets with getCodeString method
+            var samplePathIndex = 1;
+            var sampleIteration = 2;
+            var sampleEscapePath = [[0,0], [1,1], [2,2]];
+            mandelbrotExplorer.cloudLengthFilter = preset.getCodeString(samplePathIndex, sampleIteration, sampleEscapePath);
+        } else if (typeof preset === 'string') {
+            // For string presets, use directly
+            mandelbrotExplorer.cloudLengthFilter = preset;
+        }
+        document.getElementById("cloudLengthFilter").value = mandelbrotExplorer.cloudLengthFilter;
+        updateCloudLengthFilter();
+    }
+}
+
+function setEscapingZFromPreset(){
+    var selectedPreset = document.getElementById("escapingZPresets").value;
+    if (selectedPreset && mandelbrotExplorer.presets.mandelbrot.escapingZ[selectedPreset]) {
+        var preset = mandelbrotExplorer.presets.mandelbrot.escapingZ[selectedPreset];
+        if (typeof preset === 'object' && preset.getCodeString) {
+            // For object presets with getCodeString method
+            var sampleEscapePath = [[0,0], [1,1], [2,2]];
+            var samplePathIndex = 1;
+            mandelbrotExplorer.escapingZ = preset.getCodeString(sampleEscapePath, samplePathIndex);
+        } else if (typeof preset === 'string') {
+            // For string presets, use directly
+            mandelbrotExplorer.escapingZ = preset;
+        }
+        document.getElementById("escapingZ").value = mandelbrotExplorer.escapingZ;
+    }
+}
+
+function setParticleFilterFromPreset(){
+    var selectedPreset = document.getElementById("particleFilterPresets").value;
+    if (selectedPreset && mandelbrotExplorer.presets.particleFilter[selectedPreset]) {
+        var preset = mandelbrotExplorer.presets.particleFilter[selectedPreset];
+        if (typeof preset === 'object' && preset.getCodeString) {
+            // For object presets with getCodeString method
+            var sampleNewX = 0.25;
+            var sampleNewY = 0.25;
+            var sampleParticleVector = new THREE.Vector3(0.25, 0.25, 0);
+            mandelbrotExplorer.particleFilter = preset.getCodeString(sampleNewX, sampleNewY, sampleParticleVector);
+        } else if (typeof preset === 'string') {
+            // For string presets, use directly
+            mandelbrotExplorer.particleFilter = preset;
+        }
+        document.getElementById("particleFilter").value = mandelbrotExplorer.particleFilter;
+    }
+}
+
+function setDualZMultiplierFromPreset(){
+    var selectedPreset = document.getElementById("dualZMultiplierPresets").value;
+    if (selectedPreset && mandelbrotExplorer.presets.dualZMultiplier[selectedPreset]) {
+        var preset = mandelbrotExplorer.presets.dualZMultiplier[selectedPreset];
+        if (typeof preset === 'object' && preset.getCodeString) {
+            // For object presets with getCodeString method
+            var samplePathIndex = 1;
+            var sampleIteration = 2;
+            var sampleEscapePath = [[0,0], [1,1], [2,2]];
+            var sampleNewX = 1;
+            var sampleNewY = 1;
+            var sampleZ = 0.5;
+            mandelbrotExplorer.dualZMultiplier = preset.getCodeString(samplePathIndex, sampleIteration, sampleEscapePath, sampleNewX, sampleNewY, sampleZ);
+        } else if (typeof preset === 'string') {
+            // For string presets, use directly
+            mandelbrotExplorer.dualZMultiplier = preset;
+        }
+        document.getElementById("dualZMultiplier").value = mandelbrotExplorer.dualZMultiplier;
+    }
+}
+
+function setParticleSizeFromPreset(){
+    var selectedPreset = document.getElementById("particleSizePresets").value;
+    if (selectedPreset && mandelbrotExplorer.presets.particleSize[selectedPreset]) {
+        var preset = mandelbrotExplorer.presets.particleSize[selectedPreset];
+        if (typeof preset === 'object' && preset.getCodeString) {
+            // For object presets with getCodeString method
+            var sampleIndex = 0;
+            var sampleIterationParticles = [];
+            mandelbrotExplorer.particleSize = preset.getCodeString(sampleIndex, sampleIterationParticles);
+        } else if (typeof preset === 'string') {
+            // For string presets, use directly
+            mandelbrotExplorer.particleSize = preset;
+        }
+        document.getElementById("particleSize").value = mandelbrotExplorer.particleSize;
+    }
+}
+
+function setCloudIterationFilterFromPreset(){
+    var selectedPreset = document.getElementById("cloudIterationFilterPresets").value;
+    if (selectedPreset && mandelbrotExplorer.presets.cloudIterationFilter[selectedPreset]) {
+        var preset = mandelbrotExplorer.presets.cloudIterationFilter[selectedPreset];
+        if (typeof preset === 'object' && preset.getCodeString) {
+            // For object presets with getCodeString method
+            var samplePathIndex = 1;
+            var sampleIteration = 2;
+            var sampleEscapePath = [[0,0], [1,1], [2,2]];
+            mandelbrotExplorer.cloudIterationFilter = preset.getCodeString(samplePathIndex, sampleIteration, sampleEscapePath);
+        } else if (typeof preset === 'string') {
+            // For string presets, use directly
+            mandelbrotExplorer.cloudIterationFilter = preset;
+        }
+        document.getElementById("cloudIterationFilter").value = mandelbrotExplorer.cloudIterationFilter;
+        updateCloudIterationFilter();
+    }
+}
+
+function setInitialZFromPreset(){
+    var selectedPreset = document.getElementById("initialZPresets").value;
+    if (selectedPreset && mandelbrotExplorer.presets.initialZ[selectedPreset]) {
+        var preset = mandelbrotExplorer.presets.initialZ[selectedPreset];
+        if (typeof preset === 'object' && preset.getCodeString) {
+            // For object presets with getCodeString method
+            var sampleEscapePath = [[0,0], [1,1], [2,2]];
+            mandelbrotExplorer.initialZ = preset.getCodeString(sampleEscapePath);
+        } else if (typeof preset === 'string') {
+            // For string presets, use directly
+            mandelbrotExplorer.initialZ = preset;
+        }
+        document.getElementById("initialZ").value = mandelbrotExplorer.initialZ;
+        updateInitialZ();
+    }
 }
 
 // Generation functions
@@ -590,14 +841,25 @@ function restoreContext(){
 }
 
 // Animation and rendering
+var lastFrameTime = 0;
+
 function animate() {
     animationFrameId = requestAnimationFrame( animate );
-    tjStats.update();
-    if(mandelbrotExplorer.controls){
-        mandelbrotExplorer.controls.update();
-    }
     
-    render();
+    var currentTime = performance.now();
+    var deltaTime = currentTime - lastFrameTime;
+    var frameInterval = 1000 / mandelbrotExplorer.targetFrameRate; // Time between frames in milliseconds
+    
+    // Only render if enough time has passed since last frame
+    if (deltaTime >= frameInterval) {
+        tjStats.update();
+        if(mandelbrotExplorer.controls){
+            mandelbrotExplorer.controls.update();
+        }
+        
+        render();
+        lastFrameTime = currentTime;
+    }
 }
 
 function render() {
@@ -611,6 +873,10 @@ function init()
     tjStats.domElement.style.float='right';
     document.body.appendChild( tjStats.domElement );
     var params = loadQueryStringParams();
+    
+    // Load saved settings first
+    mandelbrotExplorer.loadSettings();
+    
     dimControls();
     loadPaletteOptions();
     loadFilterOptions();
@@ -640,4 +906,18 @@ function init()
         mandelbrotExplorer.drawMandelbrot();
     }
     window.onresize = onWindowResize;
+}
+
+function loadSettingsFromStorage(){
+    if (mandelbrotExplorer.loadSettings()) {
+        loadParameterValues();
+        loadPaletteOptions(); // Refresh palette dropdown
+        // Regenerate the current view with loaded settings
+        if (mandelbrotExplorer.scene && mandelbrotExplorer.particleSystems.length > 0) {
+            generateCloud();
+        }
+        alert('Settings loaded successfully!');
+    } else {
+        alert('No saved settings found.');
+    }
 } 

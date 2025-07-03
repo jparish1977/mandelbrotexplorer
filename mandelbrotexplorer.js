@@ -1,54 +1,3 @@
-/** escapingZ to get the eye 1000cloud res  16iterations filter iteratios > 12
-currentZ = mandelbrotExplorer.getAbsoluteValueOfComplexNumber(escapePath[pathIndex]);
-previousZ = mandelbrotExplorer.getAbsoluteValueOfComplexNumber(escapePath[pathIndex-1]);
-useZ = currentZ - previousZ;
-useZ;
-*/
-/** valley of the elephants turnd inside out....
-currentZ = mandelbrotExplorer.getAbsoluteValueOfComplexNumber(escapePath[pathIndex]);
-previousZ = mandelbrotExplorer.getAbsoluteValueOfComplexNumber(escapePath[pathIndex-1]);
-useZ = currentZ - previousZ;
-useX = escapePath[pathIndex-1][0] + ((escapePath[pathIndex][0]/currentZ) * currentZ);
-useY = escapePath[pathIndex-1][1] + ((escapePath[pathIndex][1]/currentZ) * currentZ);
-escapePath[pathIndex][0] = useX;
-escapePath[pathIndex][1] = useY;
-useZ;
-
-
-useZ = abs(z(n)) - abs(z(n-1);
-useX = z(n-1)[x] + ((z(n)[x]/abs(z(n))) * abs(z(n)));
-useY = z(n-1)[y] + ((z(n)[y]/abs(z(n))) * abs(z(n)));
-z(n)[0] = useX;
-z(n)[1] = useY;
-useZ;
-*/
-
-/** stuffed in the corner
-currentZ = mandelbrotExplorer.getAbsoluteValueOfComplexNumber(escapePath[pathIndex]);
-previousZ = mandelbrotExplorer.getAbsoluteValueOfComplexNumber(escapePath[pathIndex-1]);
-useX = escapePath[pathIndex][0] + (escapePath[pathIndex][0] * (escapePath[pathIndex][0]/Math.sqrt(currentZ)));
-useY = escapePath[pathIndex][1] + (escapePath[pathIndex][1] * (escapePath[pathIndex][1]/Math.sqrt(currentZ)));
-useZ = mandelbrotExplorer.getAbsoluteValueOfComplexNumber([useX, useY]) - previousZ;
-escapePath[pathIndex][0] = useX;
-escapePath[pathIndex][1] = useY;
-useZ;
-*/
-
-/*
-// this is a neat flower.....
-newX = pathIndex > 0 ? newX - escapePath[0][0] : 0;
-newY = pathIndex > 0 ? newY - escapePath[0][1] : 0;
-*/
-
-/*
-I need to add a way of mapping the particles displayed in the current scene 
-back to their initial x,y.
-*/
-
-
-/*
-Preturbation: somehting where each iteration is slowed by the previous iteratyions in the same frame
-*/
 var STR_PAD_LEFT = 1;
 var STR_PAD_RIGHT = 2;
 var STR_PAD_BOTH = 3;
@@ -61,6 +10,7 @@ var mandelbrotExplorer = {
 		antialias: false,
 		preserveDrawingBuffer: true 
 	},
+	"targetFrameRate": 60, // Target frame rate for animation loop
 	"onlyShortened": true,
 	"onlyFull": false,
 	"startX": 				-2,
@@ -83,116 +33,13 @@ var mandelbrotExplorer = {
 	"cloudResolution":		"43,101",//774,
 	"dualZ": true,
 	"dualZMultiplier":      "newX = escapePath[pathIndex][0];\nnewY = escapePath[pathIndex][1];\nnewZ = z * -1;",
-    "dualZMultiplierExamples": [
-        "newX += escapePath[pathIndex-1][0];\nnewY += escapePath[pathIndex-1][1];\nnewZ = z * -1;",
-		"newX += escapePath[pathIndex > 1 ? pathIndex - 1 : 0][0] * -1;\nnewY += escapePath[pathIndex > 1 ? pathIndex - 1 : 0][1] * -1;\nnewZ = z * -1;",
-    ],
 	"particleSize":         "mandelbrotExplorer.xScale_3d/mandelbrotExplorer.maxIterations_3d",
-    "particleSizeExamples": [
-        "0",
-        "index/mandelbrotExplorer.iterationParticles.length"
-    ],
 	"cloudLengthFilter":	"escapePath.length > 8",//"escapePath.length == mandelbrotExplorer.maxIterations_3d - 1",//"escapePath.length > 8",
-	//"cloudLengthFilterPresets": {
-	"presets": {
-		"cloudLengthFilter": {
-			"iteration8": 			"escapePath.length == 8",
-			"iterationDecimation":	"escapePath.length % 10 == 0",
-			"maxIterations":		"escapePath.length == mandelbrotExplorer.maxIterations_3d || escapePath.shortened",
-			"theMeat":				"escapePath.length > parseInt( mandelbrotExplorer.maxIterations_3d * .1 )"
-							   + "&& escapePath.length < parseInt( mandelbrotExplorer.maxIterations_3d * .9 )"
-							   + "&& escapePath.length  > 5"
-		},
-		"juliaC": {
-			"mandelbrot":	"[0,0]",
-			"strange1":		"[(c[0]*-1)+c[1],0]",
-			"strange2":		"[(c[0]*-1)-c[1],(c[1]*-1)-c[0]]",
-			"julia01":		"[-1.037,0.17]",
-			"julia02":		"[-0.52,0.57]",
-			"julia03":		"[0.295,0.55]",
-			"julia04":		"[-0.624,0.435]",
-			"julia05":		"[.285,0]",
-			"julia06":		"[.285,0.01]",
-			"julia07":		"[0.45,0.1428]",
-			"julia08":		"[-0.70176,-0.3842]",
-			"julia09":		"[-0.835,-0.2321]",
-			"julia10":		"[-0.8,0.156]",
-			"julia11":		"[-.62772,.42193]",
-			"julia12":		"[-.74434,-.10772]",
-			"julia13":		"[.233,.53780]",
-			"julia14":		"[.03515,-.07467]",
-			"julia15":		"[-.67319,.34442]",
-			"julia16":		"[-.74543,.11301]",
-			
-			"julia17":		"[0.37,0.16]",
-			"julia18":		"[−0.50,−0.56]",
-			"julia19":		"[−0.25,0]",
-			"julia20":		"[0,1]",
-			"julia21":		"[−1.5,0]",
-			"julia22":		"[−0.75,0.25]",
-			"julia23":		"[−0.8,0.15]",
-			"julia24":		"[−1,0]",
-			"julia25":		"[-0.79,0.14]",
-			"julia26":		"[0.35,0.11]",
-			"julia27":		"[-0.25,0.64]",
-			"julia28":		"[0,-0.66]",
-			"julia29":		"[-0.039,0.695]",
-			"julia30":		"[-0.1,0.651]",
-			"julia31":		"[-0.74543,0.11301]"
-		},
-		"mandelbrot": {
-			"escapingZ": {
-				"currentZLessPreviousZ_percentOfMax3D": "((pathIndex + 1)/mandelbrotExplorer.maxIterations_3d)*(mandelbrotExplorer.getAbsoluteValueOfComplexNumber(escapePath[pathIndex]) - mandelbrotExplorer.getAbsoluteValueOfComplexNumber(escapePath[pathIndex-1]));",
-				"currentZLessPreviousZ": 			"mandelbrotExplorer.getAbsoluteValueOfComplexNumber(escapePath[pathIndex]) - mandelbrotExplorer.getAbsoluteValueOfComplexNumber(escapePath[pathIndex-1]);",
-				"alternatingPathOrigin": 			"zDirection * mandelbrotExplorer.getAbsoluteValueOfComplexNumber(escapePath[0]);",
-				pathOriginAndSkewedByPrevious: function(escapePath, pathIndex){
-					this.toString = function(escapePath, pathIndex){
-						return "mandelbrotExplorer.getAbsoluteValueOfComplexNumber((escapePath.length == 1 ? escapePath[0] : [escapePath[pathIndex][0] + escapePath[pathIndex-1][0],escapePath[pathIndex][1] + escapePath[pathIndex-1][1]]));";
-					}
-					
-					return mandelbrotExplorer.getAbsoluteValueOfComplexNumber((escapePath.length == 1 ? escapePath[0] : [escapePath[pathIndex][0] + escapePath[pathIndex-1][0],escapePath[pathIndex][1] + escapePath[pathIndex-1][1]]));
-				},
-				previousPathZ: function(escapePath, pathIndex){
-					this.toString = function(escapePath, pathIndex){
-						return "mandelbrotExplorer.getAbsoluteValueOfComplexNumber(escapePath[pathIndex - 1]);";
-					}
-					
-					return mandelbrotExplorer.getAbsoluteValueOfComplexNumber(escapePath[pathIndex - 1]);
-				},
-				pathEnd: function(){
-					this.toString = function(escapePath, pathIndex){
-						return "mandelbrotExplorer.getAbsoluteValueOfComplexNumber(escapePath[escapePath.length - 1]);";
-					}
-					return mandelbrotExplorer.getAbsoluteValueOfComplexNumber(escapePath[escapePath.length - 1]);
-				},
-				pathOrigin: function(escapePath, pathIndex){
-					this.toString = function(escapePath, pathIndex){
-						return "mandelbrotExplorer.getAbsoluteValueOfComplexNumber(escapePath[0]);";
-					}
-					return mandelbrotExplorer.getAbsoluteValueOfComplexNumber(escapePath[0]);
-				},
-				currentPathZ: function(escapePath, pathIndex){
-					this.toString = function(){
-						return "mandelbrotExplorer.getAbsoluteValueOfComplexNumber(escapePath[pathIndex]);";
-					}
-					
-					return mandelbrotExplorer.getAbsoluteValueOfComplexNumber(escapePath[pathIndex]);
-				}
-			},
-		}
-	},
 	"cloudIterationFilter":	"iteration > 8",//"iteration > 8",//"iteration == mandelbrotExplorer.maxIterations_3d",//"iteration < 9",
 	"particleSystems": 		[],//[iterationIndex][THREE.ParticleSystem]
 	"lines": 		[],//[iterationIndex][THREE.]
 	"iterationParticles": [],//[iterationIndex]{particles: THREE.Geometry}      
-/*
-	this.iterationParticles[iterationIndex] = {"particles": new THREE.Geometry()};
-					}
-					var newX = escapePath[pathIndex][0];
-					var newY = escapePath[pathIndex][1];
-					var particleVector = new THREE.Vector3(newX, newY, z);
-					this.iterationParticles[iterationIndex].particles.vertices.push(particleVector);
-*/
+	"presets": mandelbrotExplorerPresets, // Reference to external presets
 	"particleCoords":	[],//[iterationIndex][X1,Y1,Z1,X2,Y2,Y3,...]
 	"particleLimit": 		100000000,
 	"cycleTime": 			10,
@@ -205,51 +52,13 @@ var mandelbrotExplorer = {
 	"controls": 			null,
 	"palette":				palettes.palette2,
 	"particleFilter":		null,
-    "particleFilterExamples": [
-        "(newX > 0.24 && newX < 0.26) || (newY > 0.24 && newY < 0.26)",
-        "(newX > 0.24 && newX < 0.26)",
-        "(mandelbrotExplorer.getAbsoluteValueOfComplexNumber([newX, newY]) > 0.24 && mandelbrotExplorer.getAbsoluteValueOfComplexNumber([newX, newY]) < 0.26)"
-    ],
 	"initialZ":				"return [0,0];", 
-    "initialZExamples": [
-        "return this.getAbsoluteValueOfComplexNumber(escapePath[0]);",
-        "return this.getAbsoluteValueOfComplexNumber(escapePath[escapePath.length - 1]);",
-    ],
 	"escapingZ":			"return (\n"
 							+ "mandelbrotExplorer.getAbsoluteValueOfComplexNumber(escapePath[pathIndex]) - mandelbrotExplorer.getAbsoluteValueOfComplexNumber(escapePath[pathIndex-1])"
                             + "\n);",
-    "escapingZExamples": [
-        "return mandelbrotExplorer.presets.mandelbrot.escapingZ.previousPathZ(escapePath, pathIndex);",
-        "((pathIndex + 1)/this.maxIterations_3d)*(this.getAbsoluteValueOfComplexNumber(escapePath[pathIndex]) - this.getAbsoluteValueOfComplexNumber(escapePath[pathIndex-1]));",
-        "this.getAbsoluteValueOfComplexNumber(escapePath[pathIndex]) - this.getAbsoluteValueOfComplexNumber(escapePath[pathIndex-1]);",
-        "this.getAbsoluteValueOfComplexNumber((escapePath.length == 1 ? escapePath[0] : [escapePath[pathIndex][0] + escapePath[pathIndex-1][0],escapePath[pathIndex][1] + escapePath[pathIndex-1][1]]));",
-        "this.getAbsoluteValueOfComplexNumber(escapePath[0]);",
-        "this.getAbsoluteValueOfComplexNumber(escapePath[pathIndex - 1])"
-    ],
 	"nextCycleIteration":	1,
 	"iterationCycleTime":	parseInt(1000/30),
 	"juliaC":				  "[0,0]",
-    "juliaCExamples": [
-        "[c[1],c[0]]",
-        "[(c[0]*-1)+c[1],0]",
-        "[(c[0]*-1)-c[1],(c[1]*-1)-c[0]]",
-        "[-1.037,0.17]",
-        "[-0.52,0.57]",
-        "[0.295,0.55]",
-        "[-0.624,0.435]",
-        "[.285,0]",
-        "[.285,0.01]",
-        "[0.45,0.1428]",
-        "[-0.70176,-0.3842]",
-        "[-0.835,-0.2321]",
-        "[-0.8,0.156]",
-        "[-.62772,.42193]",
-        "[-.74434,-.10772]",
-        "[.233,.53780]",
-        "[.03515,-.07467]",
-        "[-.67319,.34442]",
-        "[-.74543,.11301]"
-    ],
 	"_cloudIterationCyclerId": null,
 	"drawMandelbrot": function(params) {
 		this.assignParams( params );
@@ -260,12 +69,13 @@ var mandelbrotExplorer = {
 		this.xOffset = 0 - ( this.startX / this.xScale_2d );
 		this.yOffset = this.startY / this.yScale_2d;
 		// FIX THIS
-var repeatCheck = function(zValues, z, lastZ){
-	var test = zValues.filter(function(testZ){
-		return z[0] != testZ[0] && z[1] != testZ[1];
-	});
-	return zValues.length != test.length;
-};
+		var repeatCheck = function(zValues, z, lastZ){
+			var test = zValues.filter(function(testZ){
+				return z[0] != testZ[0] && z[1] != testZ[1];
+			});
+			return zValues.length != test.length;
+		};
+
 		//var juliaC = eval(this.juliaC);
 		for( var xValue = this.startX, imageX = 0; imageX < this.canvas_2d.width; xValue += this.xScale_2d, imageX++ ){
 			for( var yValue = this.startY, imageY = 0; imageY < this.canvas_2d.height; yValue -= this.yScale_2d, imageY++ ){
@@ -293,83 +103,83 @@ var repeatCheck = function(zValues, z, lastZ){
 		
 		this.particleSystems = [];
 	},
-    "cloudMethods_CLEANUP": {
+    "cloudMethods": {
         "functionsFromEval": {},
         "evalInitialZ": function(escapePath) {
-            if( typeof mandelbrotExplorer.cloudMethods_CLEANUP.functionsFromEval.initialZ === 'undefined' ) {
+            if( typeof mandelbrotExplorer.cloudMethods.functionsFromEval.initialZ === 'undefined' ) {
                 if (mandelbrotExplorer.initialZ) {
-                    eval("mandelbrotExplorer.cloudMethods_CLEANUP.functionsFromEval.initialZ = function (){\n " + mandelbrotExplorer.initialZ + "\n}");
+                    eval("mandelbrotExplorer.cloudMethods.functionsFromEval.initialZ = function (escapePath){\n " + mandelbrotExplorer.initialZ + "\n}");
                 } else {
-                    mandelbrotExplorer.cloudMethods_CLEANUP.functionsFromEval.initialZ = function(){
+                    mandelbrotExplorer.cloudMethods.functionsFromEval.initialZ = function(escapePath){
                         return 0;
                     };
                 }
             }
             
-            return mandelbrotExplorer.cloudMethods_CLEANUP.functionsFromEval.initialZ();
+            return mandelbrotExplorer.cloudMethods.functionsFromEval.initialZ(escapePath);
         },
         "processCloudLengthFilter": function(pathIndex, iteration, escapePath){
-            if( typeof mandelbrotExplorer.cloudMethods_CLEANUP.functionsFromEval.cloudLengthFilter === 'undefined' ) {
+            if( typeof mandelbrotExplorer.cloudMethods.functionsFromEval.cloudLengthFilter === 'undefined' ) {
                 if (mandelbrotExplorer.cloudLengthFilter) {
                     let functionDefinition = "function (pathIndex, iteration, escapePath){\nreturn " + mandelbrotExplorer.cloudLengthFilter + ";\n}";
-                    eval('mandelbrotExplorer.cloudMethods_CLEANUP.functionsFromEval.cloudLengthFilter = ' + functionDefinition + ';');
+                    eval('mandelbrotExplorer.cloudMethods.functionsFromEval.cloudLengthFilter = ' + functionDefinition + ';');
                 } else {
-                    mandelbrotExplorer.cloudMethods_CLEANUP.functionsFromEval.cloudLengthFilter = function(){
+                    mandelbrotExplorer.cloudMethods.functionsFromEval.cloudLengthFilter = function(){
                         return true;
                     };
                 }
             }
             
-            return mandelbrotExplorer.cloudMethods_CLEANUP.functionsFromEval.cloudLengthFilter(pathIndex, iteration, escapePath);
+            return mandelbrotExplorer.cloudMethods.functionsFromEval.cloudLengthFilter(pathIndex, iteration, escapePath);
         },
         "processCloudIterationFilter": function(pathIndex, iteration, escapePath) {
-            if( typeof mandelbrotExplorer.cloudMethods_CLEANUP.functionsFromEval.cloudIterationFilter === 'undefined' ) {
+            if( typeof mandelbrotExplorer.cloudMethods.functionsFromEval.cloudIterationFilter === 'undefined' ) {
                 if (mandelbrotExplorer.cloudIterationFilter) {
                     let functionDefinition = "function (pathIndex, iteration, escapePath){\nreturn " + mandelbrotExplorer.cloudIterationFilter + ";\n}";
-                    eval('mandelbrotExplorer.cloudMethods_CLEANUP.functionsFromEval.cloudIterationFilter = ' + functionDefinition + ';');
+                    eval('mandelbrotExplorer.cloudMethods.functionsFromEval.cloudIterationFilter = ' + functionDefinition + ';');
                 } else {
-                    mandelbrotExplorer.cloudMethods_CLEANUP.functionsFromEval.cloudIterationFilter = function(){
+                    mandelbrotExplorer.cloudMethods.functionsFromEval.cloudIterationFilter = function(){
                         return true;
                     };
                 }
             }
             
-            return mandelbrotExplorer.cloudMethods_CLEANUP.functionsFromEval.cloudIterationFilter(pathIndex, iteration, escapePath);
+            return mandelbrotExplorer.cloudMethods.functionsFromEval.cloudIterationFilter(pathIndex, iteration, escapePath);
         },
         "evalEscapingZ": function (pathIndex, iteration, escapePath) {
-            if( typeof mandelbrotExplorer.cloudMethods_CLEANUP.functionsFromEval.escapingZ === 'undefined' ) {
+            if( typeof mandelbrotExplorer.cloudMethods.functionsFromEval.escapingZ === 'undefined' ) {
                 if (mandelbrotExplorer.escapingZ) {
                     let functionDefinition = "function (pathIndex, iteration, escapePath){\n" 
                             + mandelbrotExplorer.escapingZ 
                         + ";\n}";
-                    eval('mandelbrotExplorer.cloudMethods_CLEANUP.functionsFromEval.escapingZ = ' + functionDefinition + ';');
+                    eval('mandelbrotExplorer.cloudMethods.functionsFromEval.escapingZ = ' + functionDefinition + ';');
                 } else {
-                    mandelbrotExplorer.cloudMethods_CLEANUP.functionsFromEval.escapingZ = function(){
+                    mandelbrotExplorer.cloudMethods.functionsFromEval.escapingZ = function(){
                         return 0;
                     };
                 }
             }
             
-            return mandelbrotExplorer.cloudMethods_CLEANUP.functionsFromEval.escapingZ(pathIndex, iteration, escapePath);
+            return mandelbrotExplorer.cloudMethods.functionsFromEval.escapingZ(pathIndex, iteration, escapePath);
         },
         "processParticleFilter": function (newX, newY, particleVector) {
-            if( typeof mandelbrotExplorer.cloudMethods_CLEANUP.functionsFromEval.particleFilter === 'undefined' ) {
+            if( typeof mandelbrotExplorer.cloudMethods.functionsFromEval.particleFilter === 'undefined' ) {
                 if (mandelbrotExplorer.particleFilter) {
                     let functionDefinition = "function (newX, newY, particleVector){\n" 
                             + "var allowed = " + mandelbrotExplorer.particleFilter + ";\n"
                             + "return {newX: newX, newY: newY, particleVector: particleVector, allowed: allowed};\n"
                         + "}";
-                    eval('mandelbrotExplorer.cloudMethods_CLEANUP.functionsFromEval.particleFilter = ' + functionDefinition + ';');
+                    eval('mandelbrotExplorer.cloudMethods.functionsFromEval.particleFilter = ' + functionDefinition + ';');
                 } else {
                     let functionDefinition = "function (newX, newY, particleVector){\n" 
                             + "var allowed = true;\n"
                             + "return {newX: newX, newY: newY, particleVector: particleVector, allowed: allowed};\n"
                         + "}";
-                    eval('mandelbrotExplorer.cloudMethods_CLEANUP.functionsFromEval.particleFilter = ' + functionDefinition + ';');
+                    eval('mandelbrotExplorer.cloudMethods.functionsFromEval.particleFilter = ' + functionDefinition + ';');
                 }
             }
             
-            return mandelbrotExplorer.cloudMethods_CLEANUP.functionsFromEval.particleFilter(newX, newY, particleVector);
+            return mandelbrotExplorer.cloudMethods.functionsFromEval.particleFilter(newX, newY, particleVector);
             
             
 /*
@@ -389,10 +199,6 @@ var repeatCheck = function(zValues, z, lastZ){
 */
         },
         "processDualZMultiplier": function(pathIndex, iteration, escapePath, newX, newY, z) {
-            // TODO: Save this and do something about it....
-            //1;z=pathIndex == 0 ? z :  mandelbrotExplorer.getAbsoluteValueOfComplexNumber(escapePath[pathIndex-1]) - mandelbrotExplorer.getAbsoluteValueOfComplexNumber(escapePath[pathIndex]);
-            //1;z=pathIndex == 0 ? z :  mandelbrotExplorer.getAbsoluteValueOfComplexNumber(escapePath[pathIndex]) - mandelbrotExplorer.getAbsoluteValueOfComplexNumber(escapePath[pathIndex-1]);
-			
 			var newZ = z;
             var dualZMultiplier = eval(mandelbrotExplorer.dualZMultiplier);
             
@@ -414,7 +220,7 @@ var repeatCheck = function(zValues, z, lastZ){
             return c;
         },
         "getEscapePath": function(c) {
-            var juliaC = mandelbrotExplorer.cloudMethods_CLEANUP.evalJuliaC(c);
+            var juliaC = mandelbrotExplorer.cloudMethods.evalJuliaC(c);
             var repeatCheck = function(zValues, z, lastZ){
                 var test = zValues.filter(function(testZ){
                     return z[0] != testZ[0] && z[1] != testZ[1];
@@ -453,9 +259,9 @@ var repeatCheck = function(zValues, z, lastZ){
                 mandelbrotExplorer.renderer.setClearColor( 0x000001, 0 );	
             }
             
-            mandelbrotExplorer.cloudMethods_CLEANUP.startScene();
-            mandelbrotExplorer.cloudMethods_CLEANUP.startCamera();
-            mandelbrotExplorer.cloudMethods_CLEANUP.startTrackballControls();
+            mandelbrotExplorer.cloudMethods.startScene();
+            mandelbrotExplorer.cloudMethods.startCamera();
+            mandelbrotExplorer.cloudMethods.startTrackballControls();
         },
         "startScene": function(){
             if( mandelbrotExplorer.scene == null ) {
@@ -517,24 +323,24 @@ var repeatCheck = function(zValues, z, lastZ){
 			
         },
         "initializeMandelbrotCloud": function(){
-            mandelbrotExplorer.cloudMethods_CLEANUP.startRenderer();
-            mandelbrotExplorer.cloudMethods_CLEANUP.initialize3DScaling();
+            mandelbrotExplorer.cloudMethods.startRenderer();
+            mandelbrotExplorer.cloudMethods.initialize3DScaling();
             
             
             mandelbrotExplorer.iterationParticles = [];
             mandelbrotExplorer.particleSystems = [];
-            mandelbrotExplorer.cloudMethods_CLEANUP.functionsFromEval = {};
+            mandelbrotExplorer.cloudMethods.functionsFromEval = {};
         },
 		"initializeMandelbrotHair": function(){
-			mandelbrotExplorer.cloudMethods_CLEANUP.startRenderer();
-            mandelbrotExplorer.cloudMethods_CLEANUP.initialize3DScaling();
+			mandelbrotExplorer.cloudMethods.startRenderer();
+            mandelbrotExplorer.cloudMethods.initialize3DScaling();
             
             
 			mandelbrotExplorer.iterationParticles = [];
 			mandelbrotExplorer.lines = [];
 			mandelbrotExplorer.lineVectors = [];
 			
-            mandelbrotExplorer.cloudMethods_CLEANUP.functionsFromEval = {};
+            mandelbrotExplorer.cloudMethods.functionsFromEval = {};
 		},
         "generateMandelbrotCloudParticles": function() {
             console.time("drawMandelbrotCloud: Generating particles");
@@ -543,9 +349,9 @@ var repeatCheck = function(zValues, z, lastZ){
 			
 				for( var x = mandelbrotExplorer.startX; x < mandelbrotExplorer.endX; x += (useScales.x) ) {
 					for( var y = mandelbrotExplorer.startY; y > mandelbrotExplorer.endY; y -= (useScales.y) ) {
-						var c = mandelbrotExplorer.cloudMethods_CLEANUP.handleCloudSteppingAdjustments([x,y]);
+						var c = mandelbrotExplorer.cloudMethods.handleCloudSteppingAdjustments([x,y]);
 						
-						var escapePath = mandelbrotExplorer.cloudMethods_CLEANUP.getEscapePath(c);
+						var escapePath = mandelbrotExplorer.cloudMethods.getEscapePath(c);
 
 						if(
 							(mandelbrotExplorer.onlyShortened && !escapePath.shortened) ||
@@ -554,7 +360,7 @@ var repeatCheck = function(zValues, z, lastZ){
 							continue;
 						}
 
-						var z = mandelbrotExplorer.cloudMethods_CLEANUP.evalInitialZ(escapePath);
+						var z = mandelbrotExplorer.cloudMethods.evalInitialZ(escapePath);
 						var accumulatedZ = 0;
 						var averageOfAccumulatedZ = 0;
 
@@ -563,15 +369,15 @@ var repeatCheck = function(zValues, z, lastZ){
 							averageOfAccumulatedZ = accumulatedZ / (pathIndex + 1)
 							var iteration = pathIndex + 1;
 							if (
-								!mandelbrotExplorer.cloudMethods_CLEANUP.processCloudLengthFilter(pathIndex, iteration, escapePath) ||
-								!mandelbrotExplorer.cloudMethods_CLEANUP.processCloudIterationFilter(pathIndex, iteration, escapePath)
+								!mandelbrotExplorer.cloudMethods.processCloudLengthFilter(pathIndex, iteration, escapePath) ||
+								!mandelbrotExplorer.cloudMethods.processCloudIterationFilter(pathIndex, iteration, escapePath)
 							){
 								return true;
 							}
 
 							if( pathIndex != 0 ) {
 								// FIX THE FUCK OUT OF THIS!
-								z = mandelbrotExplorer.cloudMethods_CLEANUP.evalEscapingZ(pathIndex, iteration, escapePath);// eval( mandelbrotExplorer.escapingZ );
+								z = mandelbrotExplorer.cloudMethods.evalEscapingZ(pathIndex, iteration, escapePath);// eval( mandelbrotExplorer.escapingZ );
 							}
 							
 							var iterationIndex = parseInt(pathIndex);
@@ -582,7 +388,7 @@ var repeatCheck = function(zValues, z, lastZ){
 							var newX = escapePath[pathIndex][0];
 							var newY = escapePath[pathIndex][1];
 							var particleVector = new THREE.Vector3(newX, newY, z);
-							var particleFilterResult = mandelbrotExplorer.cloudMethods_CLEANUP.processParticleFilter(newX, newY, particleVector);
+							var particleFilterResult = mandelbrotExplorer.cloudMethods.processParticleFilter(newX, newY, particleVector);
 							if (!particleFilterResult['allowed']) {
 								return true;
 							}
@@ -599,7 +405,7 @@ var repeatCheck = function(zValues, z, lastZ){
 							if(mandelbrotExplorer.dualZ){
 								var newX = particleFilterResult.newX;
 								var newY = particleFilterResult.newY;
-								var coords = mandelbrotExplorer.cloudMethods_CLEANUP.processDualZMultiplier(pathIndex, iteration, escapePath, newX, newY, z);
+								var coords = mandelbrotExplorer.cloudMethods.processDualZMultiplier(pathIndex, iteration, escapePath, newX, newY, z);
 								var particleVector = new THREE.Vector3(coords[0], coords[1], coords[2]);
 								
 								mandelbrotExplorer.iterationParticles[iterationIndex].particles.vertices.push(particleVector);
@@ -610,7 +416,7 @@ var repeatCheck = function(zValues, z, lastZ){
 			});
             console.timeEnd("drawMandelbrotCloud: Generating particles");
             
-            mandelbrotExplorer.cloudMethods_CLEANUP.applyMandelbrotCloudPalette();
+            mandelbrotExplorer.cloudMethods.applyMandelbrotCloudPalette();
             
             mandelbrotExplorer.iterationParticles = null;
         },
@@ -641,13 +447,13 @@ var repeatCheck = function(zValues, z, lastZ){
 			
 			
 			// FUCKING FIX THIS
-			//var juliaC = mandelbrotExplorer.cloudMethods_CLEANUP.evalJuliaC();
+			//var juliaC = mandelbrotExplorer.cloudMethods.evalJuliaC();
 			console.time("drawMandelbrotsHair: Generating line vectors");
 			mandelbrotExplorer.scales_3d.forEach(function(useScales){
 				for( var x = mandelbrotExplorer.startX; x < mandelbrotExplorer.endX; x += useScales.x ) {
 					for( var y = mandelbrotExplorer.startY; y > mandelbrotExplorer.endY; y -= useScales.y ) {
 						var c = [x,y];
-						var juliaC = mandelbrotExplorer.cloudMethods_CLEANUP.evalJuliaC();
+						var juliaC = mandelbrotExplorer.cloudMethods.evalJuliaC();
 						if(mandelbrotExplorer.randomizeCloudStepping){
 							var getRandomArbitrary = function(min, max) {
 							  return Math.random() * (max - min) + min;
@@ -673,7 +479,7 @@ var repeatCheck = function(zValues, z, lastZ){
 						if((mandelbrotExplorer.onlyShortened && !escapePath.shortened) ||
 						   (mandelbrotExplorer.onlyFull && escapePath.shortened)){continue;}
 						// FIX THIS STUPID SHIT
-						var z = mandelbrotExplorer.cloudMethods_CLEANUP.evalInitialZ(escapePath);
+						var z = mandelbrotExplorer.cloudMethods.evalInitialZ(escapePath);
 						var accumulatedZ = 0;
 						var averageOfAccumulatedZ = 0;
 						
@@ -695,7 +501,7 @@ var repeatCheck = function(zValues, z, lastZ){
 							if( pathIndex != 0 ) {
 								// FIX THE FUCK OUT OF THIS!
 								//z = eval( mandelbrotExplorer.escapingZ );
-								z = mandelbrotExplorer.cloudMethods_CLEANUP.evalEscapingZ(pathIndex, iteration, escapePath);// eval( mandelbrotExplorer.escapingZ );
+								z = mandelbrotExplorer.cloudMethods.evalEscapingZ(pathIndex, iteration, escapePath);// eval( mandelbrotExplorer.escapingZ );
 							}
 							
 							var iterationIndex = parseInt(pathIndex);
@@ -748,11 +554,11 @@ var repeatCheck = function(zValues, z, lastZ){
 		console.time("drawMandelbrotCloud");
 		mandelbrotExplorer.assignParams( params );
         
-        mandelbrotExplorer.cloudMethods_CLEANUP.initializeMandelbrotCloud();
+        mandelbrotExplorer.cloudMethods.initializeMandelbrotCloud();
         
-		var resumeIterationCycle = mandelbrotExplorer.cloudMethods_CLEANUP.discontinueIterationCycle();
+		var resumeIterationCycle = mandelbrotExplorer.cloudMethods.discontinueIterationCycle();
         
-        mandelbrotExplorer.cloudMethods_CLEANUP.generateMandelbrotCloudParticles();
+        mandelbrotExplorer.cloudMethods.generateMandelbrotCloudParticles();
 		
 		mandelbrotExplorer.displayCloudParticles();
 		mandelbrotExplorer.continueIterationCycle = resumeIterationCycle;
@@ -772,9 +578,9 @@ var repeatCheck = function(zValues, z, lastZ){
 		console.time("drawMandelbrotsHair");
 		mandelbrotExplorer.assignParams( params );
         
-        mandelbrotExplorer.cloudMethods_CLEANUP.initializeMandelbrotHair();
+        mandelbrotExplorer.cloudMethods.initializeMandelbrotHair();
         
-		var resumeIterationCycle = mandelbrotExplorer.cloudMethods_CLEANUP.discontinueIterationCycle();
+		var resumeIterationCycle = mandelbrotExplorer.cloudMethods.discontinueIterationCycle();
 		
 		if( mandelbrotExplorer.renderer == null )	{
 			mandelbrotExplorer.renderer = new mandelbrotExplorer.useRenderer(
@@ -814,7 +620,7 @@ var repeatCheck = function(zValues, z, lastZ){
 		mandelbrotExplorer.lines = [];
 		mandelbrotExplorer.lineVectors = [];
 		
-		mandelbrotExplorer.cloudMethods_CLEANUP.generateMandelbrotHair();
+		mandelbrotExplorer.cloudMethods.generateMandelbrotHair();
 
 		console.timeEnd("drawMandelbrotsHair");
 	},
@@ -1186,5 +992,77 @@ var repeatCheck = function(zValues, z, lastZ){
 		}
 		
 		return str;
+	},
+	
+	// LocalStorage settings persistence
+	"saveSettings": function() {
+		try {
+			var settings = {
+				startX: this.startX,
+				startY: this.startY,
+				endX: this.endX,
+				endY: this.endY,
+				maxIterations_2d: this.maxIterations_2d,
+				maxIterations_3d: this.maxIterations_3d,
+				cloudResolution: this.cloudResolution,
+				randomizeCloudStepping: this.randomizeCloudStepping,
+				dualZ: this.dualZ,
+				dualZMultiplier: this.dualZMultiplier,
+				particleSize: this.particleSize,
+				particleFilter: this.particleFilter,
+				cloudLengthFilter: this.cloudLengthFilter,
+				cloudIterationFilter: this.cloudIterationFilter,
+				juliaC: this.juliaC,
+				initialZ: this.initialZ,
+				escapingZ: this.escapingZ,
+				iterationCycleTime: this.iterationCycleTime,
+				iterationCycleFrame: this.iterationCycleFrame,
+				targetFrameRate: this.targetFrameRate,
+				onlyShortened: this.onlyShortened,
+				onlyFull: this.onlyFull,
+				selectedPalette: this.palette ? this.palette.name || 'palette2' : 'palette2'
+			};
+			
+			localStorage.setItem('mandelbrotExplorer_settings', JSON.stringify(settings));
+			console.log('Settings saved to localStorage');
+		} catch (e) {
+			console.error('Failed to save settings:', e);
+		}
+	},
+	
+	"loadSettings": function() {
+		try {
+			var savedSettings = localStorage.getItem('mandelbrotExplorer_settings');
+			if (savedSettings) {
+				var settings = JSON.parse(savedSettings);
+				
+				// Apply saved settings
+				for (var key in settings) {
+					if (this.hasOwnProperty(key) && settings[key] !== null && settings[key] !== undefined) {
+						this[key] = settings[key];
+					}
+				}
+				
+				// Handle palette separately since it's an object
+				if (settings.selectedPalette && palettes[settings.selectedPalette]) {
+					this.palette = palettes[settings.selectedPalette];
+				}
+				
+				console.log('Settings loaded from localStorage');
+				return true;
+			}
+		} catch (e) {
+			console.error('Failed to load settings:', e);
+		}
+		return false;
+	},
+	
+	"clearSettings": function() {
+		try {
+			localStorage.removeItem('mandelbrotExplorer_settings');
+			console.log('Settings cleared from localStorage');
+		} catch (e) {
+			console.error('Failed to clear settings:', e);
+		}
 	}
 }
