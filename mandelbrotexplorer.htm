@@ -10,8 +10,16 @@
 		<script src="./TrackballControls.js"></script>
 		<script src="./palettes.js"></script>
 		<script src="./presets.js"></script>
+		<script src="./settingsManager.js"></script>
+		<script src="./threeRenderer.js"></script>
 		<script src="./mandelbrotexplorer.js"></script>
 		<script src="./ui.js"></script>
+		<script src="altUI.js"></script>
+		<!-- CodeMirror 5 for code editing in the new UI -->
+		<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.css">
+		<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/theme/material.min.css">
+		<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.js"></script>
+		<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/javascript/javascript.min.js"></script>
 	</head>
 	<body onload="init()">
 		<div>
@@ -23,6 +31,7 @@
 				<input type="button" onclick="toggleControls()" value="..." />
 			</div>
 			<div class="maximized" id="controls_maximized">
+				<button id="uiToggleBtn" style="margin-bottom:0.5em;margin-right:3em;float:right;">Switch UI</button>
 				<table width="100%" style="text-align: right" id="controls_table">
 					<tr>
 						<td>Max Iterations (2d):<input type="text" id="maxIterations_2d" onchange="update2dIterations()" /></td>
@@ -30,7 +39,7 @@
 					</tr>
 					<tr>
 						<td>
-							Cloud Resolution: <input type="text" id="cloudResolution" style="width:10em;"onchange="updateCloudResolution()" />
+							Cloud Resolution: <input type="text" id="cloudResolution" style="width:10em;" onchange="updateCloudResolution()" />
 							Random Step <input type="checkbox" id="randomStepCheckbox" onchange="toggleRandomStepping()" />
 						</td>
 						<td>Palette:<select id="palette" onchange="updatePalette()"></select></td>
@@ -84,7 +93,7 @@
 					</tr>
 					<tr>
 						<td colspan="2">
-							<button onclick='mandelbrotExplorer.controls.reset()'>Reset Camera</button>
+							<button onclick='mandelbrotExplorer.threeRenderer.controls.reset()'>Reset Camera</button>
 							<input type='checkbox' id="hide2d" onchange='hide2D()' /><label for='hide2d'>Hide 2D</label>
 							<input type='checkbox' id="toggleBackground" onchange='toggleBackground()' /><label for='toggleBackground'>Toggle Background</label>
 						</td>
@@ -164,5 +173,7 @@
 				</table>
 			</div>
 		</div>
+		<div id="toast" class="toast"></div>
+		<div id="alternativeUI" style="display:none"></div>
 	</body>
 </html>

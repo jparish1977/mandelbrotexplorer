@@ -5,6 +5,7 @@
 var tjStats = null;
 var animationFrameId;
 var restoreContextTimer = null;
+var originalHomeState = null;
 
 // Screen capture functionality
 function openScreenCap(){
@@ -118,10 +119,14 @@ function onWindowResize( event ) {
 function resizeCloud(){
     cancelAnimationFrame(animationFrameId); 
     
-    mandelbrotExplorer.renderer.setSize( mandelbrotExplorer.canvas_3d.width, mandelbrotExplorer.canvas_3d.height );
+    if (mandelbrotExplorer.threeRenderer && mandelbrotExplorer.threeRenderer.renderer) {
+        mandelbrotExplorer.threeRenderer.renderer.setSize( mandelbrotExplorer.canvas_3d.width, mandelbrotExplorer.canvas_3d.height );
+    }
 
-    mandelbrotExplorer.camera.aspect = mandelbrotExplorer.canvas_3d.width / mandelbrotExplorer.canvas_3d.height;
-    mandelbrotExplorer.camera.updateProjectionMatrix();
+    if (mandelbrotExplorer.threeRenderer && mandelbrotExplorer.threeRenderer.camera) {
+        mandelbrotExplorer.threeRenderer.camera.aspect = mandelbrotExplorer.canvas_3d.width / mandelbrotExplorer.canvas_3d.height;
+        mandelbrotExplorer.threeRenderer.camera.updateProjectionMatrix();
+    }
 
     animate();
 }
@@ -304,7 +309,9 @@ function toggleBackground(){
         document.body.style.backgroundColor = 'rgb(255, 255, 255)';
     }
     
-    mandelbrotExplorer.scene.background =  color;
+    if (mandelbrotExplorer.threeRenderer && mandelbrotExplorer.threeRenderer.scene) {
+        mandelbrotExplorer.threeRenderer.scene.background = color;
+    }
 }
 
 function toggleRandomStepping(){
@@ -360,9 +367,11 @@ function drawPlanes(){
     plane2.rotation.x = Math.PI / 2;
     var plane3 = new THREE.Mesh( geometry, material );
     plane3.rotation.y = Math.PI / 2;
-    mandelbrotExplorer.scene.add( plane1 );
-    mandelbrotExplorer.scene.add( plane2 );
-    mandelbrotExplorer.scene.add( plane3 );
+    if (mandelbrotExplorer.threeRenderer && mandelbrotExplorer.threeRenderer.scene) {
+        mandelbrotExplorer.threeRenderer.scene.add( plane1 );
+        mandelbrotExplorer.threeRenderer.scene.add( plane2 );
+        mandelbrotExplorer.threeRenderer.scene.add( plane3 );
+    }
 }
 
 // Load and setup functions
@@ -409,8 +418,7 @@ function loadQueryStringParams(){
         true 
         : params.get('antialias') === '0' ? 
             false : 
-            mandelbrotExplorer.rendererOptions.antialias;
-    mandelbrotExplorer.rendererOptions.antialias = useAntialiasing;
+            ThreeJSRenderer.rendererOptions.antialias;
     
     var precisionValues = [
         'highp', 
@@ -420,11 +428,9 @@ function loadQueryStringParams(){
     var requestedPrecision = params.get('precision');
     var usePrecision = precisionValues.includes(requestedPrecision) ? 
         requestedPrecision 
-        : mandelbrotExplorer.rendererOptions.precision;
-    mandelbrotExplorer.rendererOptions.precision = usePrecision;
+        : ThreeJSRenderer.rendererOptions.precision;
     
     var show2d = params.get('show2d') === '1' ? true : false;
-    mandelbrotExplorer.rendererOptions.antialias = useAntialiasing;
     
     return {
         antialias: useAntialiasing,
@@ -711,6 +717,90 @@ function setInitialZFromPreset(){
     }
 }
 
+// Store the original home state for the camera and controls
+function saveOriginalHomeState() {
+    var controls = mandelbrotExplorer.threeRenderer.controls;
+    if (controls && !originalHomeState) {
+        originalHomeState = {
+            position: controls.position0.clone(),
+            target: controls.target0.clone()
+        };
+    }
+}
+
+function restoreCameraAndControlsFromStorage() {
+    var settings = JSON.parse(localStorage.getItem(SettingsManager.storageKey));
+    var controls = mandelbrotExplorer.threeRenderer.controls;
+    if (controls) controls.enabled = false; // Disable controls during restore
+    if (settings && settings.cameraState) {
+        SettingsManager.restoreCameraState(mandelbrotExplorer, settings.cameraState);
+    }
+    if (settings && settings.controlsState && controls) {
+        if (settings.controlsState.target) {
+            controls.target.set(
+                settings.controlsState.target.x,
+                settings.controlsState.target.y,
+                settings.controlsState.target.z
+            );
+        }
+        if (settings.controlsState.object && settings.controlsState.object.position) {
+            controls.object.position.set(
+                settings.controlsState.object.position.x,
+                settings.controlsState.object.position.y,
+                settings.controlsState.object.position.z
+            );
+        }
+        controls.update();
+    }
+    if (mandelbrotExplorer.threeRenderer.render) {
+        mandelbrotExplorer.threeRenderer.render();
+    }
+    if (controls) controls.enabled = true; // Re-enable controls after restore
+}
+
+// Add a function to reset to the original home state
+function resetCameraToOriginalHome() {
+    var controls = mandelbrotExplorer.threeRenderer.controls;
+    if (controls && originalHomeState) {
+        controls.target0.copy(originalHomeState.target);
+        controls.position0.copy(originalHomeState.position);
+        controls.reset();
+        if (mandelbrotExplorer.threeRenderer.render) {
+            mandelbrotExplorer.threeRenderer.render();
+        }
+    }
+}
+
+function loadSettingsFromStorage(){
+    if (mandelbrotExplorer.loadSettings()) {
+        loadParameterValues();
+        loadPaletteOptions(); // Refresh palette dropdown
+        // Regenerate the current view with loaded settings
+        if (mandelbrotExplorer.threeRenderer && mandelbrotExplorer.threeRenderer.scene) {
+            generateCloud();
+        }
+        showToast('Settings loaded successfully!');
+    } else {
+        showToast('No saved settings found.');
+
+        loadParameterValues();
+        loadPaletteOptions(); // Refresh palette dropdown
+        // Generate cloud with default values even when no settings are found
+        if (mandelbrotExplorer.threeRenderer && mandelbrotExplorer.threeRenderer.scene) {
+            generateCloud();
+        }
+    }
+}
+
+function showToast(message, duration = 2500) {
+    var toast = document.getElementById("toast");
+    toast.textContent = message;
+    toast.className = "toast show";
+    setTimeout(function() {
+        toast.className = toast.className.replace("show", "");
+    }, duration);
+}
+
 // Generation functions
 function generateHair(){
     if(!confirm("Hair takes some time to grow...are you sure?")){
@@ -730,31 +820,31 @@ function generateHair(){
     var endY = mandelbrotExplorer.endY == null ? (verticalRange / -2) : mandelbrotExplorer.endY;
 
     mandelbrotExplorer.drawMandelbrotsHair({
-        "startX": startX,
-        "endX": endX,
-        "startY": startY,
-        "endY": endY,
-        "maxIterations_3d": document.getElementById("maxIterations_3d").value,
-        "cloudResolution": document.getElementById("cloudResolution").value
+        "startX": mandelbrotExplorer.startX,
+        "endX": mandelbrotExplorer.endX,
+        "startY": mandelbrotExplorer.startY,
+        "endY": mandelbrotExplorer.endY,
+        "maxIterations_3d": mandelbrotExplorer.maxIterations_3d,
+        "cloudResolution": mandelbrotExplorer.cloudResolution
     });
-    loadParameterValues();
-    if(mandelbrotExplorer.useRenderer == THREE.WebGLRenderer){
-        mandelbrotExplorer.renderer.context.canvas.addEventListener("webglcontextlost", function(event) {
+    if(mandelbrotExplorer.threeRenderer && mandelbrotExplorer.threeRenderer.renderer){
+        mandelbrotExplorer.threeRenderer.renderer.context.canvas.addEventListener("webglcontextlost", function(event) {
             event.preventDefault();
             cancelAnimationFrame(animationFrameId); 
         }, false);
 
-        mandelbrotExplorer.renderer.context.canvas.addEventListener("webglcontextrestored", function(event) {
+        mandelbrotExplorer.threeRenderer.renderer.context.canvas.addEventListener("webglcontextrestored", function(event) {
             if(restoreContextTimer != null){
                 cancelTimeout(restoreContextTimer);
             }
-            restoreContextTimer = setTimeout(function(){mandelbrotExplorer.restoreContext();animate();}, 500)
-        }, false);			
+            restoreContextTimer = setTimeout(function(){restoreContext();animate();}, 500)
+        }, false);            
     }
     animate();
 }
 
 function generateCloud(){
+    //debugger;
     if(!mandelbrotExplorer.canvas_3d){
         mandelbrotExplorer.canvas_3d = document.getElementById("mandelbrotCanvas3d");
     }
@@ -769,26 +859,25 @@ function generateCloud(){
     var endY = mandelbrotExplorer.endY == null ? (verticalRange / -2) : mandelbrotExplorer.endY;
 
     mandelbrotExplorer.drawMandelbrotCloud({
-        "startX": startX,
-        "endX": endX,
-        "startY": startY,
-        "endY": endY,
-        "maxIterations_3d": document.getElementById("maxIterations_3d").value,
-        "cloudResolution": document.getElementById("cloudResolution").value
+        "startX": mandelbrotExplorer.startX,
+        "endX": mandelbrotExplorer.endX,
+        "startY": mandelbrotExplorer.startY,
+        "endY": mandelbrotExplorer.endY,
+        "maxIterations_3d": mandelbrotExplorer.maxIterations_3d,
+        "cloudResolution": mandelbrotExplorer.cloudResolution
     });
-    loadParameterValues();
-    if(mandelbrotExplorer.useRenderer == THREE.WebGLRenderer){
-        mandelbrotExplorer.renderer.context.canvas.addEventListener("webglcontextlost", function(event) {
+    if(mandelbrotExplorer.threeRenderer && mandelbrotExplorer.threeRenderer.renderer){
+        mandelbrotExplorer.threeRenderer.renderer.context.canvas.addEventListener("webglcontextlost", function(event) {
             event.preventDefault();
             cancelAnimationFrame(animationFrameId); 
         }, false);
 
-        mandelbrotExplorer.renderer.context.canvas.addEventListener("webglcontextrestored", function(event) {
+        mandelbrotExplorer.threeRenderer.renderer.context.canvas.addEventListener("webglcontextrestored", function(event) {
             if(restoreContextTimer != null){
                 cancelTimeout(restoreContextTimer);
             }
-            restoreContextTimer = setTimeout(function(){mandelbrotExplorer.restoreContext();animate();}, 500)
-        }, false);			
+            restoreContextTimer = setTimeout(function(){restoreContext();animate();}, 500)
+        }, false);            
     }
     animate();
 }
@@ -798,18 +887,15 @@ function restoreContext(){
     mandelbrotExplorer.restoringContext = true;
     mandelbrotExplorer.canvas_3d =  document.getElementById("mandelbrotCanvas3d");
     
-    mandelbrotExplorer.renderer = new mandelbrotExplorer.useRenderer(
-        {
-            canvas: mandelbrotExplorer.canvas_3d,  
-            alpha: mandelbrotExplorer.rendererOptions.alpha, 
-            precision: mandelbrotExplorer.rendererOptions.precision, 
-            antialias: mandelbrotExplorer.rendererOptions.antialias
-        }
-    );
-    mandelbrotExplorer.renderer.setClearColor( 0x000001, 0 );	
-    mandelbrotExplorer.renderer.setSize( mandelbrotExplorer.canvas_3d.width/2, mandelbrotExplorer.canvas_3d.height/2 )
+    // Reinitialize the ThreeJSRenderer
+    mandelbrotExplorer.threeRenderer.init(mandelbrotExplorer.canvas_3d, {
+        startX: mandelbrotExplorer.startX,
+        endX: mandelbrotExplorer.endX,
+        startY: mandelbrotExplorer.startY,
+        endY: mandelbrotExplorer.endY
+    });
     
-    mandelbrotExplorer.scene = new THREE.Scene();
+    // Recreate particle systems
     for( var systemIndex in mandelbrotExplorer.particleSystems ){
         var colorIndex = systemIndex;
         while( colorIndex >= mandelbrotExplorer.palette.length  ) {
@@ -817,26 +903,18 @@ function restoreContext(){
         }
         var color = mandelbrotExplorer.palette[ colorIndex ];
         
-        var pMaterial = new THREE.ParticleBasicMaterial({
-            color: new THREE.Color( color.R / 255, color.G / 255, color.B / 255 ),
-            size: 0,
-            transparent: false,
-            opacity: color.A/255
-        });
+        var pMaterial = mandelbrotExplorer.threeRenderer.createParticleMaterial(color, 0);
         
-        mandelbrotExplorer.particleSystems[systemIndex] = new THREE.ParticleSystem(
-            mandelbrotExplorer.particleSystems[parseInt(systemIndex)].geometry.verticies,
-            pMaterial);
-        
-        mandelbrotExplorer.scene.add( mandelbrotExplorer.particleSystems[systemIndex] );
+        mandelbrotExplorer.particleSystems[systemIndex] = mandelbrotExplorer.threeRenderer.addParticleSystem(
+            mandelbrotExplorer.particleSystems[parseInt(systemIndex)].geometry,
+            pMaterial
+        );
     }
     
-    mandelbrotExplorer.camera = new THREE.PerspectiveCamera( 45, Math.abs(mandelbrotExplorer.startX - mandelbrotExplorer.endX) / Math.abs(mandelbrotExplorer.startY - mandelbrotExplorer.endY), .1, 1000 );
-    mandelbrotExplorer.camera.position.z = 5;
-    
-    mandelbrotExplorer.controls = new THREE.TrackballControls( mandelbrotExplorer.camera, mandelbrotExplorer.renderer.domElement );
-    
     mandelbrotExplorer.displayCloudParticles();
+    // Always restore camera/controls state after context restore
+    //restoreCameraAndControlsFromStorage();
+    //setTimeout(restoreCameraAndControlsFromStorage, 50); // Try restoring again after a short delay
     mandelbrotExplorer.restoringContext = false;
 }
 
@@ -845,42 +923,38 @@ var lastFrameTime = 0;
 
 function animate() {
     animationFrameId = requestAnimationFrame( animate );
-    
     var currentTime = performance.now();
     var deltaTime = currentTime - lastFrameTime;
     var frameInterval = 1000 / mandelbrotExplorer.targetFrameRate; // Time between frames in milliseconds
-    
     // Only render if enough time has passed since last frame
     if (deltaTime >= frameInterval) {
         tjStats.update();
-        if(mandelbrotExplorer.controls){
-            mandelbrotExplorer.controls.update();
-        }
-        
+        mandelbrotExplorer.threeRenderer.update();
         render();
         lastFrameTime = currentTime;
     }
 }
 
 function render() {
-    mandelbrotExplorer.renderer.render( mandelbrotExplorer.scene, mandelbrotExplorer.camera );
+    mandelbrotExplorer.threeRenderer.render();
 }
 
 // Initialization
 function init()
 {
     tjStats = new Stats();
-    tjStats.domElement.style.float='right';
+    tjStats.domElement.style.position = 'fixed';
+    tjStats.domElement.style.bottom = '0.5em';
+    tjStats.domElement.style.right = '0.5em';
+    tjStats.domElement.style.left = '';
+    tjStats.domElement.style.top = '';
+    tjStats.domElement.style.zIndex = '2000';
     document.body.appendChild( tjStats.domElement );
     var params = loadQueryStringParams();
-    
-    // Load saved settings first
-    mandelbrotExplorer.loadSettings();
     
     dimControls();
     loadPaletteOptions();
     loadFilterOptions();
-    loadParameterValues();
                 
     var canvas_2d = document.getElementById("mandelbrotCanvas2d");
     canvas_2d.width = window.innerWidth / 2;
@@ -898,26 +972,37 @@ function init()
     mandelbrotExplorer.canvas_3d.style.left = window.innerWidth / 2 + "px";
     mandelbrotExplorer.canvas_3d.width = window.innerWidth / 2;
     mandelbrotExplorer.canvas_3d.height = window.innerHeight;
+
+    // Initialize ThreeJSRenderer
+    mandelbrotExplorer.init(mandelbrotExplorer.canvas_3d, params);
+
+    // Load saved settings after renderer/camera/controls are initialized
+    loadSettingsFromStorage();
     
-    generateCloud();
+    // Load parameter values after settings are loaded
+    loadParameterValues();
+    
+    // generateCloud(); // Removed redundant call
     if(!params.show2d){
         hide2D(true);
     } else {
         mandelbrotExplorer.drawMandelbrot();
     }
     window.onresize = onWindowResize;
-}
-
-function loadSettingsFromStorage(){
-    if (mandelbrotExplorer.loadSettings()) {
-        loadParameterValues();
-        loadPaletteOptions(); // Refresh palette dropdown
-        // Regenerate the current view with loaded settings
-        if (mandelbrotExplorer.scene && mandelbrotExplorer.particleSystems.length > 0) {
-            generateCloud();
-        }
-        alert('Settings loaded successfully!');
-    } else {
-        alert('No saved settings found.');
+    
+    // Setup alternate UI event listeners
+    if (window.MBEUI && typeof window.MBEUI.setupAltUIEventListeners === 'function') {
+        window.MBEUI.setupAltUIEventListeners();
     }
 } 
+
+// --- ALTERNATE UI EXTRACTION START ---
+// The following code is now in altUI.js:
+// - buildAlternativeUI
+// - showAltToast
+// - initAltUICodeMirror5
+// - refreshVisibleAltUICM
+// - syncAltUICMWithPreset
+// - DOMContentLoaded event for toggleBtn and alternativeUI
+// Remove these from this file and import from altUI.js instead.
+// --- ALTERNATE UI EXTRACTION END --- 

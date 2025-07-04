@@ -77,6 +77,30 @@ An interactive web-based Mandelbrot set and Julia set explorer with 2D and 3D vi
 - **Cycle Time**: Control animation speed
 - **Cycle Frame**: Set animation frame position
 
+### Camera Controls & Reset
+
+- **3D Navigation**: Use your mouse to rotate, zoom, and pan the 3D view with TrackballControls.
+- **Reset Camera**: The "Reset Camera" button always returns the camera to its original home position and orientation from when the app first loaded.
+- **Load Settings**: Loading saved settings will snap the camera and controls to the saved state, but will NOT change the "home" position for reset.
+- **Reset vs. Load**: "Reset" always returns to the original home state, while "Load" snaps to the saved state for exploration.
+
+## Settings Persistence
+
+- **Save Settings**: Saves all current parameters, including camera position and controls, to your browser's localStorage.
+- **Load Settings**: Restores all parameters, including camera and controls, to the saved state.
+- **Reset Camera**: Always returns to the original home state, not the last loaded state.
+
+## Technical Details (Camera/Controls)
+
+- **Camera State**: The application uses Three.js TrackballControls for 3D navigation. The "reset" function always returns to the initial camera state from when the controls were first created.
+- **Settings Restore**: When loading settings, the camera and controls are set directly to the saved state, but the reset "home" state is not changed.
+
+## Troubleshooting
+
+### Camera/Controls Not Resetting as Expected?
+- If you load settings and then use "Reset Camera," it will always return to the original home state from the start of your session, not the last loaded state.
+- If you want to change the "home" state, reload the page with your desired view as the default.
+
 ## Detailed Controls Guide
 
 ### 🎛️ **Core Parameters**
