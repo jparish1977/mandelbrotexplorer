@@ -19,7 +19,7 @@ function openScreenCap(){
 }
 
 function getScreenCap(){
-    var dataUrl = mandelbrotExplorer.renderer.domElement.toDataURL();
+    var dataUrl = mandelbrotExplorer.threeRenderer.renderer.domElement.toDataURL();
     
     var img = document.getElementById("screen_cap");
     if( !img ) {

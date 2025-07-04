@@ -57,68 +57,107 @@ function buildAlternativeUI() {
           <section class="alt-ui-section alt-ui-tabpanel" data-tabpanel="rendering" style="display:none;">
             <h3>Rendering</h3>
             <div class="alt-ui-render-controls" id="alt-ui-render-controls">
-              <label for="alt-particleSize">Particle Size</label>
-              <textarea id="alt-particleSize"></textarea>
-              <select id="alt-particleSizePresets">
-                <option value="">----</option>
-              </select>
-              
-              <label for="alt-dualZEnabled">Dual Z Enabled</label>
-              <input type="checkbox" id="alt-dualZEnabled" />
-              
-              <label for="alt-dualZMultiplier">Dual Z Multiplier</label>
-              <textarea id="alt-dualZMultiplier"></textarea>
-              <select id="alt-dualZMultiplierPresets">
-                <option value="">----</option>
-              </select>
-              
-              <label for="alt-cloudLengthFilter">Cloud Length Filter</label>
-              <textarea id="alt-cloudLengthFilter"></textarea>
-              <select id="alt-cloudLengthFilterPresets">
-                <option value="">----</option>
-              </select>
-              
-              <label for="alt-cloudIterationFilter">Cloud Iteration Filter</label>
-              <textarea id="alt-cloudIterationFilter"></textarea>
-              <select id="alt-cloudIterationFilterPresets">
-                <option value="">----</option>
-              </select>
+              <div class="alt-ui-fieldgroup">
+                <div class="alt-ui-fieldrow">
+                  <label for="alt-particleSize">Particle Size</label>
+                  <select id="alt-particleSizePresets">
+                    <option value="">----</option>
+                  </select>
+                </div>
+                <textarea id="alt-particleSize"></textarea>
+              </div>
+              <div class="alt-ui-fieldgroup">
+                <div class="alt-ui-fieldrow">
+                  <label for="alt-dualZMultiplier">Dual Z Multiplier</label>
+                  <select id="alt-dualZMultiplierPresets">
+                    <option value="">----</option>
+                  </select>
+                  <label style="margin-left:1em;"><input type="checkbox" id="alt-dualZEnabled" /> Dual Z Enabled</label>
+                </div>
+                <textarea id="alt-dualZMultiplier"></textarea>
+              </div>
+              <div class="alt-ui-fieldgroup">
+                <div class="alt-ui-fieldrow">
+                  <label for="alt-cloudLengthFilter">Cloud Length Filter</label>
+                  <select id="alt-cloudLengthFilterPresets">
+                    <option value="">----</option>
+                  </select>
+                </div>
+                <textarea id="alt-cloudLengthFilter"></textarea>
+              </div>
+              <div class="alt-ui-fieldgroup">
+                <div class="alt-ui-fieldrow">
+                  <label for="alt-cloudIterationFilter">Cloud Iteration Filter</label>
+                  <select id="alt-cloudIterationFilterPresets">
+                    <option value="">----</option>
+                  </select>
+                </div>
+                <textarea id="alt-cloudIterationFilter"></textarea>
+              </div>
+              <div class="alt-ui-fieldgroup">
+                <div class="alt-ui-fieldrow">
+                  <label for="alt-colorCycleCheckbox">Color Cycle</label>
+                  <input type="checkbox" id="alt-colorCycleCheckbox" />
+                  <label for="alt-iterationCycleCheckbox" style="margin-left:1.5em;">Iteration Cycle</label>
+                  <input type="checkbox" id="alt-iterationCycleCheckbox" />
+                </div>
+                <div class="alt-ui-fieldrow">
+                  <label for="alt-iterationCycleTime">Cycle Time</label>
+                  <input type="text" id="alt-iterationCycleTime" style="width:3em;" />
+                  <label for="alt-iterationCycleFrame" style="margin-left:1.5em;">Cycle Frame</label>
+                  <input type="text" id="alt-iterationCycleFrame" style="width:3em;" />
+                  <label for="alt-targetFrameRate" style="margin-left:1.5em;">Target FPS:</label>
+                  <input type="text" id="alt-targetFrameRate" style="width:3em;" />
+                </div>
+                <div class="alt-ui-fieldrow">
+                  <button id="alt-captureBtn" type="button">Capture</button>
+                </div>
+              </div>
             </div>
           </section>
           <section class="alt-ui-section alt-ui-tabpanel" data-tabpanel="presets" style="display:none;">
             <h3>Presets & Filters</h3>
             <div class="alt-ui-presets" id="alt-ui-presets">
-              <label for="alt-juliaC">Julia C</label>
-              <textarea id="alt-juliaC"></textarea>
-              
-              <label for="alt-initialZ">Initial Z</label>
-              <textarea id="alt-initialZ"></textarea>
-              <select id="alt-initialZPresets">
-                <option value="">----</option>
-              </select>
-              
-              <label for="alt-escapingZ">Escaping Z</label>
-              <textarea id="alt-escapingZ"></textarea>
-              <select id="alt-escapingZPresets">
-                <option value="">----</option>
-              </select>
-              
-              <label for="alt-particleFilter">Particle Filter</label>
-              <textarea id="alt-particleFilter"></textarea>
-              <select id="alt-particleFilterPresets">
-                <option value="">----</option>
-              </select>
+              <div class="alt-ui-fieldgroup">
+                <div class="alt-ui-fieldrow">
+                  <label for="alt-juliaC">Julia C</label>
+                </div>
+                <textarea id="alt-juliaC"></textarea>
+              </div>
+              <div class="alt-ui-fieldgroup">
+                <div class="alt-ui-fieldrow">
+                  <label for="alt-initialZ">Initial Z</label>
+                  <select id="alt-initialZPresets">
+                    <option value="">----</option>
+                  </select>
+                </div>
+                <textarea id="alt-initialZ"></textarea>
+              </div>
+              <div class="alt-ui-fieldgroup">
+                <div class="alt-ui-fieldrow">
+                  <label for="alt-escapingZ">Escaping Z</label>
+                  <select id="alt-escapingZPresets">
+                    <option value="">----</option>
+                  </select>
+                </div>
+                <textarea id="alt-escapingZ"></textarea>
+              </div>
+              <div class="alt-ui-fieldgroup">
+                <div class="alt-ui-fieldrow">
+                  <label for="alt-particleFilter">Particle Filter</label>
+                  <select id="alt-particleFilterPresets">
+                    <option value="">----</option>
+                  </select>
+                </div>
+                <textarea id="alt-particleFilter"></textarea>
+              </div>
             </div>
           </section>
           <section class="alt-ui-section alt-ui-tabpanel" data-tabpanel="settings" style="display:none;">
             <h3>Settings</h3>
             <div class="alt-ui-settings" id="alt-ui-settings">
-              <button onclick="mandelbrotExplorer.threeRenderer.controls.reset()">Reset Camera</button>
               <label><input type="checkbox" id="alt-hide2d" /> Hide 2D</label>
               <label><input type="checkbox" id="alt-toggleBackground" /> Toggle Background</label>
-              <br><br>
-              <button onclick="generateHair()">Generate Hair</button>
-              <button onclick="generateCloud()">Generate Cloud</button>
               <br><br>
               <button onclick="mandelbrotExplorer.saveSettings()">Save Settings</button>
               <button onclick="loadSettingsFromStorage()">Load Settings</button>
@@ -132,10 +171,21 @@ function buildAlternativeUI() {
       </div>
     `;
     
-    // Populate fields with current values
+    // Collapse button logic
+    const container = altUI.querySelector('.alt-ui-container');
+    const header = altUI.querySelector('.alt-ui-header');
+    const collapseBtn = altUI.querySelector('#alt-collapseBtn');
+    if (collapseBtn && container && header) {
+      collapseBtn.addEventListener('click', function() {
+        container.classList.toggle('collapsed');
+        header.classList.toggle('collapsed');
+      });
+    }
+    
+    // Populate fields with current values (from MBE/state) when switching to altUI
     populateAltUIFields();
     
-    // Attach event listeners
+    // Attach event listeners for altUI fields (these update MBE and classic UI as needed)
     attachAltUIEventListeners();
     
     // Setup tab switching
@@ -143,6 +193,60 @@ function buildAlternativeUI() {
     
     // Initialize CodeMirror for text areas
     setTimeout(initAltUICodeMirror5, 0);
+
+    // Add modal HTML to the end of buildAlternativeUI
+    if (!document.getElementById('alt-ui-cm-modal')) {
+      const modal = document.createElement('div');
+      modal.id = 'alt-ui-cm-modal';
+      modal.style.display = 'none';
+      modal.innerHTML = `
+        <div class="alt-ui-cm-modal-backdrop"></div>
+        <div class="alt-ui-cm-modal-dialog">
+          <div class="alt-ui-cm-modal-header">
+            <span id="alt-ui-cm-modal-title">Edit</span>
+            <button id="alt-ui-cm-modal-close">×</button>
+          </div>
+          <textarea id="alt-ui-cm-modal-textarea"></textarea>
+          <div class="alt-ui-cm-modal-actions">
+            <button id="alt-ui-cm-modal-save">Save</button>
+            <button id="alt-ui-cm-modal-cancel">Cancel</button>
+          </div>
+        </div>
+      `;
+      document.body.appendChild(modal);
+    }
+
+// Add pop-out buttons to each CodeMirror field
+    [
+      'alt-particleSize', 'alt-dualZMultiplier', 'alt-cloudLengthFilter', 'alt-cloudIterationFilter',
+      'alt-juliaC', 'alt-initialZ', 'alt-escapingZ', 'alt-particleFilter'
+    ].forEach(id => {
+      const textarea = document.getElementById(id);
+      if (textarea) {
+        let group = textarea.closest('.alt-ui-fieldgroup');
+        if (group) {
+          let row = group.querySelector('.alt-ui-fieldrow');
+          if (!row) {
+            // If no fieldrow, create one above textarea
+            row = document.createElement('div');
+            row.className = 'alt-ui-fieldrow';
+            group.insertBefore(row, textarea);
+          }
+          if (!row.querySelector('.alt-ui-cm-popout')) {
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'alt-ui-cm-popout';
+            btn.title = 'Expand editor';
+            btn.textContent = '🗖';
+            btn.style.marginLeft = '0.5em';
+            btn.addEventListener('click', function() {
+              openAltUICMModal(id);
+            });
+            row.appendChild(btn);
+          }
+        }
+      }
+    });
 }
 
 function populateAltUIFields() {
@@ -232,6 +336,33 @@ function populateAltUIFields() {
     if (toggleBackground) {
         const altToggleBackground = document.getElementById('alt-toggleBackground');
         if (altToggleBackground) altToggleBackground.checked = toggleBackground.checked;
+    }
+    
+    // Animation controls
+    const colorCycle = document.getElementById('colorCycleCheckbox');
+    if (colorCycle) {
+      const altColorCycle = document.getElementById('alt-colorCycleCheckbox');
+      if (altColorCycle) altColorCycle.checked = colorCycle.checked;
+    }
+    const iterationCycle = document.getElementById('iterationCycleCheckbox');
+    if (iterationCycle) {
+      const altIterationCycle = document.getElementById('alt-iterationCycleCheckbox');
+      if (altIterationCycle) altIterationCycle.checked = iterationCycle.checked;
+    }
+    const iterationCycleTime = document.getElementById('iterationCycleTime');
+    if (iterationCycleTime) {
+      const altIterationCycleTime = document.getElementById('alt-iterationCycleTime');
+      if (altIterationCycleTime) altIterationCycleTime.value = iterationCycleTime.value;
+    }
+    const iterationCycleFrame = document.getElementById('iterationCycleFrame');
+    if (iterationCycleFrame) {
+      const altIterationCycleFrame = document.getElementById('alt-iterationCycleFrame');
+      if (altIterationCycleFrame) altIterationCycleFrame.value = iterationCycleFrame.value;
+    }
+    const targetFrameRate = document.getElementById('targetFrameRate');
+    if (targetFrameRate) {
+      const altTargetFrameRate = document.getElementById('alt-targetFrameRate');
+      if (altTargetFrameRate) altTargetFrameRate.value = targetFrameRate.value;
     }
     
     // Copy preset options
@@ -351,11 +482,69 @@ function attachAltUIEventListeners() {
         });
     }
     
+    // Animation controls
+    const altColorCycle = document.getElementById('alt-colorCycleCheckbox');
+    if (altColorCycle) {
+      altColorCycle.addEventListener('change', function() {
+        const colorCycle = document.getElementById('colorCycleCheckbox');
+        if (colorCycle) colorCycle.checked = this.checked;
+        toggleColorCycle();
+      });
+    }
+    const altIterationCycle = document.getElementById('alt-iterationCycleCheckbox');
+    if (altIterationCycle) {
+      altIterationCycle.addEventListener('change', function() {
+        const iterationCycle = document.getElementById('iterationCycleCheckbox');
+        if (iterationCycle) iterationCycle.checked = this.checked;
+        toggleIterationCycle();
+      });
+    }
+    const altIterationCycleTime = document.getElementById('alt-iterationCycleTime');
+    if (altIterationCycleTime) {
+      altIterationCycleTime.addEventListener('change', function() {
+        const iterationCycleTime = document.getElementById('iterationCycleTime');
+        if (iterationCycleTime) iterationCycleTime.value = this.value;
+        updateIterationCycleTime();
+      });
+    }
+    const altIterationCycleFrame = document.getElementById('alt-iterationCycleFrame');
+    if (altIterationCycleFrame) {
+      altIterationCycleFrame.addEventListener('change', function() {
+        const iterationCycleFrame = document.getElementById('iterationCycleFrame');
+        if (iterationCycleFrame) iterationCycleFrame.value = this.value;
+        updateIterationCycleFrame();
+      });
+    }
+    const altTargetFrameRate = document.getElementById('alt-targetFrameRate');
+    if (altTargetFrameRate) {
+      altTargetFrameRate.addEventListener('change', function() {
+        const targetFrameRate = document.getElementById('targetFrameRate');
+        if (targetFrameRate) targetFrameRate.value = this.value;
+        updateTargetFrameRate();
+      });
+    }
+    const altCaptureBtn = document.getElementById('alt-captureBtn');
+    if (altCaptureBtn) {
+      altCaptureBtn.addEventListener('click', function() {
+        getScreenCap();
+      });
+    }
+    
     // Preset events
     const presetFields = [
         'particleSizePresets', 'dualZMultiplierPresets', 'cloudLengthFilterPresets',
         'cloudIterationFilterPresets', 'initialZPresets', 'escapingZPresets', 'particleFilterPresets'
     ];
+    
+    const presetToAltCM = {
+        'particleSizePresets':   { textarea: 'particleSize',   altCM: 'alt-particleSize' },
+        'dualZMultiplierPresets':{ textarea: 'dualZMultiplier',altCM: 'alt-dualZMultiplier' },
+        'cloudLengthFilterPresets': { textarea: 'cloudLengthFilter', altCM: 'alt-cloudLengthFilter' },
+        'cloudIterationFilterPresets': { textarea: 'cloudIterationFilter', altCM: 'alt-cloudIterationFilter' },
+        'initialZPresets': { textarea: 'initialZ', altCM: 'alt-initialZ' },
+        'escapingZPresets': { textarea: 'escapingZ', altCM: 'alt-escapingZ' },
+        'particleFilterPresets': { textarea: 'particleFilter', altCM: 'alt-particleFilter' }
+    };
     
     presetFields.forEach(presetId => {
         const altPreset = document.getElementById(`alt-${presetId}`);
@@ -376,6 +565,16 @@ function attachAltUIEventListeners() {
                     };
                     if (presetFunctions[presetId]) {
                         presetFunctions[presetId]();
+                        // After preset function, sync CodeMirror in altUI
+                        const cmInfo = presetToAltCM[presetId];
+                        if (cmInfo) {
+                            setTimeout(() => {
+                                const newVal = document.getElementById(cmInfo.textarea)?.value;
+                                if (typeof newVal !== 'undefined') {
+                                    syncAltUICMWithPreset(cmInfo.altCM, newVal);
+                                }
+                            }, 0);
+                        }
                     }
                 }
             });
@@ -545,6 +744,33 @@ function syncAltUIFromOriginal() {
         if (altShortenedFilter) altShortenedFilter.checked = true;
     }
     
+    // Sync animation controls
+    const colorCycle = document.getElementById('colorCycleCheckbox');
+    if (colorCycle) {
+      const altColorCycle = document.getElementById('alt-colorCycleCheckbox');
+      if (altColorCycle) altColorCycle.checked = colorCycle.checked;
+    }
+    const iterationCycle = document.getElementById('iterationCycleCheckbox');
+    if (iterationCycle) {
+      const altIterationCycle = document.getElementById('alt-iterationCycleCheckbox');
+      if (altIterationCycle) altIterationCycle.checked = iterationCycle.checked;
+    }
+    const iterationCycleTime = document.getElementById('iterationCycleTime');
+    if (iterationCycleTime) {
+      const altIterationCycleTime = document.getElementById('alt-iterationCycleTime');
+      if (altIterationCycleTime) altIterationCycleTime.value = iterationCycleTime.value;
+    }
+    const iterationCycleFrame = document.getElementById('iterationCycleFrame');
+    if (iterationCycleFrame) {
+      const altIterationCycleFrame = document.getElementById('alt-iterationCycleFrame');
+      if (altIterationCycleFrame) altIterationCycleFrame.value = iterationCycleFrame.value;
+    }
+    const targetFrameRate = document.getElementById('targetFrameRate');
+    if (targetFrameRate) {
+      const altTargetFrameRate = document.getElementById('alt-targetFrameRate');
+      if (altTargetFrameRate) altTargetFrameRate.value = targetFrameRate.value;
+    }
+    
     // Refresh CodeMirror instances
     setTimeout(refreshVisibleAltUICM, 0);
 }
@@ -581,7 +807,7 @@ function setupAltUIEventListeners() {
         altUI.style.overflowY = 'auto';
         
         // Set up periodic sync from original UI
-        setInterval(syncAltUIFromOriginal, 1000);
+        // setInterval(syncAltUIFromOriginal, 1000); // Removed as per edit hint
     }
     if (document.readyState === 'loading') {
         window.addEventListener('DOMContentLoaded', attachHandlers);
@@ -590,3 +816,72 @@ function setupAltUIEventListeners() {
     }
 }
 window.MBEUI.setupAltUIEventListeners = setupAltUIEventListeners; 
+
+// Modal logic
+window.openAltUICMModal = function(textareaId) {
+  const modal = document.getElementById('alt-ui-cm-modal');
+  const modalTextarea = document.getElementById('alt-ui-cm-modal-textarea');
+  const modalTitle = document.getElementById('alt-ui-cm-modal-title');
+  const saveBtn = document.getElementById('alt-ui-cm-modal-save');
+  const cancelBtn = document.getElementById('alt-ui-cm-modal-cancel');
+  const closeBtn = document.getElementById('alt-ui-cm-modal-close');
+  if (!modal || !modalTextarea) return;
+  const origTextarea = document.getElementById(textareaId);
+  if (!origTextarea) return;
+  modal.style.display = '';
+  // Find the correct label for the textarea
+  let labelText = 'Edit';
+  // Try to find <label for="textareaId">
+  let label = document.querySelector('label[for="' + textareaId + '"]');
+  if (!label) {
+    // Fallback: find the first label in the same fieldgroup
+    const group = origTextarea.closest('.alt-ui-fieldgroup');
+    if (group) {
+      label = group.querySelector('label');
+    }
+  }
+  if (label) labelText = label.textContent.trim();
+  modalTitle.textContent = labelText;
+  modalTextarea.value = origTextarea.value;
+  let cmInstance;
+  setTimeout(() => {
+    if (window.CodeMirror) {
+      if (modalTextarea._cm) {
+        modalTextarea._cm.toTextArea();
+        modalTextarea._cm = null;
+      }
+      cmInstance = CodeMirror.fromTextArea(modalTextarea, {
+        mode: 'javascript',
+        theme: 'material',
+        lineNumbers: true,
+        lineWrapping: true,
+        viewportMargin: Infinity,
+        tabSize: 2,
+        indentUnit: 2,
+        matchBrackets: true,
+        autoCloseBrackets: true,
+        height: 'auto'
+      });
+      cmInstance.setSize('100%', '300px');
+      modalTextarea._cm = cmInstance;
+    }
+  }, 0);
+  function closeModal() {
+    modal.style.display = 'none';
+    if (modalTextarea._cm) {
+      modalTextarea._cm.toTextArea();
+      modalTextarea._cm = null;
+    }
+  }
+  saveBtn.onclick = function() {
+    const newVal = modalTextarea._cm ? modalTextarea._cm.getValue() : modalTextarea.value;
+    origTextarea.value = newVal;
+    if (window.altUICMInstances && window.altUICMInstances[textareaId]) {
+      window.altUICMInstances[textareaId].setValue(newVal);
+    }
+    origTextarea.dispatchEvent(new Event('change', {bubbles:true}));
+    closeModal();
+  };
+  cancelBtn.onclick = closeBtn.onclick = closeModal;
+  modal.querySelector('.alt-ui-cm-modal-backdrop').onclick = closeModal;
+}; 

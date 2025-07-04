@@ -86,8 +86,11 @@ body{
   color: var(--alt-text);
   border-radius: 1.2em;
   box-shadow: 0 4px 32px rgba(0,0,0,0.25);
-  min-width: 540px;
+  min-width: 320px;
   max-width: 900px;
+  width: 640px;
+  resize: horizontal;
+  overflow: auto;
   padding: 0;
   font-family: 'Segoe UI', 'Arial', sans-serif;
 }
@@ -219,6 +222,13 @@ body{
   grid-template-columns: 1fr 1fr;
   align-items: center;
 }
+.alt-ui-render-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 0.7em;
+  align-items: stretch;
+  width: 100%;
+}
 .alt-ui-presets {
   display: flex;
   flex-direction: column;
@@ -294,6 +304,7 @@ body{
   background: transparent !important;
   box-shadow: none !important;
   border-radius: 1.2em !important;
+  resize: none !important;
 } 
 
 .alt-ui-tabs {
@@ -302,7 +313,6 @@ body{
   border-bottom: 2px solid var(--alt-border);
   padding: 0 1.5em;
   gap: 0.2em;
-  border-radius: 0.8em 0.8em 0 0;
   box-shadow: 0 2px 8px rgba(0,0,0,0.04);
   position: relative;
   z-index: 2;
@@ -322,6 +332,7 @@ body{
   transition: background 0.18s, color 0.18s, border-color 0.18s;
   position: relative;
   z-index: 1;
+  white-space: nowrap;
 }
 
 .alt-ui-tab:not(.active):hover {
@@ -336,4 +347,138 @@ body{
   border-bottom: 2px solid var(--alt-bg);
   z-index: 3;
   box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+} 
+
+.alt-ui-container.collapsed .alt-ui-actions,
+.alt-ui-container.collapsed .alt-ui-tabs,
+.alt-ui-container.collapsed .alt-ui-main,
+.alt-ui-container.collapsed .alt-ui-footer {
+  display: none !important;
+} 
+
+.alt-ui-fieldgroup {
+  margin-bottom: 1.2em;
+  width: 100%;
+}
+
+.alt-ui-fieldrow {
+  display: flex;
+  align-items: center;
+  gap: 0.7em;
+  margin-bottom: 0.2em;
+  width: 100%;
+}
+
+.alt-ui-fieldrow label,
+.alt-ui-fieldrow select {
+  flex-shrink: 0;
+}
+
+.alt-ui-fieldgroup textarea,
+.alt-ui-fieldgroup .CodeMirror {
+  width: 100%;
+  min-height: 3em;
+  margin-top: 0.1em;
+  background: #23272e !important;
+  color: #f5f6fa !important;
+  border: 2px solid #4f8cff !important;
+  border-radius: 0.4em;
+} 
+
+.alt-ui-cm-popout {
+  background: none;
+  border: none;
+  color: var(--alt-accent);
+  font-size: 1.1em;
+  cursor: pointer;
+  margin-left: 0.3em;
+  padding: 0.1em 0.3em;
+  border-radius: 0.3em;
+  transition: background 0.15s;
+  vertical-align: middle;
+}
+.alt-ui-cm-popout:hover {
+  background: #23272e;
+}
+
+#alt-ui-cm-modal {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.alt-ui-cm-modal-backdrop {
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0,0,0,0.45);
+  z-index: 0;
+}
+.alt-ui-cm-modal-dialog {
+  position: relative;
+  background: #23272e;
+  color: #f5f6fa;
+  border-radius: 1em;
+  box-shadow: 0 8px 48px rgba(0,0,0,0.45);
+  padding: 1.2em 1.5em 1em 1.5em;
+  min-width: 420px;
+  max-width: 90vw;
+  min-height: 320px;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  z-index: 1;
+}
+.alt-ui-cm-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 1.1em;
+  font-weight: 600;
+  margin-bottom: 0.7em;
+}
+#alt-ui-cm-modal-close {
+  background: none;
+  border: none;
+  color: #bfc7d5;
+  font-size: 1.5em;
+  cursor: pointer;
+  border-radius: 0.3em;
+  padding: 0.1em 0.5em;
+  transition: background 0.15s;
+}
+#alt-ui-cm-modal-close:hover {
+  background: #2c313a;
+  color: #fff;
+}
+#alt-ui-cm-modal-textarea {
+  width: 100%;
+  min-height: 220px;
+  font-size: 1em;
+  font-family: monospace;
+  background: #181b20;
+  color: #f5f6fa;
+  border: 2px solid #4f8cff;
+  border-radius: 0.4em;
+  margin-bottom: 1em;
+}
+.alt-ui-cm-modal-actions {
+  display: flex;
+  gap: 1em;
+  justify-content: flex-end;
+  margin-top: 0.5em;
+}
+.alt-ui-cm-modal-actions button {
+  background: var(--alt-accent);
+  color: #fff;
+  border: none;
+  border-radius: 0.4em;
+  padding: 0.5em 1.2em;
+  font-size: 1em;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.alt-ui-cm-modal-actions button:hover {
+  background: #2563eb;
 } 
