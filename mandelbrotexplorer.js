@@ -302,94 +302,265 @@ var mandelbrotExplorer = {
 		},
         "generateMandelbrotCloudParticles": function() {
             console.time("drawMandelbrotCloud: Generating particles");
-            mandelbrotExplorer.scales_3d.forEach(function(useScales){
-                for( var x = mandelbrotExplorer.startX; x < mandelbrotExplorer.endX; x += (useScales.x) ) {
-                    for( var y = mandelbrotExplorer.startY; y > mandelbrotExplorer.endY; y -= (useScales.y) ) {
-                        var c = mandelbrotExplorer.cloudMethods.handleCloudSteppingAdjustments([x,y]);
-                        var escapePath = mandelbrotExplorer.cloudMethods.getEscapePath(c);
-                        if(
-                            (mandelbrotExplorer.onlyShortened && !escapePath.shortened) ||
-                            (mandelbrotExplorer.onlyFull && escapePath.shortened)
-                        ){
-                            continue;
-                        }
-
-                        var z = mandelbrotExplorer.cloudMethods.evalInitialZ(escapePath);
-                        var accumulatedZ = 0;
-                        var averageOfAccumulatedZ = 0;
-
-                        escapePath.forEach(function(pathValue, pathIndex, source){
-                            accumulatedZ += mandelbrotExplorer.getAbsoluteValueOfComplexNumber(escapePath[pathIndex]);
-                            averageOfAccumulatedZ = accumulatedZ / (pathIndex + 1)
-                            var iteration = pathIndex + 1;
-                            if (
-                                !mandelbrotExplorer.cloudMethods.processCloudLengthFilter(pathIndex, iteration, escapePath) ||
-                                !mandelbrotExplorer.cloudMethods.processCloudIterationFilter(pathIndex, iteration, escapePath)
-                            ){
-                                return true;
-                            }
-
-                            if( pathIndex != 0 ) {
-                                // FIX THE FUCK OUT OF THIS!
-                                z = mandelbrotExplorer.cloudMethods.evalEscapingZ(pathIndex, iteration, escapePath);// eval( mandelbrotExplorer.escapingZ );
-                            }
-                            
-                            var iterationIndex = parseInt(pathIndex);
-                            
-                            if( typeof mandelbrotExplorer.iterationParticles[iterationIndex] === "undefined" ) {
-                                mandelbrotExplorer.iterationParticles[iterationIndex] = {"particles": new THREE.Geometry()};
-                            }
-                            var newX = escapePath[pathIndex][0];
-                            var newY = escapePath[pathIndex][1];
-                            var particleVector = new THREE.Vector3(newX, newY, z);
-                            var particleFilterResult = mandelbrotExplorer.cloudMethods.processParticleFilter(newX, newY, particleVector);
-                            if (!particleFilterResult['allowed']) {
-                                return true;
-                            }
-                            
-                            mandelbrotExplorer.iterationParticles[iterationIndex].particles.vertices.push(particleFilterResult.particleVector);
-                            
-                            // Why was I trying to catch the floating point error?
-                            if(typeof mandelbrotExplorer.iterationParticles[iterationIndex].fpe === "undefined"){
-                                mandelbrotExplorer.iterationParticles[iterationIndex].fpe = 0;
-                            }
-                            mandelbrotExplorer.iterationParticles[iterationIndex].fpe += pathValue.fpe;
-                            
-                            
-                            if(mandelbrotExplorer.dualZ){
-                                var newX = particleFilterResult.newX;
-                                var newY = particleFilterResult.newY;
-                                var coords = mandelbrotExplorer.cloudMethods.processDualZMultiplier(pathIndex, iteration, escapePath, newX, newY, z);
-                                var particleVector = new THREE.Vector3(coords[0], coords[1], coords[2]);
-                                
-                                mandelbrotExplorer.iterationParticles[iterationIndex].particles.vertices.push(particleVector);
-                            }
-                        });
+            
+            // Create a progress indicator
+            const progressDiv = document.createElement('div');
+            progressDiv.id = 'cloud-generation-progress';
+            progressDiv.style.cssText = `
+                position: fixed;
+                top: 50%;
+                left: 50%;
+                transform: translate(-50%, -50%);
+                background: rgba(0, 0, 0, 0.8);
+                color: white;
+                padding: 20px;
+                border-radius: 10px;
+                z-index: 10000;
+                font-family: Arial, sans-serif;
+                text-align: center;
+                min-width: 200px;
+            `;
+            progressDiv.innerHTML = `
+                <div>Generating Cloud...</div>
+                <div id="progress-text">0%</div>
+                <div style="width: 200px; height: 10px; background: #333; border-radius: 5px; margin-top: 10px;">
+                    <div id="progress-bar" style="width: 0%; height: 100%; background: #4CAF50; border-radius: 5px; transition: width 0.3s;"></div>
+                </div>
+                <button id="cancel-generation" style="margin-top: 10px; padding: 5px 10px; background: #f44336; color: white; border: none; border-radius: 3px; cursor: pointer;">Cancel</button>
+            `;
+            document.body.appendChild(progressDiv);
+            
+            // Calculate total work
+            let totalPoints = 0;
+            mandelbrotExplorer.scales_3d.forEach(function(useScales) {
+                const xPoints = Math.ceil((mandelbrotExplorer.endX - mandelbrotExplorer.startX) / useScales.x);
+                const yPoints = Math.ceil((mandelbrotExplorer.startY - mandelbrotExplorer.endY) / useScales.y);
+                totalPoints += xPoints * yPoints;
+            });
+            
+            let processedPoints = 0;
+            let isCancelled = false;
+            
+            // Cancel button handler
+            document.getElementById('cancel-generation').addEventListener('click', function() {
+                isCancelled = true;
+                progressDiv.remove();
+                console.log('Cloud generation cancelled');
+            });
+            
+            // Create a flat array of all points to process
+            let allPoints = [];
+            mandelbrotExplorer.scales_3d.forEach(function(useScales) {
+                for (var x = mandelbrotExplorer.startX; x < mandelbrotExplorer.endX; x += useScales.x) {
+                    for (var y = mandelbrotExplorer.startY; y > mandelbrotExplorer.endY; y -= useScales.y) {
+                        allPoints.push({x: x, y: y, scale: useScales});
                     }
                 }
             });
-            console.timeEnd("drawMandelbrotCloud: Generating particles");
             
-            mandelbrotExplorer.cloudMethods.applyMandelbrotCloudPalette();
+            let currentPointIndex = 0;
+            const BATCH_SIZE = 50; // Process 50 points per batch
+
+
             
-            mandelbrotExplorer.iterationParticles = null;
+            function processBatch() {
+                if (isCancelled) {
+                    return;
+                }
+                
+                const endIndex = Math.min(currentPointIndex + BATCH_SIZE, allPoints.length);
+                
+                for (let i = currentPointIndex; i < endIndex; i++) {
+                    const point = allPoints[i];
+                    var c = mandelbrotExplorer.cloudMethods.handleCloudSteppingAdjustments([point.x, point.y]);
+                    var escapePath = mandelbrotExplorer.cloudMethods.getEscapePath(c);
+                    
+                    if (
+                        (mandelbrotExplorer.onlyShortened && !escapePath.shortened) ||
+                        (mandelbrotExplorer.onlyFull && escapePath.shortened)
+                    ) {
+                        processedPoints++;
+                        continue;
+                    }
+
+                    var z = mandelbrotExplorer.cloudMethods.evalInitialZ(escapePath);
+                    var accumulatedZ = 0;
+                    var averageOfAccumulatedZ = 0;
+
+                    escapePath.forEach(function(pathValue, pathIndex, source) {
+                        accumulatedZ += mandelbrotExplorer.getAbsoluteValueOfComplexNumber(escapePath[pathIndex]);
+                        averageOfAccumulatedZ = accumulatedZ / (pathIndex + 1)
+                        var iteration = pathIndex + 1;
+                        if (
+                            !mandelbrotExplorer.cloudMethods.processCloudLengthFilter(pathIndex, iteration, escapePath) ||
+                            !mandelbrotExplorer.cloudMethods.processCloudIterationFilter(pathIndex, iteration, escapePath)
+                        ) {
+                            return true;
+                        }
+
+                        if (pathIndex != 0) {
+                            z = mandelbrotExplorer.cloudMethods.evalEscapingZ(pathIndex, iteration, escapePath);
+                        }
+                        
+                        var iterationIndex = parseInt(pathIndex);
+                        
+                        if (typeof mandelbrotExplorer.iterationParticles[iterationIndex] === "undefined") {
+                            mandelbrotExplorer.iterationParticles[iterationIndex] = {"particles": []};
+                        }
+                        var newX = escapePath[pathIndex][0];
+                        var newY = escapePath[pathIndex][1];
+                        var particleVector = new THREE.Vector3(newX, newY, z);
+                        var particleFilterResult = mandelbrotExplorer.cloudMethods.processParticleFilter(newX, newY, particleVector);
+                        if (!particleFilterResult['allowed']) {
+                            return true;
+                        }
+                        
+                        mandelbrotExplorer.iterationParticles[iterationIndex].particles.push(particleFilterResult.particleVector);
+                        
+                        if (typeof mandelbrotExplorer.iterationParticles[iterationIndex].fpe === "undefined") {
+                            mandelbrotExplorer.iterationParticles[iterationIndex].fpe = 0;
+                        }
+                        mandelbrotExplorer.iterationParticles[iterationIndex].fpe += pathValue.fpe;
+                        
+                        if (mandelbrotExplorer.dualZ) {
+                            var newX = particleFilterResult.newX;
+                            var newY = particleFilterResult.newY;
+                            var coords = mandelbrotExplorer.cloudMethods.processDualZMultiplier(pathIndex, iteration, escapePath, newX, newY, z);
+                            var particleVector = new THREE.Vector3(coords[0], coords[1], coords[2]);
+                            
+                            mandelbrotExplorer.iterationParticles[iterationIndex].particles.push(particleVector);
+                        }
+                    });
+                    
+                    processedPoints++;
+                }
+                
+                currentPointIndex = endIndex;
+                
+                // Update progress
+                const progress = Math.min(100, (processedPoints / totalPoints) * 100);
+                const progressText = document.getElementById('progress-text');
+                const progressBar = document.getElementById('progress-bar');
+                if (progressText && progressBar) {
+                    progressText.textContent = Math.round(progress) + '%';
+                    progressBar.style.width = progress + '%';
+                }
+                
+                // Continue processing or finish
+                if (currentPointIndex < allPoints.length && !isCancelled) {
+                    setTimeout(processBatch, 0);
+                } else {
+                    // Generation complete
+                    progressDiv.remove();
+                    console.timeEnd("drawMandelbrotCloud: Generating particles");
+                    
+                    if (!isCancelled) {
+                        // Log total points generated
+                        let totalPointsGenerated = 0;
+                        for (let key in mandelbrotExplorer.iterationParticles) {
+                            if (mandelbrotExplorer.iterationParticles[key] && 
+                                mandelbrotExplorer.iterationParticles[key].particles) {
+                                totalPointsGenerated += mandelbrotExplorer.iterationParticles[key].particles.length;
+                            }
+                        }
+                        console.log('Total points generated:', totalPointsGenerated);
+                        console.log('Total iterationParticles keys:', Object.keys(mandelbrotExplorer.iterationParticles).length);
+                        
+                        mandelbrotExplorer.cloudMethods.applyMandelbrotCloudPalette();
+                        // Don't set iterationParticles to null here - let applyMandelbrotCloudPalette handle cleanup
+                    }
+                }
+            }
+            
+            // Start processing
+            processBatch();
         },
         "applyMandelbrotCloudPalette": function() {
             console.time("drawMandelbrotCloud: Applying palette");
-            for( var index in mandelbrotExplorer.iterationParticles ) {
-                var color = mandelbrotExplorer.palette[ mandelbrotExplorer.getColorIndex(index) ];
-                var size = mandelbrotExplorer.particleSize ? eval(mandelbrotExplorer.particleSize): 0;
-                
-                var pMaterial = mandelbrotExplorer.threeRenderer.createParticleMaterial(color, size);
-                var points = mandelbrotExplorer.threeRenderer.addParticleSystem(
-                    mandelbrotExplorer.iterationParticles[parseInt(index)].particles,
-                    pMaterial
-                );
-                
-                mandelbrotExplorer.particleSystems[index] = points;
-                mandelbrotExplorer.iterationParticles[parseInt(index)] = null;
+            
+            // Update progress text to show palette application
+            const progressDiv = document.getElementById('cloud-generation-progress');
+            if (progressDiv) {
+                document.getElementById('progress-text').textContent = 'Applying palette...';
             }
-            console.timeEnd("drawMandelbrotCloud: Applying palette");
+            
+            const indices = Object.keys(mandelbrotExplorer.iterationParticles);
+            console.log('Processing indices:', indices.slice(0, 20), '... (total:', indices.length, ')');
+            let currentIndex = 0;
+            const BATCH_SIZE = 10; // Process 10 particle systems per batch
+            
+            function processPaletteBatch() {
+                const endIndex = Math.min(currentIndex + BATCH_SIZE, indices.length);
+                
+                for (let i = currentIndex; i < endIndex; i++) {
+                    const index = indices[i];
+                    
+                    // Get the particles data safely - copy it to avoid race conditions
+                    const particlesData = mandelbrotExplorer.iterationParticles[index];
+                    if (!particlesData) {
+                        console.warn('Missing iterationParticles at index', index);
+                        continue;
+                    }
+                    
+
+                    
+                    if (!particlesData.particles || 
+                        !Array.isArray(particlesData.particles) ||
+                        particlesData.particles.length === 0) {
+                        console.warn('Empty or invalid particles array at index', index);
+                        continue;
+                    }
+                    
+                    // Copy the particles array to avoid race conditions
+                    const particlesCopy = particlesData.particles.slice();
+                    
+                    // Additional safety check for the copy
+                    if (!particlesCopy || !Array.isArray(particlesCopy)) {
+                        console.warn('Failed to copy particles array at index', index);
+                        continue;
+                    }
+                    
+                    var color = mandelbrotExplorer.palette[ mandelbrotExplorer.getColorIndex(index) ];
+                    var size = mandelbrotExplorer.particleSize ? eval(mandelbrotExplorer.particleSize): 0;
+                    
+                    var pMaterial = mandelbrotExplorer.threeRenderer.createParticleMaterial(color, size);
+                    
+                    // Convert array of vectors to geometry for rendering
+                    var geometry = new THREE.Geometry();
+                    
+                    particlesCopy.forEach(function(vector) {
+                        if (vector && vector.x !== undefined && vector.y !== undefined && vector.z !== undefined) {
+                            geometry.vertices.push(vector);
+                        }
+                    });
+                    
+                    var points = mandelbrotExplorer.threeRenderer.addParticleSystem(
+                        geometry,
+                        pMaterial
+                    );
+                    
+                    mandelbrotExplorer.particleSystems[index] = points;
+                    mandelbrotExplorer.iterationParticles[index] = null;
+                }
+                
+                currentIndex = endIndex;
+                
+                if (currentIndex < indices.length) {
+                    setTimeout(processPaletteBatch, 0);
+                } else {
+                    console.timeEnd("drawMandelbrotCloud: Applying palette");
+                    
+                    // Clean up iterationParticles after palette application is complete
+                    mandelbrotExplorer.iterationParticles = null;
+                    
+                    // Call completion handler if it exists
+                    if (mandelbrotExplorer.cloudMethods.onCloudGenerationComplete) {
+                        mandelbrotExplorer.cloudMethods.onCloudGenerationComplete();
+                    }
+                }
+            }
+            
+            processPaletteBatch();
         },
 		"generateMandelbrotHair": function () {
 			console.time("drawMandelbrotsHair: Generating line vectors");
@@ -496,11 +667,15 @@ var mandelbrotExplorer = {
         
 		var resumeIterationCycle = mandelbrotExplorer.cloudMethods.discontinueIterationCycle();
         
+        // Start async particle generation
         mandelbrotExplorer.cloudMethods.generateMandelbrotCloudParticles();
-		
-		mandelbrotExplorer.displayCloudParticles();
-		mandelbrotExplorer.continueIterationCycle = resumeIterationCycle;
-		console.timeEnd("drawMandelbrotCloud");
+        
+        // Set up a completion handler that will be called when generation finishes
+        mandelbrotExplorer.cloudMethods.onCloudGenerationComplete = function() {
+            mandelbrotExplorer.displayCloudParticles();
+            mandelbrotExplorer.continueIterationCycle = resumeIterationCycle;
+            console.timeEnd("drawMandelbrotCloud");
+        };
 	},
 	"clearMandelbrotsHair": function(){
 		for( var index = this.lines.length - 1; index >= 0; index-- ){
@@ -527,7 +702,10 @@ var mandelbrotExplorer = {
 		mandelbrotExplorer.particleCount = 0;
 		
 		for( var index = this.particleSystems.length - 1; index >= 0; index-- ){
-			if(!this.particleSystems[index]){continue;}
+			if(!this.particleSystems[index]){
+				console.warn('Missing particleSystem at index', index);
+				continue;
+			}
 			var iteration = index + 1;
 			this.threeRenderer.removeObject(this.particleSystems[index]);
 
