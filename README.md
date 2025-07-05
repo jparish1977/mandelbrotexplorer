@@ -1,6 +1,6 @@
 # Mandelbrot Explorer
 
-An interactive web-based Mandelbrot set and Julia set explorer with 2D and 3D visualization capabilities. This project allows you to explore the fascinating world of fractals through an intuitive web interface.
+An interactive web-based Mandelbrot set and Julia set explorer with 2D and 3D visualization capabilities. This project allows you to explore the fascinating world of fractals through an intuitive web interface with both classic and modern UI options.
 
 ## Features
 
@@ -33,6 +33,14 @@ An interactive web-based Mandelbrot set and Julia set explorer with 2D and 3D vi
 - **Custom Filters**: Filter particles by iteration count and path length
 - **Screen Capture**: Save your discoveries as images
 
+### 🆕 **New: Alternative UI with CodeMirror Integration**
+- **Modern Tabbed Interface**: Organized into Parameters, Rendering, Presets & Filters, and Settings
+- **CodeMirror Code Editors**: Advanced syntax highlighting and code editing for all JavaScript expressions
+- **Smart Autocomplete**: Context-aware suggestions with Ctrl+Space
+- **Expandable Editors**: Click the 🗖 button to open larger editing windows
+- **Real-time Validation**: Immediate feedback on code syntax and errors
+- **Preset Integration**: Seamless integration with existing preset system
+
 ## Getting Started
 
 ### Prerequisites
@@ -42,7 +50,8 @@ An interactive web-based Mandelbrot set and Julia set explorer with 2D and 3D vi
 ### Running the Application
 1. Clone or download this repository
 2. Open `mandelbrotexplorer.htm` in your web browser
-3. The application will load automatically
+3. The application will load with the new Alternative UI by default
+4. Use the "Back to Classic UI" button to switch to the original interface
 
 ### Basic Usage
 1. **Start Exploring**: The default view shows the classic Mandelbrot set
@@ -50,6 +59,38 @@ An interactive web-based Mandelbrot set and Julia set explorer with 2D and 3D vi
 3. **Switch to 3D**: Use the controls to enable 3D visualization
 4. **Adjust Settings**: Modify iterations, palettes, and other parameters
 5. **Experiment**: Try different Julia C values and custom filters
+6. **Use CodeMirror**: Press Ctrl+Space in any code field for autocomplete suggestions
+
+## UI Options
+
+### 🆕 **Alternative UI (Default)**
+The new Alternative UI provides a modern, tabbed interface with enhanced code editing capabilities:
+
+#### **Tabbed Organization**
+- **Parameters**: Basic settings like iterations, resolution, and palette
+- **Rendering**: Advanced rendering controls and filters
+- **Presets & Filters**: Mathematical parameters and custom expressions
+- **Settings**: Display options and settings management
+
+#### **CodeMirror Features**
+- **Syntax Highlighting**: JavaScript code with proper syntax coloring
+- **Smart Autocomplete**: Press Ctrl+Space for context-aware suggestions
+- **Expandable Editing**: Click 🗖 to open larger editing windows
+- **Real-time Updates**: Changes apply immediately as you type
+- **Error Detection**: Visual feedback for syntax errors
+
+#### **Context-Aware Autocomplete**
+The autocomplete system provides intelligent suggestions based on:
+- **Field Type**: Different suggestions for filters vs. mathematical expressions
+- **Available Variables**: Shows relevant variables like `pathIndex`, `escapePath`, `iteration`
+- **Built-in Functions**: Suggests Math functions and Mandelbrot Explorer methods
+- **Common Patterns**: Offers frequently used expressions and patterns
+
+### **Classic UI**
+The original interface is still available for users who prefer the traditional layout:
+- **Compact Design**: All controls in a single panel
+- **Familiar Layout**: Traditional form-based interface
+- **Quick Access**: All parameters visible at once
 
 ## Controls Reference
 
@@ -84,6 +125,50 @@ An interactive web-based Mandelbrot set and Julia set explorer with 2D and 3D vi
 - **Load Settings**: Loading saved settings will snap the camera and controls to the saved state, but will NOT change the "home" position for reset.
 - **Reset vs. Load**: "Reset" always returns to the original home state, while "Load" snaps to the saved state for exploration.
 
+## 🆕 **CodeMirror Autocomplete Guide**
+
+### **Using Autocomplete**
+1. **Activate**: Press `Ctrl+Space` in any code editor field
+2. **Navigate**: Use arrow keys to select suggestions
+3. **Complete**: Press Enter or Tab to insert the selected suggestion
+4. **Filter**: Start typing to filter suggestions
+
+### **Available Variables**
+The autocomplete system provides context-aware suggestions including:
+
+#### **Common Variables**
+- `pathIndex`: Current position in escape path (0-based)
+- `iteration`: Current iteration number (1-based)
+- `escapePath`: Array of all Z values in the path
+- `index`: Particle index
+- `newX`, `newY`: Current particle coordinates
+- `z`: Current Z value
+
+#### **Built-in Objects**
+- `mandelbrotExplorer`: Main application object
+- `Math`: JavaScript Math functions
+- `console`: Browser console for debugging
+
+#### **Type-Specific Suggestions**
+Different fields show different suggestions:
+- **Filters**: Boolean expressions and comparison operators
+- **Mathematical**: Math functions and numerical expressions
+- **Coordinates**: Position and transformation functions
+
+### **Common Patterns**
+The autocomplete includes frequently used patterns:
+```javascript
+// Filter patterns
+"escapePath.length > 8"
+"iteration % 2 == 0"
+"pathIndex > 5"
+
+// Mathematical patterns
+"mandelbrotExplorer.xScale_3d / mandelbrotExplorer.maxIterations_3d"
+"Math.sin(pathIndex) * 10"
+"escapePath[pathIndex][0] * -1"
+```
+
 ## Settings Persistence
 
 - **Save Settings**: Saves all current parameters, including camera position and controls, to your browser's localStorage.
@@ -100,6 +185,11 @@ An interactive web-based Mandelbrot set and Julia set explorer with 2D and 3D vi
 ### Camera/Controls Not Resetting as Expected?
 - If you load settings and then use "Reset Camera," it will always return to the original home state from the start of your session, not the last loaded state.
 - If you want to change the "home" state, reload the page with your desired view as the default.
+
+### CodeMirror Issues?
+- **Autocomplete not working**: Make sure you're pressing `Ctrl+Space` (not just `Space`)
+- **Syntax errors**: Check the browser console for detailed error messages
+- **Editor not responding**: Try refreshing the page or switching between UI modes
 
 ## Detailed Controls Guide
 
@@ -605,10 +695,14 @@ The cloud resolution is essentially your "sampling rate" for the 3D Mandelbrot v
 mandelbrotexplorer/
 ├── mandelbrotexplorer.htm    # Main HTML file
 ├── mandelbrotexplorer.js     # Core Mandelbrot calculation engine
-├── ui.js                     # User interface logic
+├── ui.js                     # Classic user interface logic
+├── altUI.js                  # 🆕 Alternative UI with CodeMirror integration
 ├── palettes.js               # Color palette definitions
-├── styles.css                # Visual styling
+├── presets.js                # Preset configurations
+├── settingsManager.js        # Settings persistence
+├── styles.css                # Visual styling (includes CodeMirror themes)
 ├── three.js                  # 3D graphics library
+├── threeRenderer.js          # 3D rendering engine
 ├── TrackballControls.js      # 3D camera controls
 ├── Stats.js                  # Performance monitoring
 ├── gradientline.js           # Gradient utilities
@@ -635,11 +729,19 @@ The application implements the standard Mandelbrot set algorithm:
 - Z-axis typically represents iteration depth
 - Supports custom particle sizing and filtering
 
+### 🆕 **UI Architecture**
+- **Dual Interface System**: Classic UI (ui.js) and Alternative UI (altUI.js)
+- **CodeMirror Integration**: Advanced code editing with syntax highlighting
+- **Context-Aware Autocomplete**: Smart suggestions based on field type and available variables
+- **Real-time Synchronization**: Changes in one UI immediately reflect in the other
+- **Modal Editing**: Expandable code editors for complex expressions
+
 ### Performance Features
 - WebGL acceleration for smooth 3D rendering
 - Configurable iteration limits for performance tuning
 - Particle limit controls to prevent memory issues
 - Real-time parameter updates
+- CodeMirror optimization for large expressions
 
 ## Browser Compatibility
 

@@ -6,6 +6,352 @@ window.MBEUI = window.MBEUI || {};
 // Track CodeMirror instances by field ID
 const altUICMInstances = {};
 
+// CodeMirror completion provider for Mandelbrot Explorer
+function createMandelbrotCompleter(editorType) {
+  return function(cm) {
+    const cursor = cm.getCursor();
+    const line = cm.getLine(cursor.line);
+    const pos = cursor.ch;
+    
+    // Get tokens from CodeMirror's syntax highlighting
+    const tokens = cm.getLineTokens(cursor.line);
+    let currentToken = null;
+    let tokenStart = 0;
+    
+    // Find the current token at cursor position
+    for (let i = 0; i < tokens.length; i++) {
+      const token = tokens[i];
+      if (pos >= tokenStart && pos <= tokenStart + token.string.length) {
+        currentToken = token;
+        break;
+      }
+      tokenStart += token.string.length;
+    }
+    
+    // Find the start of the current word
+    let start = pos;
+    while (start > 0 && /[\w\.]/.test(line.charAt(start - 1))) {
+      start--;
+    }
+    
+    const currentWord = line.slice(start, pos);
+    
+    // Check if we're typing after a dot (e.g., "xyz.")
+    const beforeCursor = line.slice(0, pos);
+    const dotMatch = beforeCursor.match(/(\w+(?:\.\w+)*)\.$/);
+    let objectPath = null;
+    let prefix = '';
+    
+    if (dotMatch) {
+      objectPath = dotMatch[1];
+      prefix = objectPath + '.';
+    }
+    
+    // Dynamically get properties based on current context
+    const dynamicProps = [];
+    
+    function addObjectProperties(obj, prefix, maxDepth = 2, currentDepth = 0) {
+      if (!obj || typeof obj !== 'object' || currentDepth >= maxDepth) return;
+      
+      Object.keys(obj).forEach(prop => {
+        const value = obj[prop];
+        const fullPath = prefix ? `${prefix}.${prop}` : prop;
+        
+        if (typeof value === 'function') {
+          // For functions, create a function call with parameter placeholders
+          const funcStr = value.toString();
+          const paramMatch = funcStr.match(/function\s*\w*\s*\(([^)]*)\)/);
+          if (paramMatch && paramMatch[1].trim()) {
+            const params = paramMatch[1].split(',').map(p => p.trim()).filter(p => p);
+            const paramPlaceholders = params.map(p => `\${${p}}`).join(', ');
+            dynamicProps.push({
+              text: `${fullPath}(${paramPlaceholders})`,
+              displayText: `${fullPath}(${params.join(', ')})`,
+              className: 'cm-function'
+            });
+          } else {
+            dynamicProps.push({
+              text: `${fullPath}()`,
+              displayText: `${fullPath}()`,
+              className: 'cm-function'
+            });
+          }
+        } else if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
+          // For objects, add the object itself
+          dynamicProps.push({
+            text: fullPath,
+            displayText: fullPath,
+            className: 'cm-object'
+          });
+        } else {
+          // For other values, just add the property
+          dynamicProps.push({
+            text: fullPath,
+            displayText: fullPath,
+            className: 'cm-property'
+          });
+        }
+      });
+    }
+    
+    // If we're typing after a dot, explore that specific object
+    if (objectPath) {
+      const pathParts = objectPath.split('.');
+      let currentObj = window;
+      
+      // Navigate to the object at the path
+      for (let i = 0; i < pathParts.length; i++) {
+        if (currentObj && typeof currentObj === 'object' && currentObj[pathParts[i]] !== undefined) {
+          currentObj = currentObj[pathParts[i]];
+        } else {
+          currentObj = null;
+          break;
+        }
+      }
+      
+      if (currentObj && typeof currentObj === 'object') {
+        addObjectProperties(currentObj, objectPath, 1, 0);
+      }
+    } else if (currentWord.length > 0) {
+      // Show global variables that start with the current word
+      const globalVars = Object.getOwnPropertyNames(window);
+      
+      // Also check for variables that might not be own properties but are in global scope
+      const additionalGlobals = [];
+      for (let key in window) {
+        if (!globalVars.includes(key)) {
+          additionalGlobals.push(key);
+        }
+      }
+      
+      const allGlobals = [...globalVars, ...additionalGlobals];
+      
+      // Debug: Check what globals we found
+      if (currentWord.toLowerCase().includes('man')) {
+        console.log('Global vars found:', globalVars.filter(k => k.toLowerCase().includes('man')));
+        console.log('Additional globals found:', additionalGlobals.filter(k => k.toLowerCase().includes('man')));
+        console.log('mandelbrotExplorer exists:', 'mandelbrotExplorer' in window);
+        console.log('mandelbrotExplorer own property:', window.hasOwnProperty('mandelbrotExplorer'));
+      }
+      
+      allGlobals.forEach(key => {
+        if (key.toLowerCase().startsWith(currentWord.toLowerCase())) {
+          try {
+            const value = window[key];
+            if (typeof value === 'function') {
+              const funcStr = value.toString();
+              const paramMatch = funcStr.match(/function\s*\w*\s*\(([^)]*)\)/);
+              if (paramMatch && paramMatch[1].trim()) {
+                const params = paramMatch[1].split(',').map(p => p.trim()).filter(p => p);
+                const paramPlaceholders = params.map(p => `\${${p}}`).join(', ');
+                dynamicProps.push({
+                  text: `${key}(${paramPlaceholders})`,
+                  displayText: `${key}(${params.join(', ')})`,
+                  className: 'cm-function'
+                });
+              } else {
+                dynamicProps.push({
+                  text: `${key}()`,
+                  displayText: `${key}()`,
+                  className: 'cm-function'
+                });
+              }
+            } else if (typeof value === 'object' && value !== null) {
+              dynamicProps.push({
+                text: key,
+                displayText: key,
+                className: 'cm-object'
+              });
+            } else {
+              dynamicProps.push({
+                text: key,
+                displayText: key,
+                className: 'cm-property'
+              });
+            }
+          } catch (e) {
+            // Skip properties that can't be accessed
+          }
+        }
+      });
+    }
+
+    // Common variables available in different contexts
+    const commonVars = [
+      'pathIndex',
+      'iteration', 
+      'escapePath',
+      'index',
+      'iterationParticles',
+      'newX',
+      'newY', 
+      'z'
+    ];
+    
+    // Common JavaScript globals that are often useful
+    const jsGlobals = [
+      'console', 'document', 'window', 'Math', 'JSON', 'Array', 'Object', 'String', 'Number',
+      'parseInt', 'parseFloat', 'isNaN', 'isFinite', 'encodeURI', 'decodeURI',
+      'setTimeout', 'setInterval', 'clearTimeout', 'clearInterval',
+      'Date', 'RegExp', 'Error', 'Promise', 'Map', 'Set', 'WeakMap', 'WeakSet'
+    ];
+    
+    // JavaScript keywords
+    const jsKeywords = [
+      'var', 'let', 'const', 'function', 'return', 'if', 'else', 'for', 'while', 'do',
+      'switch', 'case', 'default', 'break', 'continue', 'try', 'catch', 'finally', 'throw',
+      'new', 'delete', 'typeof', 'instanceof', 'in', 'of', 'this', 'super', 'class', 'extends',
+      'static', 'async', 'await', 'yield', 'import', 'export', 'from', 'as', 'default',
+      'true', 'false', 'null', 'undefined', 'NaN', 'Infinity'
+    ];
+
+    // Mathematical functions
+    const mathFuncs = [
+      'Math.sin', 'Math.cos', 'Math.tan',
+      'Math.abs', 'Math.sqrt', 'Math.pow',
+      'Math.floor', 'Math.ceil', 'Math.round',
+      'Math.min', 'Math.max', 'Math.random',
+      'Math.PI', 'Math.E'
+    ];
+
+    // Common patterns and expressions
+    const commonPatterns = [
+      'escapePath.length',
+      'escapePath.length == 8',
+      'escapePath.length % 10 == 0',
+      'iteration > 8',
+      'iteration % 2 == 0',
+      'iteration % 2 == 1',
+      'iteration <= mandelbrotExplorer.maxIterations_3d / 2',
+      'iteration > mandelbrotExplorer.maxIterations_3d / 2',
+      'mandelbrotExplorer.xScale_3d/mandelbrotExplorer.maxIterations_3d',
+      'index/mandelbrotExplorer.iterationParticles.length',
+      'escapePath[pathIndex][0]',
+      'escapePath[pathIndex][1]',
+      'escapePath[pathIndex-1][0]',
+      'escapePath[pathIndex-1][1]',
+      'newX * -1',
+      'newY * -1',
+      'z * -1'
+    ];
+
+    // Type-specific completions
+    let typeSpecific = [];
+    switch(editorType) {
+      case 'cloudLengthFilter':
+        typeSpecific = [
+          'return escapePath.length == 8;',
+          'return escapePath.length % 10 == 0;',
+          'return escapePath.length == mandelbrotExplorer.maxIterations_3d || escapePath.shortened;',
+          'return escapePath.length > parseInt(mandelbrotExplorer.maxIterations_3d * .1) && escapePath.length < parseInt(mandelbrotExplorer.maxIterations_3d * .9) && escapePath.length > 5;'
+        ];
+        break;
+      case 'cloudIterationFilter':
+        typeSpecific = [
+          'return iteration > 8;',
+          'return iteration == mandelbrotExplorer.maxIterations_3d;',
+          'return iteration < 9;',
+          'return iteration % 2 == 0;',
+          'return iteration % 2 == 1;',
+          'return iteration <= mandelbrotExplorer.maxIterations_3d / 2;',
+          'return iteration > mandelbrotExplorer.maxIterations_3d / 2;'
+        ];
+        break;
+      case 'particleSize':
+        typeSpecific = [
+          'return mandelbrotExplorer.xScale_3d/mandelbrotExplorer.maxIterations_3d;',
+          'return 0;',
+          'return index/mandelbrotExplorer.iterationParticles.length;',
+          'return 0.1;',
+          'return mandelbrotExplorer.xScale_3d;'
+        ];
+        break;
+      case 'dualZMultiplier':
+        typeSpecific = [
+          'return [escapePath[pathIndex][0], escapePath[pathIndex][1], z * -1];',
+          'if(pathIndex > 0) {\n  return [newX + escapePath[pathIndex-1][0], newY + escapePath[pathIndex-1][1], z * -1];\n}\nreturn [newX, newY, z * -1];',
+          'return [newX * -1, newY, z * -1];',
+          'return [newX, newY * -1, z * -1];',
+          'return [newX * -1, newY * -1, z * -1];'
+        ];
+        break;
+      case 'particleFilter':
+        typeSpecific = [
+          'return true;',
+          'return false;',
+          'return index % 2 == 0;',
+          'return iteration > 5;'
+        ];
+        break;
+    }
+
+    // Combine all completions
+    let allCompletions = [
+      ...dynamicProps, // Dynamic properties from current context
+      ...commonVars.map(varName => ({text: varName, displayText: varName, className: 'cm-variable'})),
+      ...jsGlobals.map(global => ({text: global, displayText: global, className: 'cm-builtin'})),
+      ...jsKeywords.map(keyword => ({text: keyword, displayText: keyword, className: 'cm-keyword'})),
+      ...mathFuncs.map(func => ({text: func, displayText: func, className: 'cm-builtin'})),
+      ...commonPatterns.map(pattern => ({text: pattern, displayText: pattern, className: 'cm-string'})),
+      ...typeSpecific.map(snippet => ({text: snippet, displayText: snippet.substring(0, 50) + '...', className: 'cm-snippet'}))
+    ];
+    
+    // Use token information for better context awareness
+    if (currentToken) {
+      const tokenType = currentToken.type;
+      
+      // If we're in a string, don't show completions
+      if (tokenType && tokenType.includes('string')) {
+        allCompletions = [];
+      }
+      // If we're in a comment, don't show completions
+      else if (tokenType && tokenType.includes('comment')) {
+        allCompletions = [];
+      }
+      // If we're after a keyword like 'new', 'typeof', etc., show appropriate completions
+      else if (tokenType && tokenType.includes('keyword')) {
+        // Filter to show only relevant completions based on the keyword
+        const keyword = currentToken.string.toLowerCase();
+        if (keyword === 'new') {
+          allCompletions = allCompletions.filter(completion => 
+            completion.className === 'cm-builtin' || completion.className === 'cm-object'
+          );
+        } else if (keyword === 'typeof' || keyword === 'instanceof') {
+          allCompletions = allCompletions.filter(completion => 
+            completion.className === 'cm-variable' || completion.className === 'cm-object'
+          );
+        }
+      }
+    }
+    
+    // Filter completions based on current word if user is typing
+    if (currentWord.length > 0) {
+      allCompletions = allCompletions.filter(completion => 
+        completion.text.toLowerCase().startsWith(currentWord.toLowerCase())
+      );
+    } else {
+      // If no current word, show all global variables and objects (including user-defined)
+      allCompletions = allCompletions.filter(completion => 
+        completion.className !== 'cm-string' && 
+        completion.className !== 'cm-snippet'
+      );
+    }
+
+    // Sort completions alphabetically by display text
+    allCompletions.sort((a, b) => a.displayText.localeCompare(b.displayText));
+
+
+
+    const result = {
+      list: allCompletions,
+      from: CodeMirror.Pos(cursor.line, start),
+      to: CodeMirror.Pos(cursor.line, pos)
+    };
+    
+    return result;
+  };
+}
+
 function buildAlternativeUI() {
     const altUI = document.getElementById('alternativeUI');
     if (!altUI || altUI.dataset.built) return;
@@ -193,6 +539,11 @@ function buildAlternativeUI() {
     
     // Initialize CodeMirror for text areas
     setTimeout(initAltUICodeMirror5, 0);
+    
+    // Show autocomplete help
+    setTimeout(() => {
+      showAltToast('💡 Tip: Press Ctrl+Space in any code editor for autocomplete suggestions!', 4000);
+    }, 2000);
 
     // Add modal HTML to the end of buildAlternativeUI
     if (!document.getElementById('alt-ui-cm-modal')) {
@@ -618,10 +969,17 @@ function showAltToast(msg, duration = 2500) {
 
 function initAltUICodeMirror5() {
     if (!window.CodeMirror) return;
+    
+    // Test if hint functionality is available
+    if (!CodeMirror.showHint) return;
     function makeCM(textareaId, onChange) {
       const textarea = document.getElementById(textareaId);
       if (!textarea) return null;
       textarea.style.display = 'none';
+      
+      // Determine editor type for context-aware completions
+      const editorType = textareaId.replace('alt-', '');
+      
       const cm = CodeMirror.fromTextArea(textarea, {
         mode: 'javascript',
         theme: 'material',
@@ -632,22 +990,46 @@ function initAltUICodeMirror5() {
         indentUnit: 2,
         matchBrackets: true,
         autoCloseBrackets: true,
-        height: 'auto'
+        height: 'auto',
+        extraKeys: {
+          'Ctrl-Space': function(cm) {
+            cm.showHint({
+              hint: createMandelbrotCompleter(editorType),
+              completeSingle: false
+            });
+            // Fix cursor positioning after hint
+            setTimeout(() => {
+              const cursor = cm.getCursor();
+              cm.refresh();
+              cm.setCursor(cursor);
+            }, 10);
+          }
+        }
       });
+      
       cm.getWrapperElement().style.height = '4em';
       cm.getScrollerElement().style.maxHeight = '4em';
       cm.refresh();
       altUICMInstances[textareaId] = cm;
+      
       cm.on('change', function(editor) {
         const newVal = editor.getValue();
         textarea.value = newVal;
         if (onChange) onChange(newVal);
+        // Refresh after changes to fix cursor positioning
+        setTimeout(() => {
+          const cursor = cm.getCursor();
+          cm.refresh();
+          cm.setCursor(cursor);
+        }, 0);
       });
+      
       textarea.addEventListener('change', function() {
         if (cm.getValue() !== textarea.value) {
           cm.setValue(textarea.value);
         }
       });
+      
       return cm;
     }
     // List of fields to convert
@@ -850,6 +1232,9 @@ window.openAltUICMModal = function(textareaId) {
         modalTextarea._cm.toTextArea();
         modalTextarea._cm = null;
       }
+      // Determine editor type for context-aware completions
+      const editorType = textareaId.replace('alt-', '');
+      
       cmInstance = CodeMirror.fromTextArea(modalTextarea, {
         mode: 'javascript',
         theme: 'material',
@@ -860,7 +1245,21 @@ window.openAltUICMModal = function(textareaId) {
         indentUnit: 2,
         matchBrackets: true,
         autoCloseBrackets: true,
-        height: 'auto'
+        height: 'auto',
+        extraKeys: {
+          'Ctrl-Space': function(cm) {
+            cm.showHint({
+              hint: createMandelbrotCompleter(editorType),
+              completeSingle: false
+            });
+            // Fix cursor positioning after hint
+            setTimeout(() => {
+              const cursor = cm.getCursor();
+              cm.refresh();
+              cm.setCursor(cursor);
+            }, 10);
+          }
+        }
       });
       cmInstance.setSize('100%', '300px');
       modalTextarea._cm = cmInstance;

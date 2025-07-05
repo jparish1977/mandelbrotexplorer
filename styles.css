@@ -482,3 +482,70 @@ body{
 .alt-ui-cm-modal-actions button:hover {
   background: #2563eb;
 } 
+
+/* CodeMirror autocomplete styling */
+.CodeMirror-hints {
+  background: #2d2d2d !important;
+  border: 1px solid #555 !important;
+  border-radius: 4px !important;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.3) !important;
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace !important;
+  font-size: 13px !important;
+  max-height: 200px !important;
+  overflow-y: auto !important;
+  z-index: 99999 !important;
+  position: absolute !important;
+  display: block !important;
+  visibility: visible !important;
+}
+
+.CodeMirror-hint {
+  color: #e6e6e6;
+  padding: 4px 8px;
+  cursor: pointer;
+  border-bottom: 1px solid #444;
+}
+
+.CodeMirror-hint:last-child {
+  border-bottom: none;
+}
+
+.CodeMirror-hint:hover {
+  background: #3d3d3d;
+}
+
+.CodeMirror-hint.cm-property {
+  color: #9cdcfe;
+}
+
+.CodeMirror-hint.cm-variable {
+  color: #4fc1ff;
+}
+
+.CodeMirror-hint.cm-builtin {
+  color: #dcdcaa;
+}
+
+.CodeMirror-hint.cm-string {
+  color: #ce9178;
+}
+
+.CodeMirror-hint.cm-snippet {
+  color: #c586c0;
+  font-style: italic;
+}
+
+.CodeMirror-hint.cm-function {
+  color: #dcdcaa;
+  font-weight: bold;
+}
+
+.CodeMirror-hint.cm-object {
+  color: #4ec9b0;
+  font-weight: bold;
+}
+
+.CodeMirror-hint.cm-keyword {
+  color: #569cd6;
+  font-weight: bold;
+}

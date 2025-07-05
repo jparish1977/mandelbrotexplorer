@@ -19,10 +19,12 @@
 		<!-- CodeMirror 5 for code editing in the new UI -->
 		<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.css">
 		<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/theme/material.min.css">
+		<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/hint/show-hint.css">
 		<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.js"></script>
 		<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/javascript/javascript.min.js"></script>
+		<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/hint/show-hint.js"></script>
 	</head>
-	<body onload="init()">
+	<body onload="init();setTimeout(function(){if(window.buildAlternativeUI){buildAlternativeUI();}document.getElementById('controls').style.display='none';document.getElementById('alternativeUI').style.display='';}, 100);">
 		<div>
 			<canvas id="mandelbrotCanvas2d" ondblclick="zoomToDblClick(this, event)"></canvas>
 			<canvas id="mandelbrotCanvas3d"></canvas>
