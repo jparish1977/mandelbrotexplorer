@@ -446,6 +446,8 @@ function buildAlternativeUI() {
                   <input type="checkbox" id="alt-colorCycleCheckbox" />
                   <label for="alt-iterationCycleCheckbox" style="margin-left:1.5em;">Iteration Cycle</label>
                   <input type="checkbox" id="alt-iterationCycleCheckbox" />
+                  <label for="alt-gpuAccelerationCheckbox" style="margin-left:1.5em;">GPU Acceleration</label>
+                  <input type="checkbox" id="alt-gpuAccelerationCheckbox" />
                 </div>
                 <div class="alt-ui-fieldrow">
                   <label for="alt-iterationCycleTime">Cycle Time</label>
@@ -508,6 +510,15 @@ function buildAlternativeUI() {
               <button onclick="mandelbrotExplorer.saveSettings()">Save Settings</button>
               <button onclick="loadSettingsFromStorage()">Load Settings</button>
               <button onclick="mandelbrotExplorer.clearSettings()">Clear Settings</button>
+              <br><br>
+              <div class="alt-ui-fieldgroup">
+                <h4>Cache Management</h4>
+                <div class="alt-ui-fieldrow">
+                  <button onclick="clearCloudCache();">Clear Cloud Cache</button>
+                  <button onclick="showCacheStatus();">Show Cache Status</button>
+                </div>
+                <div id="alt-cacheStatus" style="margin-top: 0.5em; font-size: 0.9em; color: #666;"></div>
+              </div>
             </div>
           </section>
         </main>
@@ -628,6 +639,12 @@ function populateAltUIFields() {
     if (randomStep) {
         const altRandomStep = document.getElementById('alt-randomStepCheckbox');
         if (altRandomStep) altRandomStep.checked = randomStep.checked;
+    }
+    
+    const gpuAcceleration = document.getElementById('gpuAccelerationCheckbox');
+    if (gpuAcceleration) {
+        const altGPUAcceleration = document.getElementById('alt-gpuAccelerationCheckbox');
+        if (altGPUAcceleration) altGPUAcceleration.checked = gpuAcceleration.checked;
     }
     
     if (startX) {
@@ -773,6 +790,17 @@ function attachAltUIEventListeners() {
             if (originalField) {
                 originalField.checked = this.checked;
                 toggleRandomStepping();
+            }
+        });
+    }
+    
+    const altGPUAcceleration = document.getElementById('alt-gpuAccelerationCheckbox');
+    if (altGPUAcceleration) {
+        altGPUAcceleration.addEventListener('change', function() {
+            const originalField = document.getElementById('gpuAccelerationCheckbox');
+            if (originalField) {
+                originalField.checked = this.checked;
+                toggleGPUAcceleration();
             }
         });
     }
@@ -1099,6 +1127,7 @@ function syncAltUIFromOriginal() {
     // Sync checkboxes
     const checkboxes = [
         {original: 'randomStepCheckbox', alt: 'alt-randomStepCheckbox'},
+        {original: 'gpuAccelerationCheckbox', alt: 'alt-gpuAccelerationCheckbox'},
         {original: 'dualZEnabled', alt: 'alt-dualZEnabled'},
         {original: 'hide2d', alt: 'alt-hide2d'},
         {original: 'toggleBackground', alt: 'alt-toggleBackground'}

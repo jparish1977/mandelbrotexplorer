@@ -1,0 +1,568 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>GPU Acceleration Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .test-section { margin: 20px 0; padding: 15px; border: 1px solid #ccc; border-radius: 5px; }
+        .success { background-color: #d4edda; border-color: #c3e6cb; }
+        .error { background-color: #f8d7da; border-color: #f5c6cb; }
+        .info { background-color: #d1ecf1; border-color: #bee5eb; }
+        button { padding: 10px 15px; margin: 5px; background: #007bff; color: white; border: none; border-radius: 3px; cursor: pointer; }
+        button:hover { background: #0056b3; }
+        pre { background: #f8f9fa; padding: 10px; border-radius: 3px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>GPU Acceleration Test</h1>
+    
+    <div class="test-section info">
+        <h3>GPU Availability Check</h3>
+        <div id="gpu-status">Checking...</div>
+        <button onclick="checkGPU()">Check GPU</button>
+    </div>
+    
+    <div class="test-section">
+        <h3>Performance Test</h3>
+        <p>Test escape path generation performance with CPU vs GPU using a 100x100 grid from a high-iteration area:</p>
+        <ul>
+            <li><strong>Grid:</strong> 100x100 points (10,000 total)</li>
+            <li><strong>Area:</strong> 0.125×0.125 square centered at (-0.75, 0.0)</li>
+            <li><strong>Max Iterations:</strong> 256</li>
+            <li><strong>Location:</strong> Near Mandelbrot set boundary (high iteration density)</li>
+        </ul>
+        <button onclick="runPerformanceTest()">Run Performance Test</button>
+        <div id="performance-results"></div>
+        
+        <div style="display: flex; gap: 20px; margin-top: 20px;">
+            <div>
+                <h4>CPU Output</h4>
+                <canvas id="cpu-canvas" width="200" height="200" style="border: 1px solid #ccc;"></canvas>
+            </div>
+            <div>
+                <h4>GPU Output</h4>
+                <canvas id="gpu-canvas" width="200" height="200" style="border: 1px solid #ccc;"></canvas>
+            </div>
+            <div>
+                <h4>GPU Iteration Output</h4>
+                <canvas id="gpu-iteration-canvas" width="200" height="200" style="border: 1px solid #ccc;"></canvas>
+            </div>
+        </div>
+    </div>
+    
+    <div class="test-section">
+        <h3>GPU Shader Test</h3>
+        <p>Test GPU shader compilation and execution:</p>
+        <button onclick="testGPUShader()">Test GPU Shader</button>
+        <div id="shader-results"></div>
+    </div>
+
+    <script src="../three.js"></script>
+    <script src="../palettes.js"></script>
+    <script src="../presets.js"></script>
+    <script src="../settingsManager.js"></script>
+    <script src="../threeRenderer.js"></script>
+    <script src="../shaderLoader.js"></script>
+    <script src="../mandelbrotexplorer.js"></script>
+    <script>
+        function checkGPU() {
+            const statusDiv = document.getElementById('gpu-status');
+            const gpuInfo = window.checkGPUAvailability();
+            
+            if (gpuInfo.available) {
+                statusDiv.innerHTML = `
+                    <div class="success">
+                        <strong>✅ GPU Available</strong><br>
+                        Renderer: ${gpuInfo.renderer}<br>
+                        Version: ${gpuInfo.version}<br>
+                        Vendor: ${gpuInfo.vendor}
+                    </div>
+                `;
+            } else {
+                statusDiv.innerHTML = `
+                    <div class="error">
+                        <strong>❌ GPU Not Available</strong><br>
+                        Reason: ${gpuInfo.reason}
+                    </div>
+                `;
+            }
+        }
+        
+        function runPerformanceTest() {
+            const resultsDiv = document.getElementById('performance-results');
+            resultsDiv.innerHTML = '<p>Running performance test...</p>';
+            
+            // Clear canvases
+            const cpuCanvas = document.getElementById('cpu-canvas');
+            const gpuCanvas = document.getElementById('gpu-canvas');
+            const gpuIterationCanvas = document.getElementById('gpu-iteration-canvas');
+            const cpuCtx = cpuCanvas.getContext('2d', { willReadFrequently: true });
+            const gpuCtx = gpuCanvas.getContext('2d', { willReadFrequently: true });
+            const gpuIterationCtx = gpuIterationCanvas.getContext('2d', { willReadFrequently: true });
+            
+            cpuCtx.fillStyle = 'black';
+            cpuCtx.fillRect(0, 0, cpuCanvas.width, cpuCanvas.height);
+            gpuCtx.fillStyle = 'black';
+            gpuCtx.fillRect(0, 0, gpuCanvas.width, gpuCanvas.height);
+            gpuIterationCtx.fillStyle = 'black';
+            gpuIterationCtx.fillRect(0, 0, gpuIterationCanvas.width, gpuIterationCanvas.height);
+            
+            cpuCtx.fillStyle = 'white';
+            cpuCtx.font = '12px Arial';
+            cpuCtx.fillText('Processing...', 5, 15);
+            gpuCtx.fillStyle = 'white';
+            gpuCtx.font = '12px Arial';
+            gpuCtx.fillText('Processing...', 5, 15);
+            gpuIterationCtx.fillStyle = 'white';
+            gpuIterationCtx.font = '12px Arial';
+            gpuIterationCtx.fillText('Processing...', 5, 15);
+            
+            // Check if required functions exist
+            if (!mandelbrotExplorer || typeof mandelbrotExplorer.generateEscapePathsCPU !== 'function') {
+                resultsDiv.innerHTML = `
+                    <div class="error">
+                        <strong>❌ Required functions not available</strong><br>
+                        Please make sure all scripts are loaded properly.
+                    </div>
+                `;
+                return;
+            }
+            
+            // Ensure mandelbrotExplorer is properly initialized
+            if (!mandelbrotExplorer.cloudMethods) {
+                console.warn('Initializing mandelbrotExplorer cloud methods...');
+                // Set some default values if not already set
+                if (!mandelbrotExplorer.cloudResolution) {
+                    mandelbrotExplorer.cloudResolution = "43,101";
+                }
+                if (!mandelbrotExplorer.startX) {
+                    mandelbrotExplorer.startX = -2;
+                    mandelbrotExplorer.endX = 2;
+                    mandelbrotExplorer.startY = 2;
+                    mandelbrotExplorer.endY = -2;
+                }
+            }
+            
+            // Test parameters - 512x512 grid from a 0.125 square area with high iteration density
+            const gridSize = 512;
+            const sampleAreaSize = 0.125;
+            const maxIterations = 64;
+            const points = [];
+            
+            // Choose a sample area with high iteration density (near the boundary of the Mandelbrot set)
+            // This area typically has many points that require many iterations
+            // The point (-0.75, 0.0) is near the main cardioid boundary where many points
+            // require close to the maximum iterations, making it a good stress test
+            const sampleCenterX = -0.75; // Near the main cardioid
+            const sampleCenterY = 0.0;
+            const halfSize = sampleAreaSize / 2;
+            
+            // Generate 100x100 grid of points
+            for (let y = 0; y < gridSize; y++) {
+                for (let x = 0; x < gridSize; x++) {
+                    const xCoord = sampleCenterX - halfSize + (x / (gridSize - 1)) * sampleAreaSize;
+                    const yCoord = sampleCenterY - halfSize + (y / (gridSize - 1)) * sampleAreaSize;
+                    points.push([xCoord, yCoord]);
+                }
+            }
+            
+            console.log(`Generated ${points.length} test points in ${sampleAreaSize}x${sampleAreaSize} area centered at (${sampleCenterX}, ${sampleCenterY})`);
+            console.log(`Grid size: ${gridSize}x${gridSize}, Max iterations: ${maxIterations}`);
+            
+            // Test CPU performance
+            const cpuStart = performance.now();
+            const cpuResults = mandelbrotExplorer.generateEscapePathsCPU(points, maxIterations);
+            const cpuComputeTime = performance.now() - cpuStart;
+            
+            // Measure CPU rendering time separately
+            const cpuRenderStart = performance.now();
+            const cpuCanvasElement = document.getElementById('cpu-canvas');
+            renderMandelbrotToCanvas(cpuCanvasElement, cpuResults, maxIterations, sampleCenterX, sampleCenterY, sampleAreaSize, 'CPU');
+            const cpuRenderTime = performance.now() - cpuRenderStart;
+            
+            const cpuTime = cpuComputeTime + cpuRenderTime;
+            
+            // Test GPU performance (if available)
+            let gpuTime = null;
+            let gpuComputeTimeOnly = null;
+            let gpuRenderTimeOnly = null;
+            let gpuResults = null;
+            
+            // Test GPU iteration-centric performance
+            let gpuIterationTime = null;
+            let gpuIterationComputeTimeOnly = null;
+            let gpuIterationRenderTimeOnly = null;
+            let gpuIterationResults = null;
+            
+            // Enable GPU for testing
+            const originalGPUState = mandelbrotExplorer.useGPU;
+            mandelbrotExplorer.useGPU = true;
+            
+            // Initialize GPU if not already done
+            if (!mandelbrotExplorer.gpuContext) {
+                mandelbrotExplorer.initGPU();
+            }
+            
+            const sampleStartX = sampleCenterX - sampleAreaSize / 2;
+            const sampleEndX   = sampleCenterX + sampleAreaSize / 2;
+            const sampleStartY = sampleCenterY + sampleAreaSize / 2;
+            const sampleEndY   = sampleCenterY - sampleAreaSize / 2;
+            
+            // Wait for GPU initialization to complete
+            setTimeout(() => {
+                if (mandelbrotExplorer.gpuContext && mandelbrotExplorer.gpuProgram && mandelbrotExplorer.gpuUniforms) {
+                    const gpuStart = performance.now();
+                    try {
+                        gpuResults = mandelbrotExplorer.generateEscapePathsGPU(
+                            points,
+                            maxIterations,
+                            {
+                                startX: sampleStartX,
+                                endX: sampleEndX,
+                                startY: sampleStartY,
+                                endY: sampleEndY
+                            }
+                        );
+                        const gpuComputeTime = performance.now() - gpuStart;
+                        
+                        // Measure rendering time separately
+                        const gpuRenderStart = performance.now();
+                        const gpuCanvasElement = document.getElementById('gpu-canvas');
+                        renderMandelbrotToCanvas(gpuCanvasElement, gpuResults, maxIterations, sampleCenterX, sampleCenterY, sampleAreaSize, 'GPU');
+                        const gpuRenderTime = performance.now() - gpuRenderStart;
+                        
+                        gpuTime = gpuComputeTime + gpuRenderTime;
+                        gpuComputeTimeOnly = gpuComputeTime;
+                        gpuRenderTimeOnly = gpuRenderTime;
+                    } catch (error) {
+                        console.error('GPU test error:', error);
+                        gpuResults = null;
+                        gpuTime = null;
+                        gpuComputeTimeOnly = null;
+                        gpuRenderTimeOnly = null;
+                        // Clear GPU canvas on error
+                        const gpuCanvasError = document.getElementById('gpu-canvas');
+                        const ctx = gpuCanvasError.getContext('2d', { willReadFrequently: true });
+                        ctx.fillStyle = 'red';
+                        ctx.fillRect(0, 0, gpuCanvasError.width, gpuCanvasError.height);
+                        ctx.fillStyle = 'white';
+                        ctx.font = '12px Arial';
+                        ctx.fillText('GPU Error', 5, 15);
+                    }
+                    
+                    // Test GPU iteration-centric performance
+                    if (mandelbrotExplorer.gpuIterationProgram && mandelbrotExplorer.gpuIterationUniforms) {
+                        const gpuIterationStart = performance.now();
+                        try {
+                            gpuIterationResults = mandelbrotExplorer.generateEscapePathsGPUIterationCentric(
+                                points,
+                                maxIterations,
+                                {
+                                    startX: sampleStartX,
+                                    endX: sampleEndX,
+                                    startY: sampleStartY,
+                                    endY: sampleEndY
+                                }
+                            );
+                            const gpuIterationComputeTime = performance.now() - gpuIterationStart;
+                            
+                            // Render GPU iteration results to canvas
+                            const gpuIterationRenderStart = performance.now();
+                            const gpuIterationCanvasElement = document.getElementById('gpu-iteration-canvas');
+                            renderMandelbrotToCanvas(gpuIterationCanvasElement, gpuIterationResults, maxIterations, sampleCenterX, sampleCenterY, sampleAreaSize, 'GPU Iteration');
+                            const gpuIterationRenderTime = performance.now() - gpuIterationRenderStart;
+                            
+                            gpuIterationTime = gpuIterationComputeTime + gpuIterationRenderTime;
+                            gpuIterationComputeTimeOnly = gpuIterationComputeTime;
+                            gpuIterationRenderTimeOnly = gpuIterationRenderTime;
+                        } catch (error) {
+                            console.error('GPU iteration test error:', error);
+                            gpuIterationResults = null;
+                            gpuIterationTime = null;
+                            gpuIterationComputeTimeOnly = null;
+                            gpuIterationRenderTimeOnly = null;
+                            // Clear GPU iteration canvas on error
+                            const gpuIterationCanvasError = document.getElementById('gpu-iteration-canvas');
+                            const ctx = gpuIterationCanvasError.getContext('2d', { willReadFrequently: true });
+                            ctx.fillStyle = 'red';
+                            ctx.fillRect(0, 0, gpuIterationCanvasError.width, gpuIterationCanvasError.height);
+                            ctx.fillStyle = 'white';
+                            ctx.font = '12px Arial';
+                            ctx.fillText('GPU Iteration Error', 5, 15);
+                        }
+                    }
+                }
+                
+                // Display results
+                displayResults();
+            }, 1000); // Wait 1 second for shader loading
+            
+            function displayResults() {
+                let resultsHTML = `
+                    <div class="info">
+                        <h4>Test Results (${gridSize}x${gridSize} grid, ${maxIterations} iterations)</h4>
+                        <p><strong>Sample Area:</strong> ${sampleAreaSize}x${sampleAreaSize} centered at (${sampleCenterX}, ${sampleCenterY})</p>
+                        <p><strong>Total Points:</strong> ${points.length}</p>
+                        <p><strong>CPU Total Time:</strong> ${cpuTime.toFixed(2)}ms</p>
+                        <p><strong>CPU Compute Time:</strong> ${cpuComputeTime.toFixed(2)}ms</p>
+                        <p><strong>CPU Render Time:</strong> ${cpuRenderTime.toFixed(2)}ms</p>
+                        <p><strong>CPU Points Generated:</strong> ${cpuResults.length}</p>
+                `;
+                
+                if (gpuTime !== null) {
+                    const speedup = cpuTime / gpuTime;
+                    const cpuPointsPerMs = cpuResults.length / cpuTime;
+                    const gpuPointsPerMs = gpuResults.length / gpuTime;
+                    
+                    // Compare results
+                    let identicalResults = true;
+                    let differences = 0;
+                    if (cpuResults.length === gpuResults.length) {
+                        for (let i = 0; i < cpuResults.length; i++) {
+                            if (cpuResults[i].length !== gpuResults[i].length) {
+                                identicalResults = false;
+                                differences++;
+                            }
+                        }
+                    } else {
+                        identicalResults = false;
+                        differences = Math.abs(cpuResults.length - gpuResults.length);
+                    }
+                    
+                    resultsHTML += `
+                        <p><strong>GPU Total Time:</strong> ${gpuTime.toFixed(2)}ms</p>
+                        <p><strong>GPU Compute Time:</strong> ${gpuComputeTimeOnly.toFixed(2)}ms</p>
+                        <p><strong>GPU Render Time:</strong> ${gpuRenderTimeOnly.toFixed(2)}ms</p>
+                        <p><strong>GPU Points Generated:</strong> ${gpuResults.length}</p>
+                        <p><strong>Compute Speedup:</strong> ${(cpuTime / gpuComputeTimeOnly).toFixed(2)}x faster</p>
+                        <p><strong>Total Speedup:</strong> ${speedup.toFixed(2)}x faster</p>
+                        <p><strong>CPU Performance:</strong> ${cpuPointsPerMs.toFixed(1)} points/ms</p>
+                        <p><strong>GPU Performance:</strong> ${gpuPointsPerMs.toFixed(1)} points/ms</p>
+                        <p><strong>Results Match:</strong> ${identicalResults ? '✅ Yes' : '❌ No (differences: ' + differences + ')'}</p>
+                        <p><strong>GPU Context:</strong> ${mandelbrotExplorer.gpuContext.getParameter(mandelbrotExplorer.gpuContext.VERSION)}</p>
+                    `;
+                    
+                    // Add GPU iteration results if available
+                    if (gpuIterationTime !== null) {
+                        const iterationSpeedup = cpuTime / gpuIterationTime;
+                        const iterationComputeSpeedup = cpuTime / gpuIterationComputeTimeOnly;
+                        const gpuIterationPointsPerMs = gpuIterationResults.length / gpuIterationTime;
+                        
+                        // Compare iteration results with CPU
+                        let iterationIdenticalResults = true;
+                        let iterationDifferences = 0;
+                        if (cpuResults.length === gpuIterationResults.length) {
+                            for (let i = 0; i < cpuResults.length; i++) {
+                                if (cpuResults[i].length !== gpuIterationResults[i].length) {
+                                    iterationIdenticalResults = false;
+                                    iterationDifferences++;
+                                }
+                            }
+                        } else {
+                            iterationIdenticalResults = false;
+                            iterationDifferences = Math.abs(cpuResults.length - gpuIterationResults.length);
+                        }
+                        
+                        resultsHTML += `
+                            <hr style="margin: 20px 0; border: 1px solid #ccc;">
+                            <h4>GPU Iteration-Centric Results:</h4>
+                            <p><strong>GPU Iteration Total Time:</strong> ${gpuIterationTime.toFixed(2)}ms</p>
+                            <p><strong>GPU Iteration Compute Time:</strong> ${gpuIterationComputeTimeOnly.toFixed(2)}ms</p>
+                            <p><strong>GPU Iteration Render Time:</strong> ${gpuIterationRenderTimeOnly.toFixed(2)}ms</p>
+                            <p><strong>GPU Iteration Points Generated:</strong> ${gpuIterationResults.length}</p>
+                            <p><strong>Iteration Compute Speedup:</strong> ${iterationComputeSpeedup.toFixed(2)}x faster</p>
+                            <p><strong>Iteration Total Speedup:</strong> ${iterationSpeedup.toFixed(2)}x faster</p>
+                            <p><strong>GPU Iteration Performance:</strong> ${gpuIterationPointsPerMs.toFixed(1)} points/ms</p>
+                            <p><strong>Iteration Results Match:</strong> ${iterationIdenticalResults ? '✅ Yes' : '❌ No (differences: ' + iterationDifferences + ')'}</p>
+                        `;
+                    }
+                } else {
+                    resultsHTML += `
+                        <p><strong>GPU:</strong> Not available or failed</p>
+                        <p><strong>GPU Context:</strong> ${mandelbrotExplorer.gpuContext ? 'Available' : 'Not initialized'}</p>
+                        <p><strong>GPU Program:</strong> ${mandelbrotExplorer.gpuProgram ? 'Compiled' : 'Not compiled'}</p>
+                        <p><strong>GPU Uniforms:</strong> ${mandelbrotExplorer.gpuUniforms ? 'Initialized' : 'Not initialized'}</p>
+                    `;
+                }
+                
+                resultsHTML += '</div>';
+                resultsDiv.innerHTML = resultsHTML;
+            }
+            
+            // Restore original GPU state
+            mandelbrotExplorer.useGPU = originalGPUState;
+        }
+        
+        function testGPUShader() {
+            const resultsDiv = document.getElementById('shader-results');
+            resultsDiv.innerHTML = '<p>Testing GPU shader...</p>';
+            
+            // Check if required functions exist
+            if (!mandelbrotExplorer || typeof mandelbrotExplorer.initGPU !== 'function') {
+                resultsDiv.innerHTML = `
+                    <div class="error">
+                        <strong>❌ Required functions not available</strong><br>
+                        Please make sure all scripts are loaded properly.
+                    </div>
+                `;
+                return;
+            }
+            
+            try {
+                // Initialize GPU
+                mandelbrotExplorer.useGPU = true;
+                mandelbrotExplorer.initGPU();
+                
+                if (mandelbrotExplorer.gpuContext && mandelbrotExplorer.gpuProgram) {
+                    resultsDiv.innerHTML = `
+                        <div class="success">
+                            <strong>✅ GPU Shader Test Passed</strong><br>
+                            WebGL Context: ${mandelbrotExplorer.gpuContext.getParameter(mandelbrotExplorer.gpuContext.VERSION)}<br>
+                            Shader Program: Compiled and linked successfully
+                        </div>
+                    `;
+                } else {
+                    resultsDiv.innerHTML = `
+                        <div class="error">
+                            <strong>❌ GPU Shader Test Failed</strong><br>
+                            Could not initialize GPU context or compile shaders
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                resultsDiv.innerHTML = `
+                    <div class="error">
+                        <strong>❌ GPU Shader Test Error</strong><br>
+                        Error: ${error.message}
+                    </div>
+                `;
+            }
+        }
+        
+        // Function to render Mandelbrot output to canvas
+        function renderMandelbrotToCanvas(canvas, points, maxIterations, centerX, centerY, areaSize, method) {
+            const ctx = canvas.getContext('2d', { willReadFrequently: true });
+            const width = canvas.width;
+            const height = canvas.height;
+            
+            // Clear canvas
+            ctx.fillStyle = 'black';
+            ctx.fillRect(0, 0, width, height);
+            
+            // Create image data for pixel manipulation
+            const imageData = ctx.createImageData(width, height);
+            const data = imageData.data;
+            
+            // Calculate grid size (assuming square grid)
+            const gridSize = Math.sqrt(points.length);
+            if (gridSize * gridSize !== points.length) {
+                console.error('Points array is not a perfect square grid');
+                return;
+            }
+            
+            // Create a simple palette for visualization
+            const palette = [];
+            for (let i = 0; i < 256; i++) {
+                const hue = (i * 137.5) % 360; // Golden angle for good color distribution
+                const saturation = 80;
+                const lightness = i < 255 ? 50 : 0; // Black for points that don't escape
+                palette.push(hue, saturation, lightness);
+            }
+            
+            // Render each point
+            for (let y = 0; y < gridSize; y++) {
+                for (let x = 0; x < gridSize; x++) {
+                    const pointIndex = y * gridSize + x;
+                    const point = points[pointIndex];
+                    
+                    if (!point || !point.length) continue;
+                    
+                    // Calculate iterations from escape path length
+                    const iterations = point.length - 1; // -1 because first point is the starting point
+                    
+                    // Map grid coordinates to canvas coordinates
+                    const canvasX = Math.floor((x / (gridSize - 1)) * width);
+                    const canvasY = Math.floor((y / (gridSize - 1)) * height);
+                    
+                    if (canvasX >= 0 && canvasX < width && canvasY >= 0 && canvasY < height) {
+                        const pixelIndex = (canvasY * width + canvasX) * 4;
+                        
+                        if (iterations < maxIterations) {
+                            // Point escaped - color based on iterations
+                            const colorIndex = iterations % 256;
+                            const hue = palette[colorIndex * 3];
+                            const sat = palette[colorIndex * 3 + 1];
+                            const light = palette[colorIndex * 3 + 2];
+                            
+                            // Convert HSL to RGB (simplified)
+                            const rgb = hslToRgb(hue / 360, sat / 100, light / 100);
+                            data[pixelIndex] = rgb[0];     // R
+                            data[pixelIndex + 1] = rgb[1]; // G
+                            data[pixelIndex + 2] = rgb[2]; // B
+                            data[pixelIndex + 3] = 255;    // A
+                        } else {
+                            // Point didn't escape - black
+                            data[pixelIndex] = 0;     // R
+                            data[pixelIndex + 1] = 0; // G
+                            data[pixelIndex + 2] = 0; // B
+                            data[pixelIndex + 3] = 255; // A
+                        }
+                    }
+                }
+            }
+            
+            // Put the image data back to canvas
+            ctx.putImageData(imageData, 0, 0);
+            
+            // Add method label
+            ctx.fillStyle = 'white';
+            ctx.font = '12px Arial';
+            ctx.fillText(method, 5, 15);
+        }
+        
+        // Helper function to convert HSL to RGB
+        function hslToRgb(h, s, l) {
+            let r, g, b;
+            
+            if (s === 0) {
+                r = g = b = l; // achromatic
+            } else {
+                const hue2rgb = (p, q, t) => {
+                    if (t < 0) t += 1;
+                    if (t > 1) t -= 1;
+                    if (t < 1/6) return p + (q - p) * 6 * t;
+                    if (t < 1/2) return q;
+                    if (t < 2/3) return p + (q - p) * (2/3 - t) * 6;
+                    return p;
+                };
+                
+                const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+                const p = 2 * l - q;
+                r = hue2rgb(p, q, h + 1/3);
+                g = hue2rgb(p, q, h);
+                b = hue2rgb(p, q, h - 1/3);
+            }
+            
+            return [Math.round(r * 255), Math.round(g * 255), Math.round(b * 255)];
+        }
+        
+        // Auto-check GPU on page load
+        window.addEventListener('load', function() {
+            // Wait for all scripts to load and initialize
+            setTimeout(function() {
+                if (typeof window.checkGPUAvailability === 'function') {
+                    checkGPU();
+                } else {
+                    document.getElementById('gpu-status').innerHTML = `
+                        <div class="error">
+                            <strong>❌ Scripts not loaded</strong><br>
+                            Please refresh the page or check console for errors.
+                        </div>
+                    `;
+                }
+            }, 500);
+        });
+    </script>
+</body>
+</html> 

@@ -51,6 +51,10 @@ var mandelbrotExplorer = {
 	"iterationCycleTime":	parseInt(1000/30),
 	"juliaC":				  "[0,0]",
 	"_cloudIterationCyclerId": null,
+	"useGPU": true, // GPU acceleration toggle
+	"gpuContext": null, // WebGL context for GPU computation
+	"gpuProgram": null, // GPU shader program
+	"gpuBuffers": {}, // GPU buffers for data transfer
 	
 	/**
 	 * Initialize the Mandelbrot explorer with Three.js renderer
@@ -65,11 +69,16 @@ var mandelbrotExplorer = {
 			endY: this.endY,
 			...options
 		});
+		
+		// Initialize GPU context if GPU is enabled
+		if (this.useGPU) {
+			this.initGPU();
+		}
 	},
 	
 	"drawMandelbrot": function(params) {
 		this.assignParams( params );
-		var canvasContext = this.canvas_2d.getContext("2d");
+		var canvasContext = this.canvas_2d.getContext("2d", { willReadFrequently: true });
 		var canvasImageData = canvasContext.getImageData(0, 0, this.canvas_2d.width, this.canvas_2d.height);
 		this.xScale_2d = Math.abs( this.startX - this.endX ) / this.canvas_2d.width;
 		this.yScale_2d = Math.abs( this.startY - this.endY ) / this.canvas_2d.height;
@@ -109,6 +118,515 @@ var mandelbrotExplorer = {
 		}
 		
 		this.particleSystems = [];
+	},
+	
+	// GPU acceleration methods
+	"initGPU": function() {
+		try {
+			// Create a hidden canvas for GPU computation
+			const gpuCanvas = document.createElement('canvas');
+			gpuCanvas.width = 1;
+			gpuCanvas.height = 1;
+			gpuCanvas.style.display = 'none';
+			document.body.appendChild(gpuCanvas);
+			
+			// Try WebGL 2 first, then fall back to WebGL 1
+			this.gpuContext = gpuCanvas.getContext('webgl2') || gpuCanvas.getContext('webgl');
+			if (!this.gpuContext) {
+				console.warn('WebGL not available, falling back to CPU');
+				this.useGPU = false;
+				return;
+			}
+			
+			// Log WebGL version for debugging
+			const version = this.gpuContext.getParameter(this.gpuContext.VERSION);
+			const renderer = this.gpuContext.getParameter(this.gpuContext.RENDERER);
+			console.log('WebGL initialized:', version, 'on', renderer);
+			
+			// Create and compile shader programs
+			this.createGPUProgram();
+			this.createGPUIterationProgram();
+			console.log('GPU acceleration initialized successfully');
+		} catch (error) {
+			console.error('Failed to initialize GPU acceleration:', error);
+			this.useGPU = false;
+		}
+	},
+	
+	"createGPUProgram": function() {
+		const gl = this.gpuContext;
+		
+		// Determine correct shader path based on current location
+		const shaderPath = this.getShaderPath();
+		
+		// Load shaders from external files
+		ShaderLoader.loadShaders(shaderPath + 'mandelbrot_vertex.glsl', shaderPath + 'mandelbrot_fragment.glsl')
+			.then(shaders => {
+				// Create shaders
+				const vertexShader = this.createShader(gl.VERTEX_SHADER, shaders.vertex);
+				const fragmentShader = this.createShader(gl.FRAGMENT_SHADER, shaders.fragment);
+		
+				// Check if shaders compiled successfully
+				if (!vertexShader || !fragmentShader) {
+					console.error('Failed to compile shaders');
+					this.useGPU = false;
+					return;
+				}
+				
+				// Create program
+				this.gpuProgram = gl.createProgram();
+				gl.attachShader(this.gpuProgram, vertexShader);
+				gl.attachShader(this.gpuProgram, fragmentShader);
+				gl.linkProgram(this.gpuProgram);
+				
+				if (!gl.getProgramParameter(this.gpuProgram, gl.LINK_STATUS)) {
+					console.error('GPU program link error:', gl.getProgramInfoLog(this.gpuProgram));
+					this.useGPU = false;
+					return;
+				}
+				
+				// Get uniform locations
+				this.gpuUniforms = {
+					resolution: gl.getUniformLocation(this.gpuProgram, 'u_resolution'),
+					startX: gl.getUniformLocation(this.gpuProgram, 'u_startX'),
+					startY: gl.getUniformLocation(this.gpuProgram, 'u_startY'),
+					endX: gl.getUniformLocation(this.gpuProgram, 'u_endX'),
+					endY: gl.getUniformLocation(this.gpuProgram, 'u_endY'),
+					maxIterations: gl.getUniformLocation(this.gpuProgram, 'u_maxIterations'),
+					juliaC: gl.getUniformLocation(this.gpuProgram, 'u_juliaC'),
+					isJulia: gl.getUniformLocation(this.gpuProgram, 'u_isJulia')
+				};
+				
+				console.log('GPU shaders loaded and compiled successfully');
+			})
+			.catch(error => {
+				console.error('Failed to load shaders:', error);
+				this.useGPU = false;
+			});
+	},
+	
+	"createGPUIterationProgram": function() {
+		const gl = this.gpuContext;
+		
+		// Determine correct shader path based on current location
+		const shaderPath = this.getShaderPath();
+		
+		// Load iteration-centric shaders
+		ShaderLoader.loadShaders(shaderPath + 'mandelbrot_vertex.glsl', shaderPath + 'mandelbrot_iteration_fragment.glsl')
+			.then(shaders => {
+				// Create shaders
+				const vertexShader = this.createShader(gl.VERTEX_SHADER, shaders.vertex);
+				const fragmentShader = this.createShader(gl.FRAGMENT_SHADER, shaders.fragment);
+		
+				// Check if shaders compiled successfully
+				if (!vertexShader || !fragmentShader) {
+					console.error('Failed to compile iteration-centric shaders');
+					this.useGPU = false;
+					return;
+				}
+				
+				// Create program
+				this.gpuIterationProgram = gl.createProgram();
+				gl.attachShader(this.gpuIterationProgram, vertexShader);
+				gl.attachShader(this.gpuIterationProgram, fragmentShader);
+				gl.linkProgram(this.gpuIterationProgram);
+				
+				if (!gl.getProgramParameter(this.gpuIterationProgram, gl.LINK_STATUS)) {
+					console.error('GPU iteration program link error:', gl.getProgramInfoLog(this.gpuIterationProgram));
+					this.useGPU = false;
+					return;
+				}
+				
+				// Get uniform locations for iteration-centric program
+				this.gpuIterationUniforms = {
+					resolution: gl.getUniformLocation(this.gpuIterationProgram, 'u_resolution'),
+					startX: gl.getUniformLocation(this.gpuIterationProgram, 'u_startX'),
+					startY: gl.getUniformLocation(this.gpuIterationProgram, 'u_startY'),
+					endX: gl.getUniformLocation(this.gpuIterationProgram, 'u_endX'),
+					endY: gl.getUniformLocation(this.gpuIterationProgram, 'u_endY'),
+					maxIterations: gl.getUniformLocation(this.gpuIterationProgram, 'u_maxIterations'),
+					juliaC: gl.getUniformLocation(this.gpuIterationProgram, 'u_juliaC'),
+					isJulia: gl.getUniformLocation(this.gpuIterationProgram, 'u_isJulia'),
+					currentIteration: gl.getUniformLocation(this.gpuIterationProgram, 'u_currentIteration'),
+					previousIteration: gl.getUniformLocation(this.gpuIterationProgram, 'u_previousIteration')
+				};
+				
+				console.log('GPU iteration-centric shaders loaded and compiled successfully');
+			})
+			.catch(error => {
+				console.error('Failed to load iteration-centric shaders:', error);
+				this.useGPU = false;
+			});
+	},
+	
+	"createShader": function(type, source) {
+		const gl = this.gpuContext;
+		const shader = gl.createShader(type);
+		gl.shaderSource(shader, source);
+		gl.compileShader(shader);
+		
+		if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
+			console.error('Shader compile error:', gl.getShaderInfoLog(shader));
+			gl.deleteShader(shader);
+			return null;
+		}
+		
+		return shader;
+	},
+	
+	// Get the correct shader path based on current location
+	"getShaderPath": function() {
+		// Check if we're running from the tests folder
+		const currentPath = window.location.pathname;
+		if (currentPath.includes('/tests/')) {
+			return '../shaders/';
+		}
+		return 'shaders/';
+	},
+	
+	// Check if GPU is fully ready for use
+	"isGPUReady": function() {
+		if (!this.gpuContext || !this.gpuProgram || !this.gpuUniforms) {
+			return false;
+		}
+		
+		// Check that all required uniforms are available
+		const requiredUniforms = ['resolution', 'startX', 'startY', 'endX', 'endY', 'maxIterations', 'juliaC', 'isJulia'];
+		return requiredUniforms.every(uniform => this.gpuUniforms[uniform] !== null);
+	},
+	
+		"generateEscapePathsGPUIterationCentric": function(points, maxIterations, area) {
+		if (!this.gpuContext || !this.gpuIterationProgram) {
+			console.warn('GPU iteration program not available, falling back to CPU');
+			return this.generateEscapePathsCPU(points, maxIterations);
+		}
+		
+		// Ensure GPU program is fully initialized
+		if (!this.gpuIterationUniforms) {
+			console.warn('GPU iteration uniforms not initialized, falling back to CPU');
+			return this.generateEscapePathsCPU(points, maxIterations);
+		}
+		
+		const gl = this.gpuContext;
+		const results = [];
+		
+		// Use area if provided, otherwise fall back to this.startX, etc.
+		const startX = area && area.startX !== undefined ? area.startX : this.startX;
+		const endX   = area && area.endX   !== undefined ? area.endX   : this.endX;
+		const startY = area && area.startY !== undefined ? area.startY : this.startY;
+		const endY   = area && area.endY   !== undefined ? area.endY   : this.endY;
+		
+		// Calculate grid dimensions from points array
+		const gridSize = Math.sqrt(points.length);
+		const xPoints = gridSize;
+		const yPoints = maxIterations; // Each row represents one iteration
+		
+		console.log('GPU iteration-centric processing:', xPoints, 'points x', yPoints, 'iterations');
+		
+		// Create framebuffers for ping-pong rendering
+		const framebuffer1 = gl.createFramebuffer();
+		const framebuffer2 = gl.createFramebuffer();
+		
+		// Create textures for ping-pong
+		const texture1 = gl.createTexture();
+		const texture2 = gl.createTexture();
+		
+		gl.bindTexture(gl.TEXTURE_2D, texture1);
+		gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, xPoints, yPoints, 0, gl.RGBA, gl.FLOAT, null);
+		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+		
+		gl.bindTexture(gl.TEXTURE_2D, texture2);
+		gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, xPoints, yPoints, 0, gl.RGBA, gl.FLOAT, null);
+		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+		
+		// Set up viewport
+		gl.viewport(0, 0, xPoints, yPoints);
+		
+		// Use shader program
+		gl.useProgram(this.gpuProgram);
+		
+		// Set uniforms
+		const juliaC = eval(this.juliaC);
+		gl.uniform2f(this.gpuUniforms.resolution, xPoints, yPoints);
+		gl.uniform1f(this.gpuUniforms.startX, startX);
+		gl.uniform1f(this.gpuUniforms.startY, startY);
+		gl.uniform1f(this.gpuUniforms.endX, endX);
+		gl.uniform1f(this.gpuUniforms.endY, endY);
+		gl.uniform1i(this.gpuUniforms.maxIterations, maxIterations);
+		gl.uniform2f(this.gpuUniforms.juliaC, juliaC[0], juliaC[1]);
+		gl.uniform1i(this.gpuUniforms.isJulia, this.getAbsoluteValueOfComplexNumber(juliaC) !== 0 ? 1 : 0);
+		
+		// Create vertex buffer for full-screen quad
+		const vertices = new Float32Array([
+			-1, -1,
+			1, -1,
+			-1, 1,
+			1, 1
+		]);
+		
+		const vertexBuffer = gl.createBuffer();
+		gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffer);
+		gl.bufferData(gl.ARRAY_BUFFER, vertices, gl.STATIC_DRAW);
+		
+		// Set up vertex attributes
+		const positionLocation = gl.getAttribLocation(this.gpuIterationProgram, 'a_position');
+		gl.enableVertexAttribArray(positionLocation);
+		gl.vertexAttribPointer(positionLocation, 2, gl.FLOAT, false, 0, 0);
+		
+		// Render each iteration
+		for (let iteration = 0; iteration < maxIterations; iteration++) {
+			// Bind appropriate framebuffer
+			const currentFramebuffer = (iteration % 2 === 0) ? framebuffer1 : framebuffer2;
+			const currentTexture = (iteration % 2 === 0) ? texture1 : texture2;
+			const previousTexture = (iteration % 2 === 0) ? texture2 : texture1;
+			
+			gl.bindFramebuffer(gl.FRAMEBUFFER, currentFramebuffer);
+			gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, currentTexture, 0);
+			
+			// Set iteration uniform
+			gl.uniform1i(this.gpuIterationUniforms.currentIteration, iteration);
+			
+			// Bind previous iteration texture
+			gl.activeTexture(gl.TEXTURE0);
+			gl.bindTexture(gl.TEXTURE_2D, previousTexture);
+			gl.uniform1i(this.gpuIterationUniforms.previousIteration, 0);
+			
+			// Render
+			gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+		}
+		
+		// Read back final results
+		const pixels = new Float32Array(xPoints * yPoints * 4);
+		gl.readPixels(0, 0, xPoints, yPoints, gl.RGBA, gl.FLOAT, pixels);
+		
+		// Convert results back to escape paths
+		for (let pointIndex = 0; pointIndex < xPoints; pointIndex++) {
+			const escapePath = [];
+			let escaped = false;
+			let escapeIteration = maxIterations;
+			
+			// Find when this point escaped
+			for (let iteration = 0; iteration < maxIterations; iteration++) {
+				const pixelIndex = (iteration * xPoints + pointIndex) * 4;
+				const escapeFlag = pixels[pixelIndex + 3];
+				
+				if (escapeFlag > 0.5 && !escaped) {
+					escaped = true;
+					escapeIteration = iteration;
+				}
+				
+				// Add point to escape path
+				const x = pixels[pixelIndex];
+				const y = pixels[pixelIndex + 1];
+				escapePath.push([x, y]);
+			}
+			
+			// Truncate to escape iteration
+			if (escaped) {
+				escapePath.length = escapeIteration + 1;
+			}
+			
+			results.push(escapePath);
+		}
+		
+		// Clean up
+		gl.deleteTexture(texture1);
+		gl.deleteTexture(texture2);
+		gl.deleteFramebuffer(framebuffer1);
+		gl.deleteFramebuffer(framebuffer2);
+		gl.deleteBuffer(vertexBuffer);
+		
+		console.log('GPU iteration-centric generated', results.length, 'escape paths');
+		return results;
+	},
+	
+	"generateEscapePathsGPU": function(points, maxIterations, area) {
+		if (!this.gpuContext || !this.gpuProgram) {
+			console.warn('GPU not available, falling back to CPU');
+			return this.generateEscapePathsCPU(points, maxIterations);
+		}
+		
+		// Ensure GPU program is fully initialized
+		if (!this.gpuUniforms) {
+			console.warn('GPU uniforms not initialized, falling back to CPU');
+			return this.generateEscapePathsCPU(points, maxIterations);
+		}
+		
+		// Additional check: ensure all required uniforms are available
+		const requiredUniforms = ['resolution', 'startX', 'startY', 'endX', 'endY', 'maxIterations', 'juliaC', 'isJulia'];
+		const missingUniforms = requiredUniforms.filter(uniform => !this.gpuUniforms[uniform]);
+		if (missingUniforms.length > 0) {
+			console.warn('GPU uniforms not fully initialized, missing:', missingUniforms.join(', '), 'falling back to CPU');
+			return this.generateEscapePathsCPU(points, maxIterations);
+		}
+		
+		const gl = this.gpuContext;
+		const results = [];
+		
+		// Use area if provided, otherwise fall back to this.startX, etc.
+		const startX = area && area.startX !== undefined ? area.startX : this.startX;
+		const endX   = area && area.endX   !== undefined ? area.endX   : this.endX;
+		const startY = area && area.startY !== undefined ? area.startY : this.startY;
+		const endY   = area && area.endY   !== undefined ? area.endY   : this.endY;
+		
+		// Calculate grid dimensions from points array
+		// Use actual points length instead of assuming perfect square
+		const totalPoints = points.length;
+		console.log('GPU processing', totalPoints, 'points');
+		
+		// For GPU rendering, we need a rectangular grid
+		// Since points come from multiple scales, we'll use the largest possible square that fits
+		const gridSize = Math.ceil(Math.sqrt(totalPoints));
+		const xPoints = gridSize;
+		const yPoints = gridSize;
+		
+		// Ensure we don't exceed the points array bounds
+		const maxPoints = Math.min(xPoints * yPoints, totalPoints);
+		console.log('GPU grid size:', xPoints, 'x', yPoints, '=', xPoints * yPoints, 'pixels, processing', maxPoints, 'points');
+		
+		// For GPU rendering, we need to map the grid to the sample area
+		// The GPU will render a grid of xPoints x yPoints pixels
+		// Each pixel corresponds to one point in the sample area
+		console.log('GPU grid:', xPoints, 'x', yPoints, 'points for area', startX, 'to', endX, 'x', startY, 'to', endY);
+		console.log('GPU coordinate mapping: using normalized coordinates with area bounds');
+		
+		// Create framebuffer for output
+		const framebuffer = gl.createFramebuffer();
+		gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffer);
+		
+		// Create output texture - use actual grid size
+		const outputTexture = gl.createTexture();
+		gl.bindTexture(gl.TEXTURE_2D, outputTexture);
+		gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, xPoints, yPoints, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
+		gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, outputTexture, 0);
+		
+		// Set up viewport
+		gl.viewport(0, 0, xPoints, yPoints);
+		
+		// Use shader program
+		gl.useProgram(this.gpuProgram);
+		
+		// Set uniforms
+		const juliaC = eval(this.juliaC);
+		gl.uniform2f(this.gpuUniforms.resolution, xPoints, yPoints);
+		gl.uniform1f(this.gpuUniforms.startX, startX);
+		gl.uniform1f(this.gpuUniforms.startY, startY);
+		gl.uniform1f(this.gpuUniforms.endX, endX);
+		gl.uniform1f(this.gpuUniforms.endY, endY);
+		gl.uniform1i(this.gpuUniforms.maxIterations, maxIterations);
+		gl.uniform2f(this.gpuUniforms.juliaC, juliaC[0], juliaC[1]);
+		gl.uniform1i(this.gpuUniforms.isJulia, this.getAbsoluteValueOfComplexNumber(juliaC) !== 0 ? 1 : 0);
+		
+		// Create vertex buffer for full-screen quad
+		const vertices = new Float32Array([
+			-1, -1,
+			1, -1,
+			-1, 1,
+			1, 1
+		]);
+		
+		const vertexBuffer = gl.createBuffer();
+		gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffer);
+		gl.bufferData(gl.ARRAY_BUFFER, vertices, gl.STATIC_DRAW);
+		
+		// Set up vertex attributes
+		const positionLocation = gl.getAttribLocation(this.gpuProgram, 'a_position');
+		gl.enableVertexAttribArray(positionLocation);
+		gl.vertexAttribPointer(positionLocation, 2, gl.FLOAT, false, 0, 0);
+		
+		// Single efficient render pass
+		gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+		
+		// Read back results
+		const pixels = new Uint8Array(xPoints * yPoints * 4);
+		gl.readPixels(0, 0, xPoints, yPoints, gl.RGBA, gl.UNSIGNED_BYTE, pixels);
+		
+		// Convert GPU results back to escape paths
+		let validResults = 0;
+		let escapedPoints = [];
+		
+		for (let i = 0; i < maxPoints; i++) {
+			const pixelIndex = i * 4;
+			const iterations = pixels[pixelIndex + 2];
+			
+			// Use the original points array to avoid coordinate reconstruction errors
+			const originalPoint = points[i];
+			if (!originalPoint) {
+				console.warn('GPU: Point', i, 'is undefined, skipping');
+				continue;
+			}
+			const x = originalPoint[0];
+			const y = originalPoint[1];
+			
+			// Debug: log first few results
+			if (i < 5) {
+				console.log('GPU point', i, ':', {
+					x: x.toFixed(3), y: y.toFixed(3),
+					iterations: iterations
+				});
+			}
+			
+			// Create escape path - always generate full path to match CPU behavior
+			const c = [x, y];
+			let escapePath;
+			
+			// Use the same logic as CPU to determine Julia vs Mandelbrot
+			if (this.getAbsoluteValueOfComplexNumber(juliaC) !== 0) {
+				escapePath = this.getJuliaEscapePath(juliaC, c, maxIterations, true);
+			} else {
+				escapePath = this.getJuliaEscapePath(c, juliaC, maxIterations, true);
+			}
+			
+			// Debug: log first few escape paths
+			if (i < 3) {
+				console.log('GPU generating escape path for point', i, ':', {
+					originalPoint: [x, y],
+					gpuIterations: iterations,
+					cpuPathLength: escapePath.length,
+					fullPathShortened: escapePath.shortened,
+					firstPoint: escapePath[0],
+					lastPoint: escapePath[escapePath.length - 1]
+				});
+			}
+			
+			// Count valid results (points that escaped)
+			if (iterations > 0 && iterations < maxIterations) {
+				validResults++;
+			}
+			
+			results.push(escapePath);
+		}
+		
+		console.log('GPU generated', validResults, 'valid escape paths out of', maxPoints, 'total points');
+		
+		// Clean up
+		gl.deleteTexture(outputTexture);
+		gl.deleteFramebuffer(framebuffer);
+		gl.deleteBuffer(vertexBuffer);
+		
+		console.log('GPU generated', results.length, 'escape paths');
+		return results;
+	},
+	
+	"generateEscapePathsCPU": function(points, maxIterations) {
+		// Original CPU implementation
+		const results = [];
+		for (let i = 0; i < points.length; i++) {
+			const c = points[i];
+			const juliaC = eval(mandelbrotExplorer.juliaC);
+			
+			let escapePath;
+			if (mandelbrotExplorer.getAbsoluteValueOfComplexNumber(juliaC) !== 0) {
+				escapePath = mandelbrotExplorer.getJuliaEscapePath(juliaC, c, maxIterations, true);
+			} else {
+				escapePath = mandelbrotExplorer.getJuliaEscapePath(c, juliaC, maxIterations, true);
+			}
+			
+			results.push(escapePath);
+		}
+		return results;
 	},
     "cloudMethods": {
         "functionsFromEval": {},
@@ -300,6 +818,129 @@ var mandelbrotExplorer = {
 			
             mandelbrotExplorer.cloudMethods.functionsFromEval = {};
 		},
+        "generateCacheKey": function() {
+            // Generate a unique cache key based on parameters that affect point generation
+            const params = [
+                mandelbrotExplorer.startX,
+                mandelbrotExplorer.startY,
+                mandelbrotExplorer.endX,
+                mandelbrotExplorer.endY,
+                mandelbrotExplorer.maxIterations_3d,
+                mandelbrotExplorer.cloudResolution,
+                mandelbrotExplorer.randomizeCloudStepping,
+                mandelbrotExplorer.juliaC,
+                mandelbrotExplorer.initialZ,
+                mandelbrotExplorer.escapingZ
+            ];
+            return params.join('|');
+        },
+        "getCacheSize": function() {
+            		// Calculate approximate memory usage of escape path cache in MB
+		if (!mandelbrotExplorer.cloudCache) return 0;
+		
+		let totalSize = 0;
+		
+		for (let key in mandelbrotExplorer.cloudCache) {
+			const entry = mandelbrotExplorer.cloudCache[key];
+			if (entry.escapePaths) {
+				// Avoid circular references by only counting the array length
+				totalSize += entry.escapePaths.length * 16; // Approximate bytes per escape path
+			}
+		}
+            
+            return Math.round(totalSize / (1024 * 1024)); // Convert to MB
+        },
+
+        
+        "clearCloudCache": function() {
+            // Clear the cloud cache when parameters change
+            if (mandelbrotExplorer.cloudCache) {
+                mandelbrotExplorer.cloudCache = {};
+                console.log('Cloud cache cleared');
+            }
+        },
+
+        "limitCacheSize": function() {
+            // Limit cache size to prevent excessive memory usage
+            // Calculate realistic cache size based on current parameters
+            const currentResolutions = mandelbrotExplorer.cloudResolution.toString().split(',').map(r => parseInt(r.trim()));
+            const maxResolution = Math.max(...currentResolutions);
+            const maxIterations = mandelbrotExplorer.maxIterations_3d;
+            
+            // Estimate cache size: resolution² × iterations × 16 bytes per coordinate pair
+            const estimatedCacheSizeMB = (maxResolution * maxResolution * maxIterations * 16) / (1024 * 1024);
+            
+            // Set limits based on estimated size, with reasonable bounds
+            const MAX_ESCAPE_PATH_CACHE_SIZE_MB = Math.max(500, Math.min(9000, estimatedCacheSizeMB * 1.5)); // 500MB-9GB range
+            const MAX_CACHE_ENTRIES = Math.max(3, Math.min(5, Math.floor(1000 / estimatedCacheSizeMB))); // Fewer entries for larger data
+            
+            console.log('Cache size estimation:', {
+                maxResolution,
+                maxIterations, 
+                estimatedSizeMB: Math.round(estimatedCacheSizeMB),
+                cacheLimitMB: Math.round(MAX_ESCAPE_PATH_CACHE_SIZE_MB),
+                maxEntries: MAX_CACHE_ENTRIES
+            });
+            
+            // Warn if cache size would be very large
+            if (estimatedCacheSizeMB > 1000) {
+                console.warn('⚠️ Large cache size detected:', Math.round(estimatedCacheSizeMB), 'MB. Consider reducing resolution or iterations for better performance.');
+                
+                // Suggest specific optimizations
+                const suggestedRes = Math.floor(Math.sqrt(estimatedCacheSizeMB * 1024 * 1024 / (maxIterations * 16)));
+                console.log('💡 Suggestions:');
+                console.log('   - Reduce resolution to ~', suggestedRes, 'for ~1GB cache');
+                console.log('   - Or reduce iterations to ~', Math.floor(256), 'for current resolution');
+                console.log('   - Or disable caching for this render (will be slower but use less memory)');
+            }
+            
+            if (!mandelbrotExplorer.cloudCache) return;
+            
+            const cacheKeys = Object.keys(mandelbrotExplorer.cloudCache);
+            
+            // If we have too many entries, remove oldest ones
+            if (cacheKeys.length > MAX_CACHE_ENTRIES) {
+                const keysToRemove = cacheKeys.slice(0, cacheKeys.length - MAX_CACHE_ENTRIES);
+                keysToRemove.forEach(key => {
+                    delete mandelbrotExplorer.cloudCache[key];
+                });
+                console.log('Removed', keysToRemove.length, 'old cache entries');
+            }
+            
+            			// Check escape path cache memory usage
+			let escapePathCacheSize = 0;
+			for (let key in mandelbrotExplorer.cloudCache) {
+				const entry = mandelbrotExplorer.cloudCache[key];
+				if (entry.escapePaths) {
+					// Avoid circular references by only counting the array length
+					escapePathCacheSize += entry.escapePaths.length * 16; // Approximate bytes per escape path
+				}
+			}
+			escapePathCacheSize = Math.round(escapePathCacheSize / (1024 * 1024)); // Convert to MB
+            
+            if (escapePathCacheSize > MAX_ESCAPE_PATH_CACHE_SIZE_MB) {
+                console.log('Escape path cache size limit exceeded (' + escapePathCacheSize + 'MB), clearing cache');
+                this.clearCloudCache();
+            }
+        },
+        "getCacheStatus": function() {
+            if (!mandelbrotExplorer.cloudCache) {
+                return { entries: 0, size: 0 };
+            }
+            
+            const cacheKeys = Object.keys(mandelbrotExplorer.cloudCache);
+            
+            return {
+                entries: cacheKeys.length,
+                size: this.getCacheSize()
+            };
+        },
+        "clearCacheAndLog": function() {
+            const status = this.getCacheStatus();
+            this.clearCloudCache();
+            console.log('Cache cleared. Previous status:', status.entries, 'entries,', status.size, 'MB');
+        },
+        
         "generateMandelbrotCloudParticles": function() {
             console.time("drawMandelbrotCloud: Generating particles");
             
@@ -330,6 +971,69 @@ var mandelbrotExplorer = {
             `;
             document.body.appendChild(progressDiv);
             
+            // Check if we have a valid cache for current parameters
+            const cacheKey = this.generateCacheKey();
+            let cachedEscapePaths = null;
+            
+            if (mandelbrotExplorer.cloudCache && mandelbrotExplorer.cloudCache[cacheKey]) {
+                const cacheEntry = mandelbrotExplorer.cloudCache[cacheKey];
+                
+                if (cacheEntry.escapePaths) {
+                    cachedEscapePaths = cacheEntry.escapePaths;
+                    console.log('Using cached escape paths:', cachedEscapePaths.length, 'paths');
+                    document.getElementById('progress-text').textContent = 'Using cached escape paths...';
+                }
+            }
+            
+            // Log cache status
+            const cacheStatus = this.getCacheStatus();
+            console.log('Cache status:', cacheStatus.entries, 'entries,', cacheStatus.size, 'MB');
+            if (cacheStatus.size > 0) {
+                console.log('Cache efficiency: ~', Math.round(cacheStatus.size / cacheStatus.entries), 'KB per entry');
+            }
+            
+            if (!cachedEscapePaths) {
+                const gpuStatus = mandelbrotExplorer.useGPU ? 'GPU' : 'CPU';
+                console.log('No cache found, generating new escape paths using', gpuStatus, '...');
+                console.log('GPU enabled:', mandelbrotExplorer.useGPU);
+                console.log('GPU context available:', !!mandelbrotExplorer.gpuContext);
+                document.getElementById('progress-text').textContent = `Generating escape paths (${gpuStatus})...`;
+                
+                // If GPU is enabled but not ready, wait for it to be ready
+                if (mandelbrotExplorer.useGPU && !mandelbrotExplorer.isGPUReady()) {
+                    console.log('GPU not ready, waiting for initialization...');
+                    document.getElementById('progress-text').textContent = 'Waiting for GPU initialization...';
+                    
+                    // Wait for GPU to be ready with a timeout
+                    let gpuWaitAttempts = 0;
+                    const maxGPUWaitAttempts = 50; // 5 seconds max wait
+                    
+                    function waitForGPU() {
+                        if (mandelbrotExplorer.isGPUReady()) {
+                            console.log('GPU is now ready, proceeding with generation');
+                            document.getElementById('progress-text').textContent = 'GPU ready, generating escape paths...';
+                            startGeneration();
+                        } else if (gpuWaitAttempts < maxGPUWaitAttempts) {
+                            gpuWaitAttempts++;
+                            console.log(`GPU not ready yet, attempt ${gpuWaitAttempts}/${maxGPUWaitAttempts}`);
+                            setTimeout(waitForGPU, 100);
+                        } else {
+                            console.log('GPU initialization timeout, falling back to CPU');
+                            document.getElementById('progress-text').textContent = 'GPU timeout, using CPU...';
+                            startGeneration();
+                        }
+                    }
+                    
+                    waitForGPU();
+                    return; // Exit early, will continue in waitForGPU callback
+                }
+            }
+            
+            // Start the actual generation process
+            startGeneration();
+            
+            function startGeneration() {
+            
             // Calculate total work
             let totalPoints = 0;
             mandelbrotExplorer.scales_3d.forEach(function(useScales) {
@@ -359,7 +1063,7 @@ var mandelbrotExplorer = {
             });
             
             let currentPointIndex = 0;
-            const BATCH_SIZE = 50; // Process 50 points per batch
+            const BATCH_SIZE = mandelbrotExplorer.useGPU ? 1000 : 50; // Larger batches for GPU
 
 
             
@@ -370,17 +1074,115 @@ var mandelbrotExplorer = {
                 
                 const endIndex = Math.min(currentPointIndex + BATCH_SIZE, allPoints.length);
                 
-                for (let i = currentPointIndex; i < endIndex; i++) {
-                    const point = allPoints[i];
-                    var c = mandelbrotExplorer.cloudMethods.handleCloudSteppingAdjustments([point.x, point.y]);
-                    var escapePath = mandelbrotExplorer.cloudMethods.getEscapePath(c);
+                // Process batch using GPU or CPU
+                if (mandelbrotExplorer.useGPU && mandelbrotExplorer.isGPUReady() && !cachedEscapePaths && currentPointIndex === 0) {
+                    // GPU processes the entire grid at once
+                    console.log('GPU processing entire grid of', allPoints.length, 'points');
+                    try {
+                        const allEscapePaths = mandelbrotExplorer.generateEscapePathsGPU(allPoints.map(p => [p.x, p.y]), mandelbrotExplorer.maxIterations_3d);
+                        
+                        // Process all GPU results
+                        for (let i = 0; i < allEscapePaths.length; i++) {
+                            const point = allPoints[i];
+                            const escapePath = allEscapePaths[i];
+                            processEscapePath(point, escapePath, true, i);
+                            processedPoints++;
+                        }
+                        
+                        // Skip to the end since we processed everything
+                        currentPointIndex = allPoints.length;
+                    } catch (error) {
+                        console.error('GPU processing failed, falling back to CPU:', error);
+                        // Fall back to CPU processing for this batch
+                        for (let i = currentPointIndex; i < endIndex; i++) {
+                            const point = allPoints[i];
+                            
+                            let escapePath;
+                            let shouldCache = false;
+                            
+                            if (cachedEscapePaths && cachedEscapePaths[i]) {
+                                // Use cached escape path
+                                escapePath = cachedEscapePaths[i];
+                            } else {
+                                // Generate new escape path
+                                var c = mandelbrotExplorer.cloudMethods.handleCloudSteppingAdjustments([point.x, point.y]);
+                                escapePath = mandelbrotExplorer.cloudMethods.getEscapePath(c);
+                                shouldCache = true;
+                            }
+                            
+                            processEscapePath(point, escapePath, shouldCache, i);
+                            processedPoints++;
+                        }
+                    }
+                } else if (mandelbrotExplorer.useGPU && !mandelbrotExplorer.isGPUReady() && !cachedEscapePaths && currentPointIndex === 0) {
+                    console.log('GPU enabled but not ready, falling back to CPU processing');
+                    console.log('GPU Status:', {
+                        context: !!mandelbrotExplorer.gpuContext,
+                        program: !!mandelbrotExplorer.gpuProgram,
+                        uniforms: !!mandelbrotExplorer.gpuUniforms,
+                        ready: mandelbrotExplorer.isGPUReady()
+                    });
+                    
+                    // Fall back to CPU processing for this batch
+                    for (let i = currentPointIndex; i < endIndex; i++) {
+                        const point = allPoints[i];
+                        
+                        let escapePath;
+                        let shouldCache = false;
+                        
+                        if (cachedEscapePaths && cachedEscapePaths[i]) {
+                            // Use cached escape path
+                            escapePath = cachedEscapePaths[i];
+                        } else {
+                            // Generate new escape path
+                            var c = mandelbrotExplorer.cloudMethods.handleCloudSteppingAdjustments([point.x, point.y]);
+                            escapePath = mandelbrotExplorer.cloudMethods.getEscapePath(c);
+                            shouldCache = true;
+                        }
+                        
+                        processEscapePath(point, escapePath, shouldCache, i);
+                        processedPoints++;
+                    }
+                } else {
+                    // CPU processing (original method)
+                    for (let i = currentPointIndex; i < endIndex; i++) {
+                        const point = allPoints[i];
+                        
+                        let escapePath;
+                        let shouldCache = false;
+                        
+                        if (cachedEscapePaths && cachedEscapePaths[i]) {
+                            // Use cached escape path
+                            escapePath = cachedEscapePaths[i];
+                        } else {
+                            // Generate new escape path
+                            var c = mandelbrotExplorer.cloudMethods.handleCloudSteppingAdjustments([point.x, point.y]);
+                            escapePath = mandelbrotExplorer.cloudMethods.getEscapePath(c);
+                            shouldCache = true;
+                        }
+                        
+                        processEscapePath(point, escapePath, shouldCache, i);
+                        processedPoints++;
+                    }
+                }
+                
+                function processEscapePath(point, escapePath, shouldCache, pointIndex) {
+                    // Debug: log first few escape paths
+                    if (pointIndex < 5) {
+                        console.log('Processing escape path', pointIndex, ':', {
+                            point: [point.x, point.y],
+                            escapePathLength: escapePath.length,
+                            shortened: escapePath.shortened,
+                            firstPoint: escapePath[0],
+                            lastPoint: escapePath[escapePath.length - 1]
+                        });
+                    }
                     
                     if (
                         (mandelbrotExplorer.onlyShortened && !escapePath.shortened) ||
                         (mandelbrotExplorer.onlyFull && escapePath.shortened)
                     ) {
-                        processedPoints++;
-                        continue;
+                        return;
                     }
 
                     var z = mandelbrotExplorer.cloudMethods.evalInitialZ(escapePath);
@@ -391,10 +1193,14 @@ var mandelbrotExplorer = {
                         accumulatedZ += mandelbrotExplorer.getAbsoluteValueOfComplexNumber(escapePath[pathIndex]);
                         averageOfAccumulatedZ = accumulatedZ / (pathIndex + 1)
                         var iteration = pathIndex + 1;
+                        
+
+                        
                         if (
                             !mandelbrotExplorer.cloudMethods.processCloudLengthFilter(pathIndex, iteration, escapePath) ||
                             !mandelbrotExplorer.cloudMethods.processCloudIterationFilter(pathIndex, iteration, escapePath)
                         ) {
+
                             return true;
                         }
 
@@ -422,6 +1228,8 @@ var mandelbrotExplorer = {
                         }
                         mandelbrotExplorer.iterationParticles[iterationIndex].fpe += pathValue.fpe;
                         
+
+                        
                         if (mandelbrotExplorer.dualZ) {
                             var newX = particleFilterResult.newX;
                             var newY = particleFilterResult.newY;
@@ -432,7 +1240,23 @@ var mandelbrotExplorer = {
                         }
                     });
                     
-                    processedPoints++;
+                    // Cache the escape path data if we generated it
+                    if (shouldCache && !cachedEscapePaths) {
+                        if (!mandelbrotExplorer.cloudCache) {
+                            mandelbrotExplorer.cloudCache = {};
+                        }
+                        if (!mandelbrotExplorer.cloudCache[cacheKey]) {
+                            mandelbrotExplorer.cloudCache[cacheKey] = [];
+                        }
+                        
+                        // Store the escape path for future use
+                        mandelbrotExplorer.cloudCache[cacheKey][pointIndex] = escapePath;
+                    }
+                    
+                    // Limit cache size periodically during generation
+                    if (processedPoints % 1000 === 0) {
+                        mandelbrotExplorer.cloudMethods.limitCacheSize();
+                    }
                 }
                 
                 currentPointIndex = endIndex;
@@ -465,6 +1289,23 @@ var mandelbrotExplorer = {
                         }
                         console.log('Total points generated:', totalPointsGenerated);
                         console.log('Total iterationParticles keys:', Object.keys(mandelbrotExplorer.iterationParticles).length);
+                        console.log('Creating particle systems...');
+                        
+                        // Cache the escape paths if we generated them
+                        if (!isCancelled) {
+                            if (!mandelbrotExplorer.cloudCache) {
+                                mandelbrotExplorer.cloudCache = {};
+                            }
+                            if (!mandelbrotExplorer.cloudCache[cacheKey]) {
+                                mandelbrotExplorer.cloudCache[cacheKey] = {};
+                            }
+                            
+                            							// Store the escape paths (they were already collected during generation)
+							// Don't create circular reference - escapePaths are already stored in the array
+                            
+                            // Limit cache size after adding new data
+                            mandelbrotExplorer.cloudMethods.limitCacheSize();
+                        }
                         
                         mandelbrotExplorer.cloudMethods.applyMandelbrotCloudPalette();
                         // Don't set iterationParticles to null here - let applyMandelbrotCloudPalette handle cleanup
@@ -472,95 +1313,67 @@ var mandelbrotExplorer = {
                 }
             }
             
+
+            
             // Start processing
             processBatch();
+            } // Close startGeneration function
         },
         "applyMandelbrotCloudPalette": function() {
-            console.time("drawMandelbrotCloud: Applying palette");
+            console.time("drawMandelbrotCloud: Creating particle systems");
             
-            // Update progress text to show palette application
+            // Update progress text to show particle system creation
             const progressDiv = document.getElementById('cloud-generation-progress');
             if (progressDiv) {
-                document.getElementById('progress-text').textContent = 'Applying palette...';
+                document.getElementById('progress-text').textContent = 'Creating particle systems...';
             }
             
             const indices = Object.keys(mandelbrotExplorer.iterationParticles);
-            console.log('Processing indices:', indices.slice(0, 20), '... (total:', indices.length, ')');
-            let currentIndex = 0;
-            const BATCH_SIZE = 10; // Process 10 particle systems per batch
+            console.log('Creating particle systems for indices:', indices.slice(0, 20), '... (total:', indices.length, ')');
             
-            function processPaletteBatch() {
-                const endIndex = Math.min(currentIndex + BATCH_SIZE, indices.length);
+            // Process all particle systems in one go (no batching needed since this is fast)
+            for (let i = 0; i < indices.length; i++) {
+                const index = indices[i];
                 
-                for (let i = currentIndex; i < endIndex; i++) {
-                    const index = indices[i];
-                    
-                    // Get the particles data safely - copy it to avoid race conditions
-                    const particlesData = mandelbrotExplorer.iterationParticles[index];
-                    if (!particlesData) {
-                        console.warn('Missing iterationParticles at index', index);
-                        continue;
-                    }
-                    
-
-                    
-                    if (!particlesData.particles || 
-                        !Array.isArray(particlesData.particles) ||
-                        particlesData.particles.length === 0) {
-                        console.warn('Empty or invalid particles array at index', index);
-                        continue;
-                    }
-                    
-                    // Copy the particles array to avoid race conditions
-                    const particlesCopy = particlesData.particles.slice();
-                    
-                    // Additional safety check for the copy
-                    if (!particlesCopy || !Array.isArray(particlesCopy)) {
-                        console.warn('Failed to copy particles array at index', index);
-                        continue;
-                    }
-                    
-                    var color = mandelbrotExplorer.palette[ mandelbrotExplorer.getColorIndex(index) ];
-                    var size = mandelbrotExplorer.particleSize ? eval(mandelbrotExplorer.particleSize): 0;
-                    
-                    var pMaterial = mandelbrotExplorer.threeRenderer.createParticleMaterial(color, size);
-                    
-                    // Convert array of vectors to geometry for rendering
-                    var geometry = new THREE.Geometry();
-                    
-                    particlesCopy.forEach(function(vector) {
-                        if (vector && vector.x !== undefined && vector.y !== undefined && vector.z !== undefined) {
-                            geometry.vertices.push(vector);
-                        }
-                    });
-                    
-                    var points = mandelbrotExplorer.threeRenderer.addParticleSystem(
-                        geometry,
-                        pMaterial
-                    );
-                    
-                    mandelbrotExplorer.particleSystems[index] = points;
-                    mandelbrotExplorer.iterationParticles[index] = null;
+                // Get the particles data
+                const particlesData = mandelbrotExplorer.iterationParticles[index];
+                if (!particlesData || !particlesData.particles || 
+                    !Array.isArray(particlesData.particles) ||
+                    particlesData.particles.length === 0) {
+                    continue;
                 }
                 
-                currentIndex = endIndex;
+                var color = mandelbrotExplorer.palette[ mandelbrotExplorer.getColorIndex(index) ];
+                var size = mandelbrotExplorer.particleSize ? eval(mandelbrotExplorer.particleSize): 0;
                 
-                if (currentIndex < indices.length) {
-                    setTimeout(processPaletteBatch, 0);
-                } else {
-                    console.timeEnd("drawMandelbrotCloud: Applying palette");
-                    
-                    // Clean up iterationParticles after palette application is complete
-                    mandelbrotExplorer.iterationParticles = null;
-                    
-                    // Call completion handler if it exists
-                    if (mandelbrotExplorer.cloudMethods.onCloudGenerationComplete) {
-                        mandelbrotExplorer.cloudMethods.onCloudGenerationComplete();
+                var pMaterial = mandelbrotExplorer.threeRenderer.createParticleMaterial(color, size);
+                
+                // Convert array of vectors to geometry for rendering
+                var geometry = new THREE.Geometry();
+                
+                particlesData.particles.forEach(function(vector) {
+                    if (vector && vector.x !== undefined && vector.y !== undefined && vector.z !== undefined) {
+                        geometry.vertices.push(vector);
                     }
-                }
+                });
+                
+                var points = mandelbrotExplorer.threeRenderer.addParticleSystem(
+                    geometry,
+                    pMaterial
+                );
+                
+                mandelbrotExplorer.particleSystems[index] = points;
             }
             
-            processPaletteBatch();
+            // Clean up iterationParticles after particle system creation is complete
+            mandelbrotExplorer.iterationParticles = null;
+            
+            console.timeEnd("drawMandelbrotCloud: Creating particle systems");
+            
+            // Call completion handler if it exists
+            if (mandelbrotExplorer.cloudMethods.onCloudGenerationComplete) {
+                mandelbrotExplorer.cloudMethods.onCloudGenerationComplete();
+            }
         },
 		"generateMandelbrotHair": function () {
 			console.time("drawMandelbrotsHair: Generating line vectors");
@@ -674,6 +1487,10 @@ var mandelbrotExplorer = {
         mandelbrotExplorer.cloudMethods.onCloudGenerationComplete = function() {
             mandelbrotExplorer.displayCloudParticles();
             mandelbrotExplorer.continueIterationCycle = resumeIterationCycle;
+            
+            // Update cache status after generation
+            setTimeout(showCacheStatus, 100);
+            
             console.timeEnd("drawMandelbrotCloud");
         };
 	},
@@ -701,12 +1518,12 @@ var mandelbrotExplorer = {
 	"displayCloudParticles": function() {
 		mandelbrotExplorer.particleCount = 0;
 		
-		for( var index = this.particleSystems.length - 1; index >= 0; index-- ){
+		// Only iterate over particle systems that actually exist
+		for( var index in this.particleSystems ){
 			if(!this.particleSystems[index]){
-				console.warn('Missing particleSystem at index', index);
 				continue;
 			}
-			var iteration = index + 1;
+			var iteration = parseInt(index) + 1;
 			this.threeRenderer.removeObject(this.particleSystems[index]);
 
 			if( mandelbrotExplorer.particleCount + this.particleSystems[index].geometry.vertices.length <= this.particleLimit ){
@@ -750,7 +1567,7 @@ var mandelbrotExplorer = {
 	"cycle2dColors": function(){
 		var startTime = new Date();
 		
-		var canvasContext = this.canvas_2d.getContext("2d");
+		var canvasContext = this.canvas_2d.getContext("2d", { willReadFrequently: true });
 		var canvasImageData = canvasContext.getImageData(0, 0, this.canvas_2d.width, this.canvas_2d.height);
 
 		var index, currentColor, currentColorIndex, nextColorIndex, nextColor
@@ -787,7 +1604,7 @@ var mandelbrotExplorer = {
 		var startTime = new Date();
 		var index, currentColor, currentColorIndex, nextColorIndex, nextColor
 				
-		for( var index = 0; index < this.particleSystems.length; index++ )
+		for( var index in this.particleSystems )
 		{
 			if(!this.particleSystems[index] || !this.particleSystems[index].material){ continue; };
 			var materialColor = this.particleSystems[index].material.color;
@@ -822,12 +1639,12 @@ var mandelbrotExplorer = {
 	"cycleCloudIterations": function() {
 		var particleCount = 0;
 		var foundNext = false;
-		var particleSystemsLength = this.particleSystems.length;
+		var particleSystemsLength = Object.keys(this.particleSystems).length;
 		var cycleDirection = 1;
 		while( particleSystemsLength > 0 && foundNext == false ){
-			for( var index = 0; index < particleSystemsLength; index++ ){
+			for( var index in this.particleSystems ){
 				this.threeRenderer.removeObject( this.particleSystems[index] );
-				var iteration = index + 1;
+				var iteration = parseInt(index) + 1;
 				if( this.cloudIterationFilter.length > 0 && eval( this.cloudIterationFilter ) == false ) continue;
 				
 				if( this.particleSystems[index] && 
@@ -841,13 +1658,13 @@ var mandelbrotExplorer = {
 			}
 			this.nextCycleIteration += cycleDirection;
 			
-			if(this.nextCycleIteration > this.particleSystems.length || this.nextCycleIteration < 0){
+			if(this.nextCycleIteration > particleSystemsLength || this.nextCycleIteration < 0){
 				cycleDirection *= -1;
 			}
 			
-			while( this.nextCycleIteration > this.particleSystems.length )
+			while( this.nextCycleIteration > particleSystemsLength )
 			{
-				this.nextCycleIteration -= this.particleSystems.length;
+				this.nextCycleIteration -= particleSystemsLength;
 			}
 		}
 		
@@ -857,7 +1674,7 @@ var mandelbrotExplorer = {
 		
 	},
 	"setPalette": function( newPalette ) {
-		var canvasContext = this.canvas_2d.getContext("2d");
+		var canvasContext = this.canvas_2d.getContext("2d", { willReadFrequently: true });
 		var canvasImageData = canvasContext.getImageData(0, 0, this.canvas_2d.width, this.canvas_2d.height);
 
 		var index, currentColor, currentColorIndex, nextColorIndex, nextColor
@@ -887,7 +1704,7 @@ var mandelbrotExplorer = {
 
 		canvasContext.putImageData(canvasImageData,0,0);
 		
-		for( var index = 0; index < this.particleSystems.length; index++ ){
+		for( var index in this.particleSystems ){
 			if(!this.particleSystems[index]){continue;}
 			var materialColor = this.particleSystems[index].material.color;
 			
@@ -1077,3 +1894,77 @@ var mandelbrotExplorer = {
 		SettingsManager.clearSettings();
 	}
 }
+
+// Global functions for external access
+window.generateCloud = function() {
+    mandelbrotExplorer.drawMandelbrotCloud();
+};
+
+window.generateHair = function() {
+    mandelbrotExplorer.drawMandelbrotsHair();
+};
+
+window.clearCloudCache = function() {
+    mandelbrotExplorer.cloudMethods.clearCacheAndLog();
+};
+
+window.getCloudCacheStatus = function() {
+    return mandelbrotExplorer.cloudMethods.getCacheStatus();
+};
+
+window.showCacheStatus = function() {
+    const status = mandelbrotExplorer.cloudMethods.getCacheStatus();
+    const statusText = `Cache: ${status.entries} entries, ${status.size} MB`;
+    
+    // Update classic UI
+    const cacheStatus = document.getElementById('cacheStatus');
+    if (cacheStatus) {
+        cacheStatus.textContent = statusText;
+    }
+    
+    // Update new UI
+    const altCacheStatus = document.getElementById('alt-cacheStatus');
+    if (altCacheStatus) {
+        altCacheStatus.textContent = statusText;
+    }
+    
+    console.log('Cache Status:', statusText);
+    return status;
+};
+
+window.checkGPUAvailability = function() {
+    // Test WebGL availability
+    const canvas = document.createElement('canvas');
+    const gl = canvas.getContext('webgl2') || canvas.getContext('webgl');
+    
+    if (!gl) {
+        return {
+            available: false,
+            reason: 'WebGL not supported by browser'
+        };
+    }
+    
+    // Test shader compilation
+    const vertexShader = gl.createShader(gl.VERTEX_SHADER);
+    gl.shaderSource(vertexShader, 'attribute vec2 a_position; void main() { gl_Position = vec4(a_position, 0.0, 1.0); }');
+    gl.compileShader(vertexShader);
+    
+    if (!gl.getShaderParameter(vertexShader, gl.COMPILE_STATUS)) {
+        return {
+            available: false,
+            reason: 'Shader compilation failed'
+        };
+    }
+    
+    return {
+        available: true,
+        version: gl.getParameter(gl.VERSION),
+        vendor: gl.getParameter(gl.VENDOR),
+        renderer: gl.getParameter(gl.RENDERER)
+    };
+};
+
+// Initialize cache status display when page loads
+window.addEventListener('load', function() {
+    setTimeout(showCacheStatus, 500);
+});

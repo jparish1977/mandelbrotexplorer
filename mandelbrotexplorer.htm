@@ -13,6 +13,7 @@
 		<script src="./presets.js"></script>
 		<script src="./settingsManager.js"></script>
 		<script src="./threeRenderer.js"></script>
+		<script src="./shaderLoader.js"></script>
 		<script src="./mandelbrotexplorer.js"></script>
 		<script src="./ui.js"></script>
 		<script src="altUI.js"></script>
@@ -44,6 +45,7 @@
 						<td>
 							Cloud Resolution: <input type="text" id="cloudResolution" style="width:10em;" onchange="updateCloudResolution()" />
 							Random Step <input type="checkbox" id="randomStepCheckbox" onchange="toggleRandomStepping()" />
+							GPU Acceleration <input type="checkbox" id="gpuAccelerationCheckbox" onchange="toggleGPUAcceleration()" />
 						</td>
 						<td>Palette:<select id="palette" onchange="updatePalette()"></select></td>
 					</tr>
@@ -171,6 +173,16 @@
 							<button onclick="mandelbrotExplorer.saveSettings();">Save Settings</button>
 							<button onclick="loadSettingsFromStorage();">Load Settings</button>
 							<button onclick="mandelbrotExplorer.clearSettings();">Clear Settings</button>
+						</td>
+					</tr>
+					<tr>
+						<td colspan='2' align='left'>
+							<fieldset style="border: 1px black solid">
+								<legend style="border: 1px black dotted;">Cache Management</legend>
+								<button onclick="clearCloudCache();">Clear Cloud Cache</button>
+								<button onclick="showCacheStatus();">Show Cache Status</button>
+								<span id="cacheStatus" style="margin-left: 1em; font-size: 0.9em;"></span>
+							</fieldset>
 						</td>
 					</tr>
 				</table>

@@ -38,6 +38,30 @@ var mandelbrotExplorerPresets = {
 					+ "&& escapePath.length < parseInt( mandelbrotExplorer.maxIterations_3d * .9 )"
 					+ "&& escapePath.length  > 5";
 			}
+		},
+		"happy420_fullPaths": {
+			func: function(pathIndex, iteration, escapePath){
+				return escapePath.length == mandelbrotExplorer.maxIterations_3d;
+			},
+			getCodeString: function(pathIndex, iteration, escapePath){
+				return "escapePath.length == mandelbrotExplorer.maxIterations_3d";
+			}
+		},
+		"longPaths": {
+			func: function(pathIndex, iteration, escapePath){
+				return escapePath.length > parseInt( mandelbrotExplorer.maxIterations_3d * .8 );
+			},
+			getCodeString: function(pathIndex, iteration, escapePath){
+				return "escapePath.length > parseInt( mandelbrotExplorer.maxIterations_3d * .8 )";
+			}
+		},
+		"shortPaths": {
+			func: function(pathIndex, iteration, escapePath){
+				return escapePath.length < parseInt( mandelbrotExplorer.maxIterations_3d * .2 );
+			},
+			getCodeString: function(pathIndex, iteration, escapePath){
+				return "escapePath.length < parseInt( mandelbrotExplorer.maxIterations_3d * .2 )";
+			}
 		}
 	},
 	"cloudIterationFilter": {
@@ -138,6 +162,30 @@ var mandelbrotExplorerPresets = {
 			getCodeString: function(index, iterationParticles){
 				return "mandelbrotExplorer.xScale_3d";
 			}
+		},
+		"happy420_scale": {
+			func: function(index, iterationParticles){
+				return mandelbrotExplorer.xScale_3d/mandelbrotExplorer.maxIterations_3d;
+			},
+			getCodeString: function(index, iterationParticles){
+				return "mandelbrotExplorer.xScale_3d/mandelbrotExplorer.maxIterations_3d";
+			}
+		},
+		"dynamic": {
+			func: function(index, iterationParticles){
+				return Math.max(0.01, mandelbrotExplorer.xScale_3d * (1 - index / mandelbrotExplorer.maxIterations_3d));
+			},
+			getCodeString: function(index, iterationParticles){
+				return "Math.max(0.01, mandelbrotExplorer.xScale_3d * (1 - index / mandelbrotExplorer.maxIterations_3d))";
+			}
+		},
+		"pulse": {
+			func: function(index, iterationParticles){
+				return 0.05 + 0.05 * Math.sin(index * 0.5);
+			},
+			getCodeString: function(index, iterationParticles){
+				return "0.05 + 0.05 * Math.sin(index * 0.5)";
+			}
 		}
 	},
 	"dualZMultiplier": {
@@ -204,6 +252,77 @@ var mandelbrotExplorerPresets = {
 			getCodeString: function(pathIndex, iteration, escapePath, newX, newY, z){
 				return "if(pathIndex > 0) {\n  newX = newX - escapePath[0][0];\n  newY = newY - escapePath[0][1];\n}\nnewZ = z * -1;";
 			}
+		},
+		"happy420_originOffset": {
+			func: function(pathIndex, iteration, escapePath, newX, newY, z){
+				newX = newX - escapePath[0][0];
+				newY = newY - escapePath[0][1];
+				return [newX, newY, z * -1];
+			},
+			getCodeString: function(pathIndex, iteration, escapePath, newX, newY, z){
+				return "newX = newX - escapePath[0][0];\nnewY = newY - escapePath[0][1];\nnewZ = z * -1;";
+			}
+		},
+		"spiral": {
+			func: function(pathIndex, iteration, escapePath, newX, newY, z){
+				var angle = pathIndex * 0.5;
+				var radius = 0.1;
+				newX = newX + Math.cos(angle) * radius;
+				newY = newY + Math.sin(angle) * radius;
+				return [newX, newY, z * -1];
+			},
+			getCodeString: function(pathIndex, iteration, escapePath, newX, newY, z){
+				return "var angle = pathIndex * 0.5;\nvar radius = 0.1;\nnewX = newX + Math.cos(angle) * radius;\nnewY = newY + Math.sin(angle) * radius;\nnewZ = z * -1;";
+			}
+		},
+		"wave": {
+			func: function(pathIndex, iteration, escapePath, newX, newY, z){
+				var wave = Math.sin(pathIndex * 0.3) * 0.05;
+				newX = newX + wave;
+				newY = newY + wave;
+				return [newX, newY, z * -1];
+			},
+			getCodeString: function(pathIndex, iteration, escapePath, newX, newY, z){
+				return "var wave = Math.sin(pathIndex * 0.3) * 0.05;\nnewX = newX + wave;\nnewY = newY + wave;\nnewZ = z * -1;";
+			}
+		},
+		"magnitudeDifference": {
+			func: function(pathIndex, iteration, escapePath, newX, newY, z){
+				if(pathIndex > 0) {
+					var currentMag = mandelbrotExplorer.getAbsoluteValueOfComplexNumber(escapePath[pathIndex]);
+					var prevMag = mandelbrotExplorer.getAbsoluteValueOfComplexNumber(escapePath[pathIndex-1]);
+					return [newX, newY, currentMag - prevMag];
+				}
+				return [newX, newY, z * -1];
+			},
+			getCodeString: function(pathIndex, iteration, escapePath, newX, newY, z){
+				return "if(pathIndex > 0) {\n  var currentMag = mandelbrotExplorer.getAbsoluteValueOfComplexNumber(escapePath[pathIndex]);\n  var prevMag = mandelbrotExplorer.getAbsoluteValueOfComplexNumber(escapePath[pathIndex-1]);\n  newZ = currentMag - prevMag;\n} else {\n  newZ = z * -1;\n}";
+			}
+		},
+		"magnitudeSum": {
+			func: function(pathIndex, iteration, escapePath, newX, newY, z){
+				if(pathIndex > 0) {
+					var sumX = escapePath[pathIndex][0] + escapePath[pathIndex-1][0];
+					var sumY = escapePath[pathIndex][1] + escapePath[pathIndex-1][1];
+					return [newX, newY, mandelbrotExplorer.getAbsoluteValueOfComplexNumber([sumX, sumY])];
+				}
+				return [newX, newY, z * -1];
+			},
+			getCodeString: function(pathIndex, iteration, escapePath, newX, newY, z){
+				return "if(pathIndex > 0) {\n  var sumX = escapePath[pathIndex][0] + escapePath[pathIndex-1][0];\n  var sumY = escapePath[pathIndex][1] + escapePath[pathIndex-1][1];\n  newZ = mandelbrotExplorer.getAbsoluteValueOfComplexNumber([sumX, sumY]);\n} else {\n  newZ = z * -1;\n}";
+			}
+		},
+		"multiplyPrevious": {
+			func: function(pathIndex, iteration, escapePath, newX, newY, z){
+				if(pathIndex > 0) {
+					newX = newX * escapePath[pathIndex-1][0];
+					newY = newY * escapePath[pathIndex-1][1];
+				}
+				return [newX, newY, z * -1];
+			},
+			getCodeString: function(pathIndex, iteration, escapePath, newX, newY, z){
+				return "if(pathIndex > 0) {\n  newX = newX * escapePath[pathIndex-1][0];\n  newY = newY * escapePath[pathIndex-1][1];\n}\nnewZ = z * -1;";
+			}
 		}
 	},
 	"particleFilter": {
@@ -254,6 +373,56 @@ var mandelbrotExplorerPresets = {
 			getCodeString: function(newX, newY, particleVector){
 				return "mandelbrotExplorer.getAbsoluteValueOfComplexNumber([newX, newY]) < 1";
 			}
+		},
+		"happy420_all": {
+			func: function(newX, newY, particleVector){
+				return true; // Accept all particles
+			},
+			getCodeString: function(newX, newY, particleVector){
+				return "true";
+			}
+		},
+		"quadrant1": {
+			func: function(newX, newY, particleVector){
+				return newX > 0 && newY > 0;
+			},
+			getCodeString: function(newX, newY, particleVector){
+				return "newX > 0 && newY > 0";
+			}
+		},
+		"quadrant2": {
+			func: function(newX, newY, particleVector){
+				return newX < 0 && newY > 0;
+			},
+			getCodeString: function(newX, newY, particleVector){
+				return "newX < 0 && newY > 0";
+			}
+		},
+		"quadrant3": {
+			func: function(newX, newY, particleVector){
+				return newX < 0 && newY < 0;
+			},
+			getCodeString: function(newX, newY, particleVector){
+				return "newX < 0 && newY < 0";
+			}
+		},
+		"quadrant4": {
+			func: function(newX, newY, particleVector){
+				return newX > 0 && newY < 0;
+			},
+			getCodeString: function(newX, newY, particleVector){
+				return "newX > 0 && newY < 0";
+			}
+		},
+		"spiralZone": {
+			func: function(newX, newY, particleVector){
+				var distance = mandelbrotExplorer.getAbsoluteValueOfComplexNumber([newX, newY]);
+				var angle = Math.atan2(newY, newX);
+				return distance > 0.2 && distance < 0.8 && angle > 0;
+			},
+			getCodeString: function(newX, newY, particleVector){
+				return "(function(){var distance = mandelbrotExplorer.getAbsoluteValueOfComplexNumber([newX, newY]); var angle = Math.atan2(newY, newX); return distance > 0.2 && distance < 0.8 && angle > 0;})()";
+			}
 		}
 	},
 	"juliaC": {
@@ -291,7 +460,17 @@ var mandelbrotExplorerPresets = {
 		"julia28":		"[0,-0.66]",
 		"julia29":		"[-0.039,0.695]",
 		"julia30":		"[-0.1,0.651]",
-		"julia31":		"[-0.74543,0.11301]"
+		"julia31":		"[-0.74543,0.11301]",
+		"happy420_strange1":	"[(c[0]*-1)+c[1],0]",
+		"happy420_strange2":	"[(c[0]*-1)-c[1],(c[1]*-1)-c[0]]",
+		"dragon":		"[-0.8,0.156]",
+		"seahorse":		"[-0.74543,0.11301]",
+		"elephant":		"[0.285,0]",
+		"rabbit":		"[-0.123,0.745]",
+		"spiral":		"[-0.4,0.6]",
+		"crown":		"[-0.75,0.11]",
+		"star":		"[0.285,0.01]",
+		"butterfly":		"[-0.5,0.5]"
 	},
 	"mandelbrot": {
 		"escapingZ": {

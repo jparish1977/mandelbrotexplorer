@@ -182,10 +182,12 @@ function update2dIterations(){
 
 function update3dIterations(){
     mandelbrotExplorer.maxIterations_3d = parseInt(document.getElementById("maxIterations_3d").value);
+    mandelbrotExplorer.cloudMethods.clearCloudCache();
 }
 
 function updateCloudResolution(){
     mandelbrotExplorer.cloudResolution = document.getElementById("cloudResolution").value;
+    mandelbrotExplorer.cloudMethods.clearCloudCache();
 }
 
 function updatePalette(){
@@ -197,6 +199,7 @@ function updatePalette(){
 function updateCloudLengthFilter()
 {
     mandelbrotExplorer.cloudLengthFilter = document.getElementById("cloudLengthFilter").value;
+    // No need to clear cache - filters are applied to cached escape paths
 }
 
 function updateCloudIterationFilter(){
@@ -208,10 +211,12 @@ function updateCloudIterationFilter(){
 
 function updateInitialZ(){
     mandelbrotExplorer.initialZ = document.getElementById("initialZ").value;
+    mandelbrotExplorer.cloudMethods.clearCloudCache();
 }
 
 function updateEscapingZ(){
     mandelbrotExplorer.escapingZ = document.getElementById("escapingZ").value;
+    mandelbrotExplorer.cloudMethods.clearCloudCache();
 }
 
 function updateIterationCycleTime(){
@@ -232,16 +237,19 @@ function updateTargetFrameRate(){
 
 function updateJuliaC(){
     mandelbrotExplorer.juliaC = document.getElementById("juliaC").value;
+    mandelbrotExplorer.cloudMethods.clearCloudCache();
 }
 
 function updateStartX(){
     mandelbrotExplorer.startX = document.getElementById("startX").value;
+    mandelbrotExplorer.cloudMethods.clearCloudCache();
     mandelbrotExplorer.drawMandelbrot(); 
     mandelbrotExplorer.drawMandelbrotCloud();
 }
 
 function updateStartY(){
     mandelbrotExplorer.startY = document.getElementById("startY").value;
+    mandelbrotExplorer.cloudMethods.clearCloudCache();
     mandelbrotExplorer.drawMandelbrot(); 
     mandelbrotExplorer.drawMandelbrotCloud();
 }
@@ -316,6 +324,31 @@ function toggleBackground(){
 
 function toggleRandomStepping(){
     mandelbrotExplorer.randomizeCloudStepping = document.getElementById("randomStepCheckbox").checked;
+    mandelbrotExplorer.cloudMethods.clearCloudCache();
+}
+
+function toggleGPUAcceleration(){
+    mandelbrotExplorer.useGPU = document.getElementById("gpuAccelerationCheckbox").checked;
+    
+    if (mandelbrotExplorer.useGPU) {
+        // Initialize GPU if not already done
+        if (!mandelbrotExplorer.gpuContext) {
+            mandelbrotExplorer.initGPU();
+        }
+        
+        if (mandelbrotExplorer.gpuContext) {
+            showToast('GPU acceleration enabled', 2000);
+        } else {
+            showToast('GPU acceleration failed to initialize, falling back to CPU', 3000);
+            document.getElementById("gpuAccelerationCheckbox").checked = false;
+            mandelbrotExplorer.useGPU = false;
+        }
+    } else {
+        showToast('GPU acceleration disabled', 2000);
+    }
+    
+    // Clear cache when switching between GPU/CPU
+    mandelbrotExplorer.cloudMethods.clearCloudCache();
 }
 
 // Control visibility functions
@@ -383,6 +416,7 @@ function loadParameterValues(){
     document.getElementById("maxIterations_3d").value = mandelbrotExplorer.maxIterations_3d;
     document.getElementById("cloudResolution").value = mandelbrotExplorer.cloudResolution;
     document.getElementById("randomStepCheckbox").checked = mandelbrotExplorer.randomizeCloudStepping;
+    document.getElementById("gpuAccelerationCheckbox").checked = mandelbrotExplorer.useGPU;
     document.getElementById("initialZ").value = mandelbrotExplorer.initialZ;
     document.getElementById("escapingZ").value = mandelbrotExplorer.escapingZ;
     document.getElementById("iterationCycleTime").value = mandelbrotExplorer.iterationCycleTime;
@@ -975,6 +1009,18 @@ function init()
 
     // Initialize ThreeJSRenderer
     mandelbrotExplorer.init(mandelbrotExplorer.canvas_3d, params);
+
+    // Check GPU availability and provide feedback
+    const gpuInfo = window.checkGPUAvailability();
+    if (gpuInfo.available) {
+        console.log('GPU available:', gpuInfo.renderer, gpuInfo.version);
+        showToast(`GPU detected: ${gpuInfo.renderer}`, 3000);
+    } else {
+        console.warn('GPU not available:', gpuInfo.reason);
+        showToast(`GPU acceleration not available: ${gpuInfo.reason}`, 4000);
+        // Disable GPU checkbox if not available
+        document.getElementById("gpuAccelerationCheckbox").disabled = true;
+    }
 
     // Load saved settings after renderer/camera/controls are initialized
     loadSettingsFromStorage();

@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>GPU Acceleration Test (Modular)</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .test-section { margin: 20px 0; padding: 15px; border: 1px solid #ccc; border-radius: 5px; }
+        .success { background-color: #d4edda; border-color: #c3e6cb; }
+        .error { background-color: #f8d7da; border-color: #f5c6cb; }
+        .info { background-color: #d1ecf1; border-color: #bee5eb; }
+        button { padding: 10px 15px; margin: 5px; background: #007bff; color: white; border: none; border-radius: 3px; cursor: pointer; }
+        button:hover { background: #0056b3; }
+        pre { background: #f8f9fa; padding: 10px; border-radius: 3px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>GPU Acceleration Test (Modular Version)</h1>
+    
+    <div class="test-section info">
+        <h3>GPU Availability Check</h3>
+        <div id="gpu-status">Checking...</div>
+        <button onclick="checkGPU()">Check GPU</button>
+    </div>
+    
+    <div class="test-section">
+        <h3>Performance Test</h3>
+        <p>Test escape path generation performance with CPU vs GPU using a 512x512 grid from a high-iteration area:</p>
+        <ul>
+            <li><strong>Grid:</strong> 512x512 points (262,144 total)</li>
+            <li><strong>Area:</strong> 0.125×0.125 square centered at (-0.75, 0.0)</li>
+            <li><strong>Max Iterations:</strong> 64</li>
+            <li><strong>Location:</strong> Near Mandelbrot set boundary (high iteration density)</li>
+        </ul>
+        <button onclick="runPerformanceTest()">Run Performance Test</button>
+        <div id="performance-results"></div>
+        
+        <div style="display: flex; gap: 20px; margin-top: 20px;">
+            <div>
+                <h4>CPU Output</h4>
+                <canvas id="cpu-canvas" width="200" height="200" style="border: 1px solid #ccc;"></canvas>
+            </div>
+            <div>
+                <h4>GPU Output</h4>
+                <canvas id="gpu-canvas" width="200" height="200" style="border: 1px solid #ccc;"></canvas>
+            </div>
+            <!-- GPU Iteration Output removed due to implementation issues -->
+        </div>
+    </div>
+    
+    <div class="test-section">
+        <h3>GPU Shader Test</h3>
+        <p>Test GPU shader compilation and execution:</p>
+        <button onclick="testGPUShader()">Test GPU Shader</button>
+        <div id="shader-results"></div>
+    </div>
+
+    <!-- Load dependencies -->
+    <script src="../three.js"></script>
+    <script src="../palettes.js"></script>
+    <script src="../presets.js"></script>
+    <script src="../settingsManager.js"></script>
+    <script src="../threeRenderer.js"></script>
+    <script src="../shaderLoader.js"></script>
+    <script src="../mandelbrotexplorer.js"></script>
+    
+    <!-- Load modular test components -->
+    <script src="./gpu_test_utils.js"></script>
+    <script src="./gpu_test_runner.js"></script>
+    <script src="./gpu_test_ui.js"></script>
+</body>
+</html> 

@@ -1,6 +1,17 @@
 # Mandelbrot Explorer
 
-An interactive web-based Mandelbrot set and Julia set explorer with 2D and 3D visualization capabilities. This project allows you to explore the fascinating world of fractals through an intuitive web interface with both classic and modern UI options.
+An interactive web-based Mandelbrot set and Julia set explorer with 2D and 3D visualization capabilities. This project allows you to explore the fascinating world of fractals through an intuitive web interface with both classic and modern UI options. The system provides comprehensive mathematical exploration, visualizing both points inside the set and their escape dynamics.
+
+## 🚀 **New: GPU Acceleration**
+
+The Mandelbrot Explorer now features **WebGL GPU acceleration** for escape path generation, providing significant performance improvements for complex calculations while maintaining full mathematical accuracy and exploration capabilities.
+
+### **GPU Features**
+- **WebGL 2/1 Support**: Automatic fallback to WebGL 1 if WebGL 2 is unavailable
+- **External Shader Files**: Modular shader architecture with separate vertex and fragment shaders
+- **Performance Testing**: Built-in CPU vs GPU performance comparison tool
+- **Mathematical Accuracy**: GPU results match CPU calculations exactly
+- **Comprehensive Exploration**: Preserves all exploration capabilities including escape path visualization
 
 ## Features
 
@@ -29,7 +40,8 @@ An interactive web-based Mandelbrot set and Julia set explorer with 2D and 3D vi
 ### 🔧 **Advanced Features**
 - **Julia Set Mode**: Explore Julia sets with custom C values
 - **Dual Z Mode**: Advanced mathematical transformations
-- **Escape Path Visualization**: See how points escape the set
+- **Escape Path Visualization**: See how points escape the set and their complete trajectories
+- **Comprehensive Exploration**: Visualize both points inside the set (full iteration sequences) and escaping points (escape paths)
 - **Custom Filters**: Filter particles by iteration count and path length
 - **Screen Capture**: Save your discoveries as images
 
@@ -40,6 +52,14 @@ An interactive web-based Mandelbrot set and Julia set explorer with 2D and 3D vi
 - **Expandable Editors**: Click the 🗖 button to open larger editing windows
 - **Real-time Validation**: Immediate feedback on code syntax and errors
 - **Preset Integration**: Seamless integration with existing preset system
+
+### 🔬 **Mathematical Exploration**
+The Mandelbrot Explorer is designed for comprehensive mathematical visualization, not just simple set membership testing:
+
+- **Inside the Set**: Points that don't escape get their complete iteration sequence (up to maxIterations), revealing the complex dynamics within the set
+- **Escape Dynamics**: Points that escape get their full escape path, showing the trajectory and behavior as they leave the set
+- **Boundary Exploration**: The system excels at exploring the complex boundary regions where escape behavior becomes intricate
+- **3D Visualization**: Transform mathematical data into 3D particle clouds and "hair" effects for deeper insight
 
 ## Getting Started
 
@@ -52,6 +72,13 @@ An interactive web-based Mandelbrot set and Julia set explorer with 2D and 3D vi
 2. Open `mandelbrotexplorer.htm` in your web browser
 3. The application will load with the new Alternative UI by default
 4. Use the "Back to Classic UI" button to switch to the original interface
+
+### GPU Performance Testing
+Test the GPU acceleration capabilities:
+1. Open `gpu_test.html` in your browser
+2. Click "Run Performance Test" to compare CPU vs GPU performance
+3. View side-by-side visualizations of CPU and GPU results
+4. Check performance metrics including speedup and accuracy verification
 
 ### Basic Usage
 1. **Start Exploring**: The default view shows the classic Mandelbrot set
@@ -190,6 +217,11 @@ The autocomplete includes frequently used patterns:
 - **Autocomplete not working**: Make sure you're pressing `Ctrl+Space` (not just `Space`)
 - **Syntax errors**: Check the browser console for detailed error messages
 - **Editor not responding**: Try refreshing the page or switching between UI modes
+
+### GPU Acceleration Issues?
+- **GPU not available**: The system automatically falls back to CPU if WebGL is not supported
+- **Performance not improved**: Check the GPU test page to verify your browser's WebGL capabilities
+- **Results don't match**: GPU and CPU results should be identical - if not, check browser console for errors
 
 ## Detailed Controls Guide
 

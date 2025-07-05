@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>GPU Debug Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .test-section { margin: 20px 0; padding: 15px; border: 1px solid #ccc; border-radius: 5px; }
+        .success { background-color: #d4edda; border-color: #c3e6cb; }
+        .error { background-color: #f8d7da; border-color: #f5c6cb; }
+        .info { background-color: #d1ecf1; border-color: #bee5eb; }
+        .warning { background-color: #fff3cd; border-color: #ffeaa7; }
+        button { padding: 10px 15px; margin: 5px; background: #007bff; color: white; border: none; border-radius: 3px; cursor: pointer; }
+        button:hover { background: #0056b3; }
+        pre { background: #f8f9fa; padding: 10px; border-radius: 3px; overflow-x: auto; }
+        .debug-log { background: #000; color: #0f0; padding: 10px; border-radius: 3px; font-family: monospace; max-height: 300px; overflow-y: auto; }
+    </style>
+</head>
+<body>
+    <h1>GPU Debug Test</h1>
+    
+    <div class="test-section info">
+        <h3>Step-by-Step GPU Debug</h3>
+        <button onclick="runDebugTest()">Run Debug Test</button>
+        <div id="debug-results"></div>
+        <div id="debug-log" class="debug-log"></div>
+    </div>
+
+    <!-- Load dependencies -->
+    <script src="../three.js"></script>
+    <script src="../palettes.js"></script>
+    <script src="../presets.js"></script>
+    <script src="../settingsManager.js"></script>
+    <script src="../threeRenderer.js"></script>
+    <script src="../shaderLoader.js"></script>
+    <script src="../mandelbrotexplorer.js"></script>
+    
+    <script>
+        function log(message) {
+            const logDiv = document.getElementById('debug-log');
+            const timestamp = new Date().toLocaleTimeString();
+            logDiv.innerHTML += `[${timestamp}] ${message}\n`;
+            logDiv.scrollTop = logDiv.scrollHeight;
+            console.log(message);
+        }
+        
+        async function runDebugTest() {
+            const resultsDiv = document.getElementById('debug-results');
+            const logDiv = document.getElementById('debug-log');
+            
+            // Clear previous results
+            resultsDiv.innerHTML = '<p>Running debug test...</p>';
+            logDiv.innerHTML = '';
+            
+            log('=== GPU Debug Test Started ===');
+            
+            // Step 1: Check if mandelbrotExplorer exists
+            log('Step 1: Checking mandelbrotExplorer availability...');
+            if (!mandelbrotExplorer) {
+                log('❌ mandelbrotExplorer not found');
+                resultsDiv.innerHTML = '<div class="error">mandelbrotExplorer not available</div>';
+                return;
+            }
+            log('✅ mandelbrotExplorer found');
+            
+            // Step 2: Check GPU availability function
+            log('Step 2: Checking GPU availability function...');
+            if (typeof window.checkGPUAvailability !== 'function') {
+                log('❌ checkGPUAvailability function not found');
+                resultsDiv.innerHTML = '<div class="error">checkGPUAvailability function not available</div>';
+                return;
+            }
+            log('✅ checkGPUAvailability function found');
+            
+            // Step 3: Check GPU availability
+            log('Step 3: Checking GPU availability...');
+            const gpuInfo = window.checkGPUAvailability();
+            log(`GPU Info: available=${gpuInfo.available}, renderer=${gpuInfo.renderer}, version=${gpuInfo.version}`);
+            
+            if (!gpuInfo.available) {
+                log(`❌ GPU not available: ${gpuInfo.reason}`);
+                resultsDiv.innerHTML = `<div class="error">GPU not available: ${gpuInfo.reason}</div>`;
+                return;
+            }
+            log('✅ GPU available');
+            
+            // Step 4: Check initGPU function
+            log('Step 4: Checking initGPU function...');
+            if (typeof mandelbrotExplorer.initGPU !== 'function') {
+                log('❌ initGPU function not found');
+                resultsDiv.innerHTML = '<div class="error">initGPU function not available</div>';
+                return;
+            }
+            log('✅ initGPU function found');
+            
+            // Step 5: Initialize GPU
+            log('Step 5: Initializing GPU...');
+            try {
+                mandelbrotExplorer.useGPU = true;
+                mandelbrotExplorer.initGPU();
+                log('✅ initGPU() called successfully');
+            } catch (error) {
+                log(`❌ initGPU() failed: ${error.message}`);
+                resultsDiv.innerHTML = `<div class="error">initGPU failed: ${error.message}</div>`;
+                return;
+            }
+            
+            // Step 6: Check GPU context
+            log('Step 6: Checking GPU context...');
+            if (!mandelbrotExplorer.gpuContext) {
+                log('❌ GPU context not created');
+                resultsDiv.innerHTML = '<div class="error">GPU context not created</div>';
+                return;
+            }
+            log('✅ GPU context created');
+            
+            const version = mandelbrotExplorer.gpuContext.getParameter(mandelbrotExplorer.gpuContext.VERSION);
+            const renderer = mandelbrotExplorer.gpuContext.getParameter(mandelbrotExplorer.gpuContext.RENDERER);
+            log(`GPU Context: ${version} on ${renderer}`);
+            
+            // Step 7: Wait for shader loading
+            log('Step 7: Waiting for shader loading...');
+            let attempts = 0;
+            const maxAttempts = 100; // 10 seconds
+            
+            while (attempts < maxAttempts) {
+                if (mandelbrotExplorer.gpuProgram && mandelbrotExplorer.gpuUniforms) {
+                    log('✅ Shaders loaded successfully');
+                    break;
+                }
+                
+                log(`Waiting for shaders... (attempt ${attempts + 1}/${maxAttempts})`);
+                log(`  GPU Program: ${mandelbrotExplorer.gpuProgram ? 'Ready' : 'Not ready'}`);
+                log(`  GPU Uniforms: ${mandelbrotExplorer.gpuUniforms ? 'Ready' : 'Not ready'}`);
+                
+                await new Promise(resolve => setTimeout(resolve, 100));
+                attempts++;
+            }
+            
+            if (attempts >= maxAttempts) {
+                log('❌ Shader loading timeout');
+                resultsDiv.innerHTML = `
+                    <div class="error">
+                        <strong>Shader Loading Timeout</strong><br>
+                        GPU Context: Available<br>
+                        GPU Program: ${mandelbrotExplorer.gpuProgram ? 'Ready' : 'Not ready'}<br>
+                        GPU Uniforms: ${mandelbrotExplorer.gpuUniforms ? 'Ready' : 'Not ready'}
+                    </div>
+                `;
+                return;
+            }
+            
+            // Step 8: Test shader compilation
+            log('Step 8: Testing shader compilation...');
+            try {
+                // Try to use the GPU program
+                mandelbrotExplorer.gpuContext.useProgram(mandelbrotExplorer.gpuProgram);
+                log('✅ GPU program can be used');
+            } catch (error) {
+                log(`❌ GPU program usage failed: ${error.message}`);
+                resultsDiv.innerHTML = `<div class="error">GPU program usage failed: ${error.message}</div>`;
+                return;
+            }
+            
+            // Step 9: Final success
+            log('Step 9: All tests passed!');
+            resultsDiv.innerHTML = `
+                <div class="success">
+                    <strong>✅ GPU Debug Test Passed</strong><br>
+                    WebGL Context: ${version}<br>
+                    Renderer: ${renderer}<br>
+                    Shader Program: Compiled and linked successfully<br>
+                    GPU Uniforms: Initialized<br>
+                    Total Time: ${attempts * 100}ms
+                </div>
+            `;
+            
+            log('=== GPU Debug Test Completed Successfully ===');
+        }
+    </script>
+</body>
+</html> 
