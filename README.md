@@ -13,6 +13,8 @@ The Mandelbrot Explorer now features **WebGL GPU acceleration** for escape path 
 - **Mathematical Accuracy**: GPU results match CPU calculations exactly
 - **Comprehensive Exploration**: Preserves all exploration capabilities including escape path visualization
 
+ ## Try the Mandelbrot DEMO **[Try it now](https://mandelbrotexplorer.netlify.app)**
+
 ## Features
 
 ### 🎨 **Dual Visualization Modes**
