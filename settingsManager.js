@@ -34,7 +34,7 @@ var SettingsManager = {
 			};
 			
 			localStorage.setItem(this.storageKey, JSON.stringify(settings));
-			console.log('Settings saved to localStorage');
+			// debugLog('settings', 'Settings saved to localStorage');
 		} catch (e) {
 			console.error('Failed to save settings:', e);
 		}
@@ -66,7 +66,7 @@ var SettingsManager = {
 					this.restoreControlsState(explorer, settings.controlsState);
 				}
 				
-				console.log('Settings loaded from localStorage');
+				// debugLog('settings', 'Settings loaded from localStorage');
 				return true;
 			}
 		} catch (e) {
@@ -78,7 +78,7 @@ var SettingsManager = {
 	clearSettings: function() {
 		try {
 			localStorage.removeItem(this.storageKey);
-			console.log('Settings cleared from localStorage');
+			// debugLog('settings', 'Settings cleared from localStorage');
 		} catch (e) {
 			console.error('Failed to clear settings:', e);
 		}

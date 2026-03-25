@@ -16,7 +16,12 @@
 		<script src="./shaderLoader.js"></script>
 		<script src="./mandelbrotexplorer.js"></script>
 		<script src="./ui.js"></script>
-		<script src="altUI.js"></script>
+		<!-- Alternative UI modules -->
+		<script src="altUI-config.js"></script>
+		<script src="altUI-completion.js"></script>
+		<script src="altUI-events.js"></script>
+		<script src="altUI-codeMirror.js"></script>
+		<script src="altUI-core.js"></script>
 		<!-- CodeMirror 5 for code editing in the new UI -->
 		<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.css">
 		<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/theme/material.min.css">
@@ -25,7 +30,20 @@
 		<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/javascript/javascript.min.js"></script>
 		<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/hint/show-hint.js"></script>
 	</head>
-	<body onload="init();setTimeout(function(){if(window.buildAlternativeUI){buildAlternativeUI();}document.getElementById('controls').style.display='none';document.getElementById('alternativeUI').style.display='';}, 100);">
+	<body onload="init();setTimeout(function(){
+		try {
+			if(window.buildAlternativeUI){
+				buildAlternativeUI();
+				document.getElementById('controls').style.display='none';
+				document.getElementById('alternativeUI').style.display='';
+			} else {
+				console.warn('Alternative UI not available, keeping classic UI');
+			}
+		} catch (error) {
+			console.error('Error loading alternative UI:', error);
+			console.log('Falling back to classic UI');
+		}
+	}, 500);">
 		<div>
 			<canvas id="mandelbrotCanvas2d" ondblclick="zoomToDblClick(this, event)"></canvas>
 			<canvas id="mandelbrotCanvas3d"></canvas>

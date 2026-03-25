@@ -416,7 +416,13 @@ function loadParameterValues(){
     document.getElementById("maxIterations_3d").value = mandelbrotExplorer.maxIterations_3d;
     document.getElementById("cloudResolution").value = mandelbrotExplorer.cloudResolution;
     document.getElementById("randomStepCheckbox").checked = mandelbrotExplorer.randomizeCloudStepping;
-    document.getElementById("gpuAccelerationCheckbox").checked = mandelbrotExplorer.useGPU;
+    // Set GPU checkbox without triggering the onchange event
+    const gpuCheckbox = document.getElementById("gpuAccelerationCheckbox");
+    if (gpuCheckbox) {
+      gpuCheckbox.onchange = null; // Temporarily disable event handler
+      gpuCheckbox.checked = mandelbrotExplorer.useGPU;
+      gpuCheckbox.onchange = toggleGPUAcceleration; // Re-enable event handler
+    }
     document.getElementById("initialZ").value = mandelbrotExplorer.initialZ;
     document.getElementById("escapingZ").value = mandelbrotExplorer.escapingZ;
     document.getElementById("iterationCycleTime").value = mandelbrotExplorer.iterationCycleTime;
@@ -1013,7 +1019,7 @@ function init()
     // Check GPU availability and provide feedback
     const gpuInfo = window.checkGPUAvailability();
     if (gpuInfo.available) {
-        console.log('GPU available:', gpuInfo.renderer, gpuInfo.version);
+        	// debugLog('gpu', 'GPU available:', gpuInfo.renderer, gpuInfo.version);
         showToast(`GPU detected: ${gpuInfo.renderer}`, 3000);
     } else {
         console.warn('GPU not available:', gpuInfo.reason);

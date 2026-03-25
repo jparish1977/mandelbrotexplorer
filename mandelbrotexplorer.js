@@ -1,3 +1,66 @@
+// mandelbrotexplorer.js
+// Mandelbrot Explorer - GPU-accelerated fractal visualization
+
+// Debug configuration - control console logging levels
+window.DEBUG_CONFIG = {
+    // Set to false to disable all debug logging
+    enabled: false,
+    
+    // Individual log categories
+    gpu: false,           // GPU initialization and processing logs
+    cache: false,         // Cache status and operations
+    generation: false,    // Cloud generation progress
+    particles: false,     // Particle system creation
+    escapePaths: false,   // Escape path processing details
+    performance: true,    // Performance timing (keep this for useful info)
+    errors: true,         // Error messages (keep this for debugging)
+    warnings: true        // Warning messages (keep this for debugging)
+};
+
+// Debug logging utility
+function debugLog(category, ...args) {
+    if (DEBUG_CONFIG.enabled && DEBUG_CONFIG[category]) {
+        console.log(...args);
+    }
+}
+
+// Performance logging utility (always enabled when debug is on)
+function perfLog(...args) {
+    if (DEBUG_CONFIG.enabled && DEBUG_CONFIG.performance) {
+        console.log(...args);
+    }
+}
+
+// Performance timing utility
+const perfTimers = {};
+function perfTime(label) {
+    if (DEBUG_CONFIG.enabled && DEBUG_CONFIG.performance) {
+        perfTimers[label] = performance.now();
+    }
+}
+
+function perfTimeEnd(label) {
+    if (DEBUG_CONFIG.enabled && DEBUG_CONFIG.performance && perfTimers[label]) {
+        const duration = performance.now() - perfTimers[label];
+        console.log(`${label}: ${duration.toFixed(2)} ms`);
+        delete perfTimers[label];
+    }
+}
+
+// Error logging utility (always enabled)
+function errorLog(...args) {
+    if (DEBUG_CONFIG.errors) {
+        console.error(...args);
+    }
+}
+
+// Warning logging utility (always enabled)
+function warningLog(...args) {
+    if (DEBUG_CONFIG.warnings) {
+        console.warn(...args);
+    }
+}
+
 var STR_PAD_LEFT = 1;
 var STR_PAD_RIGHT = 2;
 var STR_PAD_BOTH = 3;
@@ -141,12 +204,12 @@ var mandelbrotExplorer = {
 			// Log WebGL version for debugging
 			const version = this.gpuContext.getParameter(this.gpuContext.VERSION);
 			const renderer = this.gpuContext.getParameter(this.gpuContext.RENDERER);
-			console.log('WebGL initialized:', version, 'on', renderer);
+			debugLog('gpu', 'WebGL initialized:', version, 'on', renderer);
 			
 			// Create and compile shader programs
 			this.createGPUProgram();
 			this.createGPUIterationProgram();
-			console.log('GPU acceleration initialized successfully');
+			debugLog('gpu', 'GPU acceleration initialized successfully');
 		} catch (error) {
 			console.error('Failed to initialize GPU acceleration:', error);
 			this.useGPU = false;
@@ -197,7 +260,7 @@ var mandelbrotExplorer = {
 					isJulia: gl.getUniformLocation(this.gpuProgram, 'u_isJulia')
 				};
 				
-				console.log('GPU shaders loaded and compiled successfully');
+				debugLog('gpu', 'GPU shaders loaded and compiled successfully');
 			})
 			.catch(error => {
 				console.error('Failed to load shaders:', error);
@@ -251,7 +314,7 @@ var mandelbrotExplorer = {
 					previousIteration: gl.getUniformLocation(this.gpuIterationProgram, 'u_previousIteration')
 				};
 				
-				console.log('GPU iteration-centric shaders loaded and compiled successfully');
+				debugLog('gpu', 'GPU iteration-centric shaders loaded and compiled successfully');
 			})
 			.catch(error => {
 				console.error('Failed to load iteration-centric shaders:', error);
@@ -321,7 +384,7 @@ var mandelbrotExplorer = {
 		const xPoints = gridSize;
 		const yPoints = maxIterations; // Each row represents one iteration
 		
-		console.log('GPU iteration-centric processing:', xPoints, 'points x', yPoints, 'iterations');
+		debugLog('gpu', 'GPU iteration-centric processing:', xPoints, 'points x', yPoints, 'iterations');
 		
 		// Create framebuffers for ping-pong rendering
 		const framebuffer1 = gl.createFramebuffer();
@@ -438,7 +501,7 @@ var mandelbrotExplorer = {
 		gl.deleteFramebuffer(framebuffer2);
 		gl.deleteBuffer(vertexBuffer);
 		
-		console.log('GPU iteration-centric generated', results.length, 'escape paths');
+		debugLog('gpu', 'GPU iteration-centric generated', results.length, 'escape paths');
 		return results;
 	},
 	
@@ -474,7 +537,7 @@ var mandelbrotExplorer = {
 		// Calculate grid dimensions from points array
 		// Use actual points length instead of assuming perfect square
 		const totalPoints = points.length;
-		console.log('GPU processing', totalPoints, 'points');
+		debugLog('gpu', 'GPU processing', totalPoints, 'points');
 		
 		// For GPU rendering, we need a rectangular grid
 		// Since points come from multiple scales, we'll use the largest possible square that fits
@@ -484,13 +547,13 @@ var mandelbrotExplorer = {
 		
 		// Ensure we don't exceed the points array bounds
 		const maxPoints = Math.min(xPoints * yPoints, totalPoints);
-		console.log('GPU grid size:', xPoints, 'x', yPoints, '=', xPoints * yPoints, 'pixels, processing', maxPoints, 'points');
+		debugLog('gpu', 'GPU grid size:', xPoints, 'x', yPoints, '=', xPoints * yPoints, 'pixels, processing', maxPoints, 'points');
 		
 		// For GPU rendering, we need to map the grid to the sample area
 		// The GPU will render a grid of xPoints x yPoints pixels
 		// Each pixel corresponds to one point in the sample area
-		console.log('GPU grid:', xPoints, 'x', yPoints, 'points for area', startX, 'to', endX, 'x', startY, 'to', endY);
-		console.log('GPU coordinate mapping: using normalized coordinates with area bounds');
+		debugLog('gpu', 'GPU grid:', xPoints, 'x', yPoints, 'points for area', startX, 'to', endX, 'x', startY, 'to', endY);
+		debugLog('gpu', 'GPU coordinate mapping: using normalized coordinates with area bounds');
 		
 		// Create framebuffer for output
 		const framebuffer = gl.createFramebuffer();
@@ -562,7 +625,7 @@ var mandelbrotExplorer = {
 			
 			// Debug: log first few results
 			if (i < 5) {
-				console.log('GPU point', i, ':', {
+				debugLog('escapePaths', 'GPU point', i, ':', {
 					x: x.toFixed(3), y: y.toFixed(3),
 					iterations: iterations
 				});
@@ -581,7 +644,7 @@ var mandelbrotExplorer = {
 			
 			// Debug: log first few escape paths
 			if (i < 3) {
-				console.log('GPU generating escape path for point', i, ':', {
+				debugLog('escapePaths', 'GPU generating escape path for point', i, ':', {
 					originalPoint: [x, y],
 					gpuIterations: iterations,
 					cpuPathLength: escapePath.length,
@@ -599,14 +662,14 @@ var mandelbrotExplorer = {
 			results.push(escapePath);
 		}
 		
-		console.log('GPU generated', validResults, 'valid escape paths out of', maxPoints, 'total points');
+		debugLog('gpu', 'GPU generated', validResults, 'valid escape paths out of', maxPoints, 'total points');
 		
 		// Clean up
 		gl.deleteTexture(outputTexture);
 		gl.deleteFramebuffer(framebuffer);
 		gl.deleteBuffer(vertexBuffer);
 		
-		console.log('GPU generated', results.length, 'escape paths');
+		debugLog('gpu', 'GPU generated', results.length, 'escape paths');
 		return results;
 	},
 	
@@ -770,10 +833,10 @@ var mandelbrotExplorer = {
         "initialize3DScaling": function() {
 			var cloudResolutions = [];
 			if(mandelbrotExplorer.cloudResolution.toString().indexOf(",") !== -1){
-				cloudResolutions = mandelbrotExplorer.cloudResolution.split(",");
+				cloudResolutions = mandelbrotExplorer.cloudResolution.split(",").map(function(val) { return parseFloat(val.trim()); });
 			}
 			else{
-				cloudResolutions.push(mandelbrotExplorer.cloudResolution);
+				cloudResolutions.push(parseFloat(mandelbrotExplorer.cloudResolution));
 			}
 
 			var minRes = Math.min.apply(null, cloudResolutions);
@@ -856,7 +919,7 @@ var mandelbrotExplorer = {
             // Clear the cloud cache when parameters change
             if (mandelbrotExplorer.cloudCache) {
                 mandelbrotExplorer.cloudCache = {};
-                console.log('Cloud cache cleared');
+                		debugLog('cache', 'Cloud cache cleared');
             }
         },
 
@@ -874,7 +937,7 @@ var mandelbrotExplorer = {
             const MAX_ESCAPE_PATH_CACHE_SIZE_MB = Math.max(500, Math.min(9000, estimatedCacheSizeMB * 1.5)); // 500MB-9GB range
             const MAX_CACHE_ENTRIES = Math.max(3, Math.min(5, Math.floor(1000 / estimatedCacheSizeMB))); // Fewer entries for larger data
             
-            console.log('Cache size estimation:', {
+            		debugLog('cache', 'Cache size estimation:', {
                 maxResolution,
                 maxIterations, 
                 estimatedSizeMB: Math.round(estimatedCacheSizeMB),
@@ -888,10 +951,10 @@ var mandelbrotExplorer = {
                 
                 // Suggest specific optimizations
                 const suggestedRes = Math.floor(Math.sqrt(estimatedCacheSizeMB * 1024 * 1024 / (maxIterations * 16)));
-                console.log('💡 Suggestions:');
-                console.log('   - Reduce resolution to ~', suggestedRes, 'for ~1GB cache');
-                console.log('   - Or reduce iterations to ~', Math.floor(256), 'for current resolution');
-                console.log('   - Or disable caching for this render (will be slower but use less memory)');
+                		debugLog('cache', '💡 Suggestions:');
+		debugLog('cache', '   - Reduce resolution to ~', suggestedRes, 'for ~1GB cache');
+		debugLog('cache', '   - Or reduce iterations to ~', Math.floor(256), 'for current resolution');
+		debugLog('cache', '   - Or disable caching for this render (will be slower but use less memory)');
             }
             
             if (!mandelbrotExplorer.cloudCache) return;
@@ -904,7 +967,7 @@ var mandelbrotExplorer = {
                 keysToRemove.forEach(key => {
                     delete mandelbrotExplorer.cloudCache[key];
                 });
-                console.log('Removed', keysToRemove.length, 'old cache entries');
+                		debugLog('cache', 'Removed', keysToRemove.length, 'old cache entries');
             }
             
             			// Check escape path cache memory usage
@@ -919,7 +982,7 @@ var mandelbrotExplorer = {
 			escapePathCacheSize = Math.round(escapePathCacheSize / (1024 * 1024)); // Convert to MB
             
             if (escapePathCacheSize > MAX_ESCAPE_PATH_CACHE_SIZE_MB) {
-                console.log('Escape path cache size limit exceeded (' + escapePathCacheSize + 'MB), clearing cache');
+                		debugLog('cache', 'Escape path cache size limit exceeded (' + escapePathCacheSize + 'MB), clearing cache');
                 this.clearCloudCache();
             }
         },
@@ -938,11 +1001,11 @@ var mandelbrotExplorer = {
         "clearCacheAndLog": function() {
             const status = this.getCacheStatus();
             this.clearCloudCache();
-            console.log('Cache cleared. Previous status:', status.entries, 'entries,', status.size, 'MB');
+            		debugLog('cache', 'Cache cleared. Previous status:', status.entries, 'entries,', status.size, 'MB');
         },
         
         "generateMandelbrotCloudParticles": function() {
-            console.time("drawMandelbrotCloud: Generating particles");
+            		perfTime("drawMandelbrotCloud: Generating particles");
             
             // Create a progress indicator
             const progressDiv = document.createElement('div');
@@ -980,28 +1043,28 @@ var mandelbrotExplorer = {
                 
                 if (cacheEntry.escapePaths) {
                     cachedEscapePaths = cacheEntry.escapePaths;
-                    console.log('Using cached escape paths:', cachedEscapePaths.length, 'paths');
+                    		debugLog('cache', 'Using cached escape paths:', cachedEscapePaths.length, 'paths');
                     document.getElementById('progress-text').textContent = 'Using cached escape paths...';
                 }
             }
             
             // Log cache status
             const cacheStatus = this.getCacheStatus();
-            console.log('Cache status:', cacheStatus.entries, 'entries,', cacheStatus.size, 'MB');
+            		debugLog('cache', 'Cache status:', cacheStatus.entries, 'entries,', cacheStatus.size, 'MB');
             if (cacheStatus.size > 0) {
-                console.log('Cache efficiency: ~', Math.round(cacheStatus.size / cacheStatus.entries), 'KB per entry');
+                		debugLog('cache', 'Cache efficiency: ~', Math.round(cacheStatus.size / cacheStatus.entries), 'KB per entry');
             }
             
             if (!cachedEscapePaths) {
                 const gpuStatus = mandelbrotExplorer.useGPU ? 'GPU' : 'CPU';
-                console.log('No cache found, generating new escape paths using', gpuStatus, '...');
-                console.log('GPU enabled:', mandelbrotExplorer.useGPU);
-                console.log('GPU context available:', !!mandelbrotExplorer.gpuContext);
+                		debugLog('generation', 'No cache found, generating new escape paths using', gpuStatus, '...');
+                		debugLog('gpu', 'GPU enabled:', mandelbrotExplorer.useGPU);
+		debugLog('gpu', 'GPU context available:', !!mandelbrotExplorer.gpuContext);
                 document.getElementById('progress-text').textContent = `Generating escape paths (${gpuStatus})...`;
                 
                 // If GPU is enabled but not ready, wait for it to be ready
                 if (mandelbrotExplorer.useGPU && !mandelbrotExplorer.isGPUReady()) {
-                    console.log('GPU not ready, waiting for initialization...');
+                    		debugLog('gpu', 'GPU not ready, waiting for initialization...');
                     document.getElementById('progress-text').textContent = 'Waiting for GPU initialization...';
                     
                     // Wait for GPU to be ready with a timeout
@@ -1010,15 +1073,15 @@ var mandelbrotExplorer = {
                     
                     function waitForGPU() {
                         if (mandelbrotExplorer.isGPUReady()) {
-                            console.log('GPU is now ready, proceeding with generation');
+                            		debugLog('gpu', 'GPU is now ready, proceeding with generation');
                             document.getElementById('progress-text').textContent = 'GPU ready, generating escape paths...';
                             startGeneration();
                         } else if (gpuWaitAttempts < maxGPUWaitAttempts) {
                             gpuWaitAttempts++;
-                            console.log(`GPU not ready yet, attempt ${gpuWaitAttempts}/${maxGPUWaitAttempts}`);
+                            		debugLog('gpu', `GPU not ready yet, attempt ${gpuWaitAttempts}/${maxGPUWaitAttempts}`);
                             setTimeout(waitForGPU, 100);
                         } else {
-                            console.log('GPU initialization timeout, falling back to CPU');
+                            		debugLog('gpu', 'GPU initialization timeout, falling back to CPU');
                             document.getElementById('progress-text').textContent = 'GPU timeout, using CPU...';
                             startGeneration();
                         }
@@ -1049,7 +1112,7 @@ var mandelbrotExplorer = {
             document.getElementById('cancel-generation').addEventListener('click', function() {
                 isCancelled = true;
                 progressDiv.remove();
-                console.log('Cloud generation cancelled');
+                		debugLog('generation', 'Cloud generation cancelled');
             });
             
             // Create a flat array of all points to process
@@ -1077,16 +1140,38 @@ var mandelbrotExplorer = {
                 // Process batch using GPU or CPU
                 if (mandelbrotExplorer.useGPU && mandelbrotExplorer.isGPUReady() && !cachedEscapePaths && currentPointIndex === 0) {
                     // GPU processes the entire grid at once
-                    console.log('GPU processing entire grid of', allPoints.length, 'points');
+                    		debugLog('gpu', 'GPU processing entire grid of', allPoints.length, 'points');
+                    
+                    // Update progress to show GPU processing
+                    const progressText = document.getElementById('progress-text');
+                    if (progressText) {
+                        progressText.textContent = 'GPU processing...';
+                    }
+                    
                     try {
                         const allEscapePaths = mandelbrotExplorer.generateEscapePathsGPU(allPoints.map(p => [p.x, p.y]), mandelbrotExplorer.maxIterations_3d);
                         
-                        // Process all GPU results
+                        // Update progress to show processing results
+                        if (progressText) {
+                            progressText.textContent = 'Processing GPU results...';
+                        }
+                        
+                        // Process all GPU results with progress updates
                         for (let i = 0; i < allEscapePaths.length; i++) {
                             const point = allPoints[i];
                             const escapePath = allEscapePaths[i];
                             processEscapePath(point, escapePath, true, i);
                             processedPoints++;
+                            
+                            // Update progress every 1000 points for GPU processing
+                            if (i % 1000 === 0) {
+                                const progress = Math.min(100, (processedPoints / totalPoints) * 100);
+                                const progressBar = document.getElementById('progress-bar');
+                                if (progressText && progressBar) {
+                                    progressText.textContent = `Processing GPU results... ${Math.round(progress)}%`;
+                                    progressBar.style.width = progress + '%';
+                                }
+                            }
                         }
                         
                         // Skip to the end since we processed everything
@@ -1115,8 +1200,8 @@ var mandelbrotExplorer = {
                         }
                     }
                 } else if (mandelbrotExplorer.useGPU && !mandelbrotExplorer.isGPUReady() && !cachedEscapePaths && currentPointIndex === 0) {
-                    console.log('GPU enabled but not ready, falling back to CPU processing');
-                    console.log('GPU Status:', {
+                    		debugLog('gpu', 'GPU enabled but not ready, falling back to CPU processing');
+		debugLog('gpu', 'GPU Status:', {
                         context: !!mandelbrotExplorer.gpuContext,
                         program: !!mandelbrotExplorer.gpuProgram,
                         uniforms: !!mandelbrotExplorer.gpuUniforms,
@@ -1167,16 +1252,16 @@ var mandelbrotExplorer = {
                 }
                 
                 function processEscapePath(point, escapePath, shouldCache, pointIndex) {
-                    // Debug: log first few escape paths
-                    if (pointIndex < 5) {
-                        console.log('Processing escape path', pointIndex, ':', {
-                            point: [point.x, point.y],
-                            escapePathLength: escapePath.length,
-                            shortened: escapePath.shortened,
-                            firstPoint: escapePath[0],
-                            lastPoint: escapePath[escapePath.length - 1]
-                        });
-                    }
+                    		// Debug: log first few escape paths
+		if (pointIndex < 5) {
+			debugLog('escapePaths', 'Processing escape path', pointIndex, ':', {
+				point: [point.x, point.y],
+				escapePathLength: escapePath.length,
+				shortened: escapePath.shortened,
+				firstPoint: escapePath[0],
+				lastPoint: escapePath[escapePath.length - 1]
+			});
+		}
                     
                     if (
                         (mandelbrotExplorer.onlyShortened && !escapePath.shortened) ||
@@ -1274,9 +1359,8 @@ var mandelbrotExplorer = {
                 if (currentPointIndex < allPoints.length && !isCancelled) {
                     setTimeout(processBatch, 0);
                 } else {
-                    // Generation complete
-                    progressDiv.remove();
-                    console.timeEnd("drawMandelbrotCloud: Generating particles");
+                    // Generation complete - don't remove progress div yet, it will be removed after particle system creation
+                    		perfTimeEnd("drawMandelbrotCloud: Generating particles");
                     
                     if (!isCancelled) {
                         // Log total points generated
@@ -1287,9 +1371,9 @@ var mandelbrotExplorer = {
                                 totalPointsGenerated += mandelbrotExplorer.iterationParticles[key].particles.length;
                             }
                         }
-                        console.log('Total points generated:', totalPointsGenerated);
-                        console.log('Total iterationParticles keys:', Object.keys(mandelbrotExplorer.iterationParticles).length);
-                        console.log('Creating particle systems...');
+                        		debugLog('particles', 'Total points generated:', totalPointsGenerated);
+		debugLog('particles', 'Total iterationParticles keys:', Object.keys(mandelbrotExplorer.iterationParticles).length);
+		debugLog('particles', 'Creating particle systems...');
                         
                         // Cache the escape paths if we generated them
                         if (!isCancelled) {
@@ -1320,16 +1404,21 @@ var mandelbrotExplorer = {
             } // Close startGeneration function
         },
         "applyMandelbrotCloudPalette": function() {
-            console.time("drawMandelbrotCloud: Creating particle systems");
+            		perfTime("drawMandelbrotCloud: Creating particle systems");
             
             // Update progress text to show particle system creation
-            const progressDiv = document.getElementById('cloud-generation-progress');
-            if (progressDiv) {
+            const progressDivUpdate = document.getElementById('cloud-generation-progress');
+            if (progressDivUpdate) {
                 document.getElementById('progress-text').textContent = 'Creating particle systems...';
+                // Reset progress bar for particle system creation
+                const progressBar = document.getElementById('progress-bar');
+                if (progressBar) {
+                    progressBar.style.width = '0%';
+                }
             }
             
             const indices = Object.keys(mandelbrotExplorer.iterationParticles);
-            console.log('Creating particle systems for indices:', indices.slice(0, 20), '... (total:', indices.length, ')');
+            		debugLog('particles', 'Creating particle systems for indices:', indices.slice(0, 20), '... (total:', indices.length, ')');
             
             // Process all particle systems in one go (no batching needed since this is fast)
             for (let i = 0; i < indices.length; i++) {
@@ -1363,12 +1452,29 @@ var mandelbrotExplorer = {
                 );
                 
                 mandelbrotExplorer.particleSystems[index] = points;
+                
+                // Update progress for particle system creation
+                if (i % 10 === 0 || i === indices.length - 1) {
+                    const progress = Math.min(100, (i / indices.length) * 100);
+                    const progressText = document.getElementById('progress-text');
+                    const progressBar = document.getElementById('progress-bar');
+                    if (progressText && progressBar) {
+                        progressText.textContent = `Creating particle systems... ${Math.round(progress)}%`;
+                        progressBar.style.width = progress + '%';
+                    }
+                }
             }
             
             // Clean up iterationParticles after particle system creation is complete
             mandelbrotExplorer.iterationParticles = null;
             
-            console.timeEnd("drawMandelbrotCloud: Creating particle systems");
+            		perfTimeEnd("drawMandelbrotCloud: Creating particle systems");
+            
+            // Remove progress div after everything is complete
+            const progressDivFinal = document.getElementById('cloud-generation-progress');
+            if (progressDivFinal) {
+                progressDivFinal.remove();
+            }
             
             // Call completion handler if it exists
             if (mandelbrotExplorer.cloudMethods.onCloudGenerationComplete) {
@@ -1376,7 +1482,7 @@ var mandelbrotExplorer = {
             }
         },
 		"generateMandelbrotHair": function () {
-			console.time("drawMandelbrotsHair: Generating line vectors");
+			perfTime("drawMandelbrotsHair: Generating line vectors");
 			mandelbrotExplorer.scales_3d.forEach(function(useScales){
 				for( var x = mandelbrotExplorer.startX; x < mandelbrotExplorer.endX; x += useScales.x ) {
 					for( var y = mandelbrotExplorer.startY; y > mandelbrotExplorer.endY; y -= useScales.y ) {
@@ -1450,7 +1556,7 @@ var mandelbrotExplorer = {
 					}
 				}
 			});
-			console.timeEnd("drawMandelbrotsHair: Generating line vectors");
+			perfTimeEnd("drawMandelbrotsHair: Generating line vectors");
 			for(var lineIndex in mandelbrotExplorer.lineVectors){
 				var currentLine = mandelbrotExplorer.lineVectors[lineIndex];
 				
@@ -1473,7 +1579,7 @@ var mandelbrotExplorer = {
 		}
     },
 	"drawMandelbrotCloud": function( params ) {
-		console.time("drawMandelbrotCloud");
+		perfTime("drawMandelbrotCloud");
 		mandelbrotExplorer.assignParams( params );
         
         mandelbrotExplorer.cloudMethods.initializeMandelbrotCloud();
@@ -1491,7 +1597,7 @@ var mandelbrotExplorer = {
             // Update cache status after generation
             setTimeout(showCacheStatus, 100);
             
-            console.timeEnd("drawMandelbrotCloud");
+            		perfTimeEnd("drawMandelbrotCloud");
         };
 	},
 	"clearMandelbrotsHair": function(){
@@ -1505,7 +1611,7 @@ var mandelbrotExplorer = {
 		this.lines = [];
 	},
 	"drawMandelbrotsHair": function( params ) {
-		console.time("drawMandelbrotsHair");
+		perfTime("drawMandelbrotsHair");
 		mandelbrotExplorer.assignParams( params );
         
         mandelbrotExplorer.cloudMethods.initializeMandelbrotHair();
@@ -1513,7 +1619,7 @@ var mandelbrotExplorer = {
 		
 		mandelbrotExplorer.cloudMethods.generateMandelbrotHair();
 
-		console.timeEnd("drawMandelbrotsHair");
+		perfTimeEnd("drawMandelbrotsHair");
 	},
 	"displayCloudParticles": function() {
 		mandelbrotExplorer.particleCount = 0;
@@ -1839,7 +1945,7 @@ var mandelbrotExplorer = {
 		return zValues;
 	},
 	"runJuliaCalc": function( c, z, maxIterations, verbose ){
-		if(verbose){console.time("runJuliaCalc");}
+		if(verbose){perfTime("runJuliaCalc");}
 
 		var iterations = 0;
 		while( this.getAbsoluteValueOfComplexNumber(z) < 2 && iterations < maxIterations ){
@@ -1849,7 +1955,7 @@ var mandelbrotExplorer = {
 			z = [zX, zY];
 		}
 		
-		if(verbose){console.timeEnd("runJuliaCalc");}
+		if(verbose){perfTimeEnd("runJuliaCalc");}
 	},
 	"getAbsoluteValueOfComplexNumber": function( c ){
 		return Math.sqrt( Math.abs( Math.pow(c[0], 2) + Math.pow(c[1],2) ) );
@@ -1928,7 +2034,7 @@ window.showCacheStatus = function() {
         altCacheStatus.textContent = statusText;
     }
     
-    console.log('Cache Status:', statusText);
+    		debugLog('cache', 'Cache Status:', statusText);
     return status;
 };
 
@@ -1968,3 +2074,39 @@ window.checkGPUAvailability = function() {
 window.addEventListener('load', function() {
     setTimeout(showCacheStatus, 500);
 });
+
+// Debug logging control functions
+window.enableDebugLogging = function(category = 'all') {
+    if (category === 'all') {
+        DEBUG_CONFIG.enabled = true;
+        DEBUG_CONFIG.gpu = true;
+        DEBUG_CONFIG.cache = true;
+        DEBUG_CONFIG.generation = true;
+        DEBUG_CONFIG.particles = true;
+        DEBUG_CONFIG.escapePaths = true;
+        DEBUG_CONFIG.performance = true;
+    } else if (DEBUG_CONFIG.hasOwnProperty(category)) {
+        DEBUG_CONFIG.enabled = true;
+        DEBUG_CONFIG[category] = true;
+    }
+    console.log('Debug logging enabled for:', category);
+};
+
+window.disableDebugLogging = function(category = 'all') {
+    if (category === 'all') {
+        DEBUG_CONFIG.enabled = false;
+        DEBUG_CONFIG.gpu = false;
+        DEBUG_CONFIG.cache = false;
+        DEBUG_CONFIG.generation = false;
+        DEBUG_CONFIG.particles = false;
+        DEBUG_CONFIG.escapePaths = false;
+        DEBUG_CONFIG.performance = false;
+    } else if (DEBUG_CONFIG.hasOwnProperty(category)) {
+        DEBUG_CONFIG[category] = false;
+    }
+    console.log('Debug logging disabled for:', category);
+};
+
+window.showDebugStatus = function() {
+    console.log('Debug logging status:', DEBUG_CONFIG);
+};
