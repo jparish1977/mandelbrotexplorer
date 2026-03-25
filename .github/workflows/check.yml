@@ -22,12 +22,18 @@ jobs:
         run: git clone https://github.com/jparish1977/JP_TOOLS.git /tmp/jp_tools
       - name: Install JS tools
         run: cd /tmp/jp_tools && npm install
-      - name: Check JS
+      - name: Check JS (errors only — warnings are tracked, not blocking)
         run: |
+          EXIT=0
           for f in mandelbrotexplorer.js ui.js altUI-core.js altUI-config.js altUI-events.js altUI-completion.js altUI-codeMirror.js gradientline.js palettes.js presets.js settingsManager.js threeRenderer.js shaderLoader.js; do
             echo "--- $f ---"
-            python /tmp/jp_tools/check.py "$f" --lang js --pretty
+            RESULT=$(node /tmp/jp_tools/jp_eslint.mjs "$f")
+            ERRORS=$(echo "$RESULT" | python3 -c "import sys,json; r=json.loads(sys.stdin.read()); print(sum(1 for x in r for m in x.get('messages',[]) if m.get('severity')==2))")
+            WARNS=$(echo "$RESULT" | python3 -c "import sys,json; r=json.loads(sys.stdin.read()); print(sum(1 for x in r for m in x.get('messages',[]) if m.get('severity')==1))")
+            echo "  errors=$ERRORS warnings=$WARNS"
+            if [ "$ERRORS" != "0" ]; then EXIT=1; echo "$RESULT" | python3 -m json.tool; fi
           done
+          exit $EXIT
       - name: Check CSS
         run: python /tmp/jp_tools/check.py styles.css --lang css --pretty
       - name: Check HTML
