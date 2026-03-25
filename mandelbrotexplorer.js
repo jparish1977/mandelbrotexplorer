@@ -1571,7 +1571,7 @@ var mandelbrotExplorer = {
 				var phase = 1.5;
 				//Create the final object to add to the scene
 				var coloredLine = getColoredBufferLine_2( steps, phase, geometry, color );
-				var coloredLine = getColoredBufferLine_3(geometry, mandelbrotExplorer.palette );
+				coloredLine = getColoredBufferLine_3(geometry, mandelbrotExplorer.palette );
 				
 				mandelbrotExplorer.threeRenderer.scene.add(coloredLine);
 				mandelbrotExplorer.lines.push(coloredLine);
