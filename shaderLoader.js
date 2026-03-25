@@ -1,5 +1,5 @@
 // Shader loader utility for loading GLSL shader files
-var ShaderLoader = {
+const ShaderLoader = {
 	// Cache for loaded shaders
 	shaderCache: {},
 
@@ -132,7 +132,7 @@ var ShaderLoader = {
 
 			// On file:// protocol, use embedded shaders (fetch is blocked by CORS)
 			if (location.protocol === 'file:') {
-				var embedded = this.embeddedShaders[shaderPath];
+				const embedded = this.embeddedShaders[shaderPath];
 				if (embedded) {
 					this.shaderCache[shaderPath] = embedded;
 					resolve(embedded);

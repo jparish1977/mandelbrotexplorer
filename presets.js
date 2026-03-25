@@ -1,7 +1,7 @@
 // Mandelbrot Explorer Presets
 // This file contains all preset configurations for the Mandelbrot Explorer
 
-var mandelbrotExplorerPresets = {
+const mandelbrotExplorerPresets = {
 	"cloudLengthFilter": {
 		"iteration8": {
 			func: function(pathIndex, iteration, escapePath){
@@ -210,7 +210,7 @@ var mandelbrotExplorerPresets = {
 		},
 		"subtractPrevious": {
 			func: function(pathIndex, iteration, escapePath, newX, newY, z){
-				var prevIndex = pathIndex > 1 ? pathIndex - 1 : 0;
+				const prevIndex = pathIndex > 1 ? pathIndex - 1 : 0;
 				return [newX + escapePath[prevIndex][0] * -1, newY + escapePath[prevIndex][1] * -1, z * -1];
 			},
 			getCodeString: function(pathIndex, iteration, escapePath, newX, newY, z){
@@ -265,8 +265,8 @@ var mandelbrotExplorerPresets = {
 		},
 		"spiral": {
 			func: function(pathIndex, iteration, escapePath, newX, newY, z){
-				var angle = pathIndex * 0.5;
-				var radius = 0.1;
+				const angle = pathIndex * 0.5;
+				const radius = 0.1;
 				newX = newX + Math.cos(angle) * radius;
 				newY = newY + Math.sin(angle) * radius;
 				return [newX, newY, z * -1];
@@ -277,7 +277,7 @@ var mandelbrotExplorerPresets = {
 		},
 		"wave": {
 			func: function(pathIndex, iteration, escapePath, newX, newY, z){
-				var wave = Math.sin(pathIndex * 0.3) * 0.05;
+				const wave = Math.sin(pathIndex * 0.3) * 0.05;
 				newX = newX + wave;
 				newY = newY + wave;
 				return [newX, newY, z * -1];
@@ -289,8 +289,8 @@ var mandelbrotExplorerPresets = {
 		"magnitudeDifference": {
 			func: function(pathIndex, iteration, escapePath, newX, newY, z){
 				if(pathIndex > 0) {
-					var currentMag = mandelbrotExplorer.getAbsoluteValueOfComplexNumber(escapePath[pathIndex]);
-					var prevMag = mandelbrotExplorer.getAbsoluteValueOfComplexNumber(escapePath[pathIndex-1]);
+					const currentMag = mandelbrotExplorer.getAbsoluteValueOfComplexNumber(escapePath[pathIndex]);
+					const prevMag = mandelbrotExplorer.getAbsoluteValueOfComplexNumber(escapePath[pathIndex-1]);
 					return [newX, newY, currentMag - prevMag];
 				}
 				return [newX, newY, z * -1];
@@ -302,8 +302,8 @@ var mandelbrotExplorerPresets = {
 		"magnitudeSum": {
 			func: function(pathIndex, iteration, escapePath, newX, newY, z){
 				if(pathIndex > 0) {
-					var sumX = escapePath[pathIndex][0] + escapePath[pathIndex-1][0];
-					var sumY = escapePath[pathIndex][1] + escapePath[pathIndex-1][1];
+					const sumX = escapePath[pathIndex][0] + escapePath[pathIndex-1][0];
+					const sumY = escapePath[pathIndex][1] + escapePath[pathIndex-1][1];
 					return [newX, newY, mandelbrotExplorer.getAbsoluteValueOfComplexNumber([sumX, sumY])];
 				}
 				return [newX, newY, z * -1];
@@ -416,8 +416,8 @@ var mandelbrotExplorerPresets = {
 		},
 		"spiralZone": {
 			func: function(newX, newY, particleVector){
-				var distance = mandelbrotExplorer.getAbsoluteValueOfComplexNumber([newX, newY]);
-				var angle = Math.atan2(newY, newX);
+				const distance = mandelbrotExplorer.getAbsoluteValueOfComplexNumber([newX, newY]);
+				const angle = Math.atan2(newY, newX);
 				return distance > 0.2 && distance < 0.8 && angle > 0;
 			},
 			getCodeString: function(newX, newY, particleVector){
@@ -541,11 +541,11 @@ var mandelbrotExplorerPresets = {
 			"valleyOfElephantsInsideOut": {
 				func: function(escapePath, pathIndex){
 					if(pathIndex > 0) {
-						var currentZ = mandelbrotExplorer.getAbsoluteValueOfComplexNumber(escapePath[pathIndex]);
-						var previousZ = mandelbrotExplorer.getAbsoluteValueOfComplexNumber(escapePath[pathIndex-1]);
-						var useZ = currentZ - previousZ;
-						var useX = escapePath[pathIndex-1][0] + ((escapePath[pathIndex][0]/currentZ) * currentZ);
-						var useY = escapePath[pathIndex-1][1] + ((escapePath[pathIndex][1]/currentZ) * currentZ);
+						const currentZ = mandelbrotExplorer.getAbsoluteValueOfComplexNumber(escapePath[pathIndex]);
+						const previousZ = mandelbrotExplorer.getAbsoluteValueOfComplexNumber(escapePath[pathIndex-1]);
+						const useZ = currentZ - previousZ;
+						const useX = escapePath[pathIndex-1][0] + ((escapePath[pathIndex][0]/currentZ) * currentZ);
+						const useY = escapePath[pathIndex-1][1] + ((escapePath[pathIndex][1]/currentZ) * currentZ);
 						escapePath[pathIndex][0] = useX;
 						escapePath[pathIndex][1] = useY;
 						return useZ;
@@ -559,11 +559,11 @@ var mandelbrotExplorerPresets = {
 			"valleyOfElephantsInverted": {
 				func: function(escapePath, pathIndex){
 					if(pathIndex > 0) {
-						var currentZ = mandelbrotExplorer.getAbsoluteValueOfComplexNumber(escapePath[pathIndex]);
-						var previousZ = mandelbrotExplorer.getAbsoluteValueOfComplexNumber(escapePath[pathIndex-1]);
-						var useZ = previousZ - currentZ;
-						var useX = escapePath[pathIndex-1][0] + ((escapePath[pathIndex][0]/currentZ) * currentZ);
-						var useY = escapePath[pathIndex-1][1] + ((escapePath[pathIndex][1]/currentZ) * currentZ);
+						const currentZ = mandelbrotExplorer.getAbsoluteValueOfComplexNumber(escapePath[pathIndex]);
+						const previousZ = mandelbrotExplorer.getAbsoluteValueOfComplexNumber(escapePath[pathIndex-1]);
+						const useZ = previousZ - currentZ;
+						const useX = escapePath[pathIndex-1][0] + ((escapePath[pathIndex][0]/currentZ) * currentZ);
+						const useY = escapePath[pathIndex-1][1] + ((escapePath[pathIndex][1]/currentZ) * currentZ);
 						escapePath[pathIndex][0] = useX;
 						escapePath[pathIndex][1] = useY;
 						return useZ;
@@ -577,11 +577,11 @@ var mandelbrotExplorerPresets = {
 			"stuffedInTheCorner": {
 				func: function(escapePath, pathIndex){
 					if(pathIndex > 0) {
-						var currentZ = mandelbrotExplorer.getAbsoluteValueOfComplexNumber(escapePath[pathIndex]);
-						var previousZ = mandelbrotExplorer.getAbsoluteValueOfComplexNumber(escapePath[pathIndex-1]);
-						var useX = escapePath[pathIndex][0] + (escapePath[pathIndex][0] * (escapePath[pathIndex][0]/Math.sqrt(currentZ)));
-						var useY = escapePath[pathIndex][1] + (escapePath[pathIndex][1] * (escapePath[pathIndex][1]/Math.sqrt(currentZ)));
-						var useZ = mandelbrotExplorer.getAbsoluteValueOfComplexNumber([useX, useY]) - previousZ;
+						const currentZ = mandelbrotExplorer.getAbsoluteValueOfComplexNumber(escapePath[pathIndex]);
+						const previousZ = mandelbrotExplorer.getAbsoluteValueOfComplexNumber(escapePath[pathIndex-1]);
+						const useX = escapePath[pathIndex][0] + (escapePath[pathIndex][0] * (escapePath[pathIndex][0]/Math.sqrt(currentZ)));
+						const useY = escapePath[pathIndex][1] + (escapePath[pathIndex][1] * (escapePath[pathIndex][1]/Math.sqrt(currentZ)));
+						const useZ = mandelbrotExplorer.getAbsoluteValueOfComplexNumber([useX, useY]) - previousZ;
 						escapePath[pathIndex][0] = useX;
 						escapePath[pathIndex][1] = useY;
 						return useZ;
@@ -638,8 +638,8 @@ var mandelbrotExplorerPresets = {
 		},
 		"averagePathValue": {
 			func: function(escapePath){
-				var sum = 0;
-				for(var i = 0; i < escapePath.length; i++) {
+				let sum = 0;
+				for(let i = 0; i < escapePath.length; i++) {
 					sum += mandelbrotExplorer.getAbsoluteValueOfComplexNumber(escapePath[i]);
 				}
 				return sum / escapePath.length;

@@ -1,10 +1,10 @@
 // Settings Manager Class for Mandelbrot Explorer
-var SettingsManager = {
+const SettingsManager = {
 	storageKey: 'mandelbrotExplorer_settings',
 	
 	saveSettings: function(explorer) {
 		try {
-			var settings = {
+			const settings = {
 				startX: explorer.startX,
 				startY: explorer.startY,
 				endX: explorer.endX,
@@ -42,12 +42,12 @@ var SettingsManager = {
 	
 	loadSettings: function(explorer) {
 		try {
-			var savedSettings = localStorage.getItem(this.storageKey);
+			const savedSettings = localStorage.getItem(this.storageKey);
 			if (savedSettings) {
-				var settings = JSON.parse(savedSettings);
+				const settings = JSON.parse(savedSettings);
 				
 				// Apply saved settings
-				for (var key in settings) {
+				for (const key in settings) {
 					if (explorer.hasOwnProperty(key) && settings[key] !== null && settings[key] !== undefined) {
 						explorer[key] = settings[key];
 					}
@@ -87,7 +87,7 @@ var SettingsManager = {
 	// Get current camera state
 	getCameraState: function(explorer) {
 		if (explorer.threeRenderer && explorer.threeRenderer.camera) {
-			var camera = explorer.threeRenderer.camera;
+			const camera = explorer.threeRenderer.camera;
 			return {
 				position: {
 					x: camera.position.x,
@@ -111,7 +111,7 @@ var SettingsManager = {
 	// Get current controls state
 	getControlsState: function(explorer) {
 		if (explorer.threeRenderer && explorer.threeRenderer.controls) {
-			var controls = explorer.threeRenderer.controls;
+			const controls = explorer.threeRenderer.controls;
 			return {
 				object: {
 					position: controls.object && controls.object.position ? {
@@ -145,7 +145,7 @@ var SettingsManager = {
 	// Restore camera state
 	restoreCameraState: function(explorer, cameraState) {
 		if (explorer.threeRenderer && explorer.threeRenderer.camera && cameraState) {
-			var camera = explorer.threeRenderer.camera;
+			const camera = explorer.threeRenderer.camera;
 			
 			// Restore position
 			if (cameraState.position) {
@@ -172,7 +172,7 @@ var SettingsManager = {
 	restoreControlsState: function(explorer, controlsState) {
 		// TODO: Theres some strangeness when restoring the camera and controls....
 		if (explorer.threeRenderer && explorer.threeRenderer.controls && controlsState) {
-			var controls = explorer.threeRenderer.controls;
+			const controls = explorer.threeRenderer.controls;
 			//// Restore camera position
 			//if (controlsState.object && controlsState.object.position && controls.object && controls.object.position) {
 			//	controls.object.position.set(

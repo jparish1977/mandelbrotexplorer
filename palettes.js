@@ -1,7 +1,7 @@
 // Palette definitions for Mandelbrot Explorer
 // Extracted from mandelbrotexplorer.js
 
-var paletteColors = {
+const paletteColors = {
 	"lightyellow1":			{"R": 255, "G": 255, "B": 204, "A": 255},
  	"lightyellow2":			{"R": 255, "G": 255, "B": 153, "A": 255},
  	"lightyellow3":			{"R": 255, "G": 255, "B": 102, "A": 255},
@@ -69,7 +69,7 @@ var paletteColors = {
  	"palevioletred":		{"R": 219, "G": 112, "B": 147, "A": 255},
 };
 
-var palettes = {
+const palettes = {
 	"palette1": [
 		{"B": 15, "R": 10, "G":  5, "A":255},
 		{"R": 15, "G": 10, "B":  5, "A":255},
@@ -358,9 +358,9 @@ var palettes = {
 	"variable_rainbow": [],
 	get buildRainbow(){
 		if(this.variable_rainbow.length === 0){
-			var result = [];
-			var frequency = .3;
-			for (var i = 0; i < 32; ++i){
+			const result = [];
+			const frequency = .3;
+			for (let i = 0; i < 32; ++i){
 			   red   = Math.round( (Math.sin(frequency*i + 0) * 127 + 128) % 255, 0);
 			   green = Math.round( (Math.sin(frequency*i + 2) * 127 + 128) % 255, 0);
 			   blue  = Math.round( (Math.sin(frequency*i + 4) * 127 + 128) % 255, 0);
@@ -374,7 +374,7 @@ var palettes = {
 		return this.variable_rainbow;
 	},
 	"getColorIndex": function(colorPalette, color){
-		for( var index = 0; index < colorPalette.length; index++ ){
+		for( let index = 0; index < colorPalette.length; index++ ){
 			if(    colorPalette[index].R === color.R 
 				&& colorPalette[index].G === color.G 
 				&& colorPalette[index].B === color.B 

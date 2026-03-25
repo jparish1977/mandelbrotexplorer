@@ -2,7 +2,7 @@
  * ThreeJSRenderer - Handles all Three.js rendering concerns
  * Separates 3D rendering logic from mathematical calculations
  */
-var ThreeJSRenderer = {
+const ThreeJSRenderer = {
     // Three.js objects
     renderer: null,
     scene: null,
