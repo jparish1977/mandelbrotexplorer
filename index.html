@@ -29,20 +29,7 @@
 		<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/javascript/javascript.min.js"></script>
 		<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/hint/show-hint.js"></script>
 	</head>
-	<body onload="init();setTimeout(function(){
-		try {
-			if(window.buildAlternativeUI){
-				buildAlternativeUI();
-				document.getElementById('controls').style.display='none';
-				document.getElementById('alternativeUI').style.display='';
-			} else {
-				console.warn('Alternative UI not available, keeping classic UI');
-			}
-		} catch (error) {
-			console.error('Error loading alternative UI:', error);
-			console.log('Falling back to classic UI');
-		}
-	}, 500);">
+	<body>
 		<div>
 			<canvas id="mandelbrotCanvas2d" ondblclick="zoomToDblClick(this, event)"></canvas>
 			<canvas id="mandelbrotCanvas3d"></canvas>

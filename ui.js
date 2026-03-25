@@ -56,11 +56,11 @@ function dumpBrot(){
             tries.push((-useX) + "," + (-useY));
             
             var escapePaths = getSymetricalEscapePaths(useX, useY, 1024);
-            if(escapePaths[0].length == 1024){
+            if(escapePaths[0].length === 1024){
                 values.push(useX + "," + useY);
             }
             
-            if(escapePaths[1].length == 1024){
+            if(escapePaths[1].length === 1024){
                 values.push((-useX) + "," + (-useY));
             }
         }
@@ -295,7 +295,7 @@ function toggleIterationCycle(){
 }
 
 function toggleControls(){
-    if( document.getElementById("controls_maximized").style.display == "none" ){
+    if( document.getElementById("controls_maximized").style.display === "none" ){
         document.getElementById("controls_maximized").style.display = "";
         document.getElementById("controls_minimized").style.opacity = document.getElementById("controls").style.opacity;
         document.getElementById("controls_minimized").style["border-bottom-right-radius"] = "0em";
@@ -361,7 +361,7 @@ function highliteControls(){
 function dimControls(){
     document.getElementById("controls").style.opacity = 0.5;
     document.getElementById("controls_minimized").style.opacity = 0.5;
-    if( document.getElementById("controls_maximized").style.display == "none" ){
+    if( document.getElementById("controls_maximized").style.display === "none" ){
         document.getElementById("controls_minimized").style.opacity = 0.25;
     }
     document.getElementById("controls_maximized").style.opacity = 0.5;
@@ -489,7 +489,7 @@ function loadPaletteOptions()
             var option = document.createElement("option");
             option.text = name;
             option.value = name;
-            if( palettes[name] == mandelbrotExplorer.palette )
+            if( palettes[name] === mandelbrotExplorer.palette )
             {
                 option.selected = true;
             }
@@ -851,13 +851,13 @@ function generateHair(){
     }
     
     var aspect = mandelbrotExplorer.canvas_3d.height / mandelbrotExplorer.canvas_3d.width;
-    var startX = mandelbrotExplorer.startX == null ? -2 : mandelbrotExplorer.startX;
-    var endX = mandelbrotExplorer.endX == null ? 2 : mandelbrotExplorer.endX;
+    var startX = mandelbrotExplorer.startX === null ? -2 : mandelbrotExplorer.startX;
+    var endX = mandelbrotExplorer.endX === null ? 2 : mandelbrotExplorer.endX;
     var horizontalRange = Math.abs( startX - endX );
     var verticalRange = horizontalRange * aspect;
     
-    var startY = mandelbrotExplorer.startY == null ? (verticalRange / 2) : mandelbrotExplorer.startY;
-    var endY = mandelbrotExplorer.endY == null ? (verticalRange / -2) : mandelbrotExplorer.endY;
+    var startY = mandelbrotExplorer.startY === null ? (verticalRange / 2) : mandelbrotExplorer.startY;
+    var endY = mandelbrotExplorer.endY === null ? (verticalRange / -2) : mandelbrotExplorer.endY;
 
     mandelbrotExplorer.drawMandelbrotsHair({
         "startX": mandelbrotExplorer.startX,
@@ -874,7 +874,7 @@ function generateHair(){
         }, false);
 
         mandelbrotExplorer.threeRenderer.renderer.context.canvas.addEventListener("webglcontextrestored", function(event) {
-            if(restoreContextTimer != null){
+            if(restoreContextTimer !== null){
                 cancelTimeout(restoreContextTimer);
             }
             restoreContextTimer = setTimeout(function(){restoreContext();animate();}, 500)
@@ -890,13 +890,13 @@ function generateCloud(){
     }
     
     var aspect = mandelbrotExplorer.canvas_3d.height / mandelbrotExplorer.canvas_3d.width;
-    var startX = mandelbrotExplorer.startX == null ? -2 : mandelbrotExplorer.startX;
-    var endX = mandelbrotExplorer.endX == null ? 2 : mandelbrotExplorer.endX;
+    var startX = mandelbrotExplorer.startX === null ? -2 : mandelbrotExplorer.startX;
+    var endX = mandelbrotExplorer.endX === null ? 2 : mandelbrotExplorer.endX;
     var horizontalRange = Math.abs( startX - endX );
     var verticalRange = horizontalRange * aspect;
     
-    var startY = mandelbrotExplorer.startY == null ? (verticalRange / 2) : mandelbrotExplorer.startY;
-    var endY = mandelbrotExplorer.endY == null ? (verticalRange / -2) : mandelbrotExplorer.endY;
+    var startY = mandelbrotExplorer.startY === null ? (verticalRange / 2) : mandelbrotExplorer.startY;
+    var endY = mandelbrotExplorer.endY === null ? (verticalRange / -2) : mandelbrotExplorer.endY;
 
     mandelbrotExplorer.drawMandelbrotCloud({
         "startX": mandelbrotExplorer.startX,
@@ -913,7 +913,7 @@ function generateCloud(){
         }, false);
 
         mandelbrotExplorer.threeRenderer.renderer.context.canvas.addEventListener("webglcontextrestored", function(event) {
-            if(restoreContextTimer != null){
+            if(restoreContextTimer !== null){
                 cancelTimeout(restoreContextTimer);
             }
             restoreContextTimer = setTimeout(function(){restoreContext();animate();}, 500)

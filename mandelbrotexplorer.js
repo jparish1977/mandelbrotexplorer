@@ -91,8 +91,8 @@ var mandelbrotExplorer = {
 	"dualZ": true,
 	"dualZMultiplier":      "newX = escapePath[pathIndex][0];\nnewY = escapePath[pathIndex][1];\nnewZ = z * -1;",
 	"particleSize":         "mandelbrotExplorer.xScale_3d/mandelbrotExplorer.maxIterations_3d",
-	"cloudLengthFilter":	"escapePath.length > 8",//"escapePath.length == mandelbrotExplorer.maxIterations_3d - 1",//"escapePath.length > 8",
-	"cloudIterationFilter":	"iteration > 8",//"iteration > 8",//"iteration == mandelbrotExplorer.maxIterations_3d",//"iteration < 9",
+	"cloudLengthFilter":	"escapePath.length > 8",//"escapePath.length === mandelbrotExplorer.maxIterations_3d - 1",//"escapePath.length > 8",
+	"cloudIterationFilter":	"iteration > 8",//"iteration > 8",//"iteration === mandelbrotExplorer.maxIterations_3d",//"iteration < 9",
 	"particleSystems": 		[],//[iterationIndex][THREE.ParticleSystem]
 	"lines": 		[],//[iterationIndex][THREE.]
 	"iterationParticles": [],//[iterationIndex]{particles: THREE.Geometry}      
@@ -150,9 +150,9 @@ var mandelbrotExplorer = {
 		// FIX THIS
 		var repeatCheck = function(zValues, z, lastZ){
 			var test = zValues.filter(function(testZ){
-				return z[0] != testZ[0] && z[1] != testZ[1];
+				return z[0] !== testZ[0] && z[1] !== testZ[1];
 			});
-			return zValues.length != test.length;
+			return zValues.length !== test.length;
 		};
 
 		//var juliaC = eval(this.juliaC);
@@ -161,7 +161,7 @@ var mandelbrotExplorer = {
 				var c = [xValue, yValue];
 				var juliaC = eval(this.juliaC);
 				var color;
-				if( this.getAbsoluteValueOfComplexNumber( juliaC ) != 0 ){
+				if( this.getAbsoluteValueOfComplexNumber( juliaC ) !== 0 ){
 					color = this.getJuliaEscapePathLengthColor( juliaC, c, this.maxIterations_2d, null, true, repeatCheck );				
 				}
 				else{
@@ -794,13 +794,13 @@ var mandelbrotExplorer = {
             var juliaC = mandelbrotExplorer.cloudMethods.evalJuliaC(c);
             var repeatCheck = function(zValues, z, lastZ){
                 var test = zValues.filter(function(testZ){
-                    return z[0] != testZ[0] && z[1] != testZ[1];
+                    return z[0] !== testZ[0] && z[1] !== testZ[1];
                 });
-                return zValues.length != test.length;
+                return zValues.length !== test.length;
             };
 
             var escapePath;
-            if( mandelbrotExplorer.getAbsoluteValueOfComplexNumber( juliaC ) != 0 ){
+            if( mandelbrotExplorer.getAbsoluteValueOfComplexNumber( juliaC ) !== 0 ){
                 escapePath = mandelbrotExplorer.getJuliaEscapePath( juliaC, c, mandelbrotExplorer.maxIterations_3d, true, repeatCheck );				
             }
             else{
@@ -855,7 +855,7 @@ var mandelbrotExplorer = {
 				}
 			)
 			
-			if(sosRes == 0) {
+			if(sosRes === 0) {
 				sosRes = 43;
 			}
 
@@ -1289,7 +1289,7 @@ var mandelbrotExplorer = {
                             return true;
                         }
 
-                        if (pathIndex != 0) {
+                        if (pathIndex !== 0) {
                             z = mandelbrotExplorer.cloudMethods.evalEscapingZ(pathIndex, iteration, escapePath);
                         }
                         
@@ -1498,12 +1498,12 @@ var mandelbrotExplorer = {
 						}
 						var repeatCheck = function(zValues, z, lastZ){
 							var test = zValues.filter(function(testZ){
-								return z[0] != testZ[0] && z[1] != testZ[1];
+								return z[0] !== testZ[0] && z[1] !== testZ[1];
 							});
-							return zValues.length != test.length;
+							return zValues.length !== test.length;
 						};
 						var escapePath;
-						if( mandelbrotExplorer.getAbsoluteValueOfComplexNumber( juliaC ) != 0 ){
+						if( mandelbrotExplorer.getAbsoluteValueOfComplexNumber( juliaC ) !== 0 ){
 							escapePath = mandelbrotExplorer.getJuliaEscapePath( juliaC, c, mandelbrotExplorer.maxIterations_3d, true, repeatCheck );				
 						}
 						else{
@@ -1520,8 +1520,8 @@ var mandelbrotExplorer = {
 						escapePath.forEach(function(pathValue, pathIndex, source){
 							var iteration = pathIndex + 1;
 							
-							if( mandelbrotExplorer.cloudLengthFilter.length > 0 && eval( mandelbrotExplorer.cloudLengthFilter ) == false ) return true;
-							if( mandelbrotExplorer.cloudIterationFilter.length > 0 && eval( mandelbrotExplorer.cloudIterationFilter ) == false ) return true;
+							if( mandelbrotExplorer.cloudLengthFilter.length > 0 && eval( mandelbrotExplorer.cloudLengthFilter ) === false ) return true;
+							if( mandelbrotExplorer.cloudIterationFilter.length > 0 && eval( mandelbrotExplorer.cloudIterationFilter ) === false ) return true;
 							var direction = [1,1];
 							if(pathIndex > 0){
 								direction[0] = escapePath[pathIndex][0] > escapePath[pathIndex-1][0] ? -1 : 1;
@@ -1530,7 +1530,7 @@ var mandelbrotExplorer = {
 							// this isn't right.... zDirection...
 							var zDirection = direction[0] * direction[1];
 							
-							if( pathIndex != 0 ) {
+							if( pathIndex !== 0 ) {
 								z = mandelbrotExplorer.cloudMethods.evalEscapingZ(pathIndex, iteration, escapePath);// eval( mandelbrotExplorer.escapingZ );
 							}
 							
@@ -1639,7 +1639,7 @@ var mandelbrotExplorer = {
 		}
 	},
 	"getMandelbrotEscapePathLengthColor": function(c, maxIterations, palette){
-		if( typeof( palette ) == "undefined" || !palette ){
+		if( typeof( palette ) === "undefined" || !palette ){
 			palette = this.palette;
 		}
 		var escapePath = this.getMandelbrotEscapePath(c, maxIterations);
@@ -1648,7 +1648,7 @@ var mandelbrotExplorer = {
 		return palette[ index ];
 	},
 	"getJuliaEscapePathLengthColor": function(c, z, maxIterations, palette, bailOnRepeat, repeatCheck){
-		if( typeof( palette ) == "undefined" || !palette ){
+		if( typeof( palette ) === "undefined" || !palette ){
 			palette = this.palette;
 		}
 		var escapePath = this.getJuliaEscapePath(c, z, maxIterations, bailOnRepeat, repeatCheck);
@@ -1747,11 +1747,11 @@ var mandelbrotExplorer = {
 		var foundNext = false;
 		var particleSystemsLength = Object.keys(this.particleSystems).length;
 		var cycleDirection = 1;
-		while( particleSystemsLength > 0 && foundNext == false ){
+		while( particleSystemsLength > 0 && foundNext === false ){
 			for( var index in this.particleSystems ){
 				this.threeRenderer.removeObject( this.particleSystems[index] );
 				var iteration = parseInt(index) + 1;
-				if( this.cloudIterationFilter.length > 0 && eval( this.cloudIterationFilter ) == false ) continue;
+				if( this.cloudIterationFilter.length > 0 && eval( this.cloudIterationFilter ) === false ) continue;
 				
 				if( this.particleSystems[index] && 
 					iteration >= this.nextCycleIteration - (this.iterationCycleFrame/2) && 
@@ -1848,7 +1848,7 @@ var mandelbrotExplorer = {
 		return false;
 	},
 	"getMandelbrotEscapePath": function( c, maxIterations, bailOnRepeat ){
-		if(typeof(bailOnRepeat) == "undefined"){
+		if(typeof(bailOnRepeat) === "undefined"){
 			bailOnRepeat = true;
 		}
 		
@@ -1861,13 +1861,13 @@ var mandelbrotExplorer = {
 		
 		if(typeof(repeatCheck) === "undefined"){
 			repeatCheck = function(zValues, z, lastZ){
-				return z[0] == lastZ[0] && z[1] == lastZ[1];
+				return z[0] === lastZ[0] && z[1] === lastZ[1];
 			};
 		}
 		
 		var iterations = 0;
 		var zValues = Array();
-		if( this.getAbsoluteValueOfComplexNumber(z) != 0 ){
+		if( this.getAbsoluteValueOfComplexNumber(z) !== 0 ){
 			zValues.push(z);
 		}
 		
@@ -1890,7 +1890,7 @@ var mandelbrotExplorer = {
 		var fullLength = zValues.length;
 		zValues = zValues.filter(function(teztZ, testZIndex, testZValues){
 			for ( var zi = 0; zi < testZIndex; zi++ ){
-				if(teztZ[0] == testZValues[zi][0] && teztZ[1] == testZValues[zi][1]){
+				if(teztZ[0] === testZValues[zi][0] && teztZ[1] === testZValues[zi][1]){
 					return false;
 				}
 			}
@@ -1913,13 +1913,13 @@ var mandelbrotExplorer = {
 		
 		if(typeof(repeatCheck) === "undefined"){
 			repeatCheck = function(zValues, z, lastZ){
-				return z[0] == lastZ[0] && z[1] == lastZ[1];
+				return z[0] === lastZ[0] && z[1] === lastZ[1];
 			};
 		}
 		
 		var iterations = 0;
 		var zValues = Array();
-		if( this.getAbsoluteValueOfComplexNumber(z) != 0 ){
+		if( this.getAbsoluteValueOfComplexNumber(z) !== 0 ){
 			zValues.push(z);
 		}
 		
@@ -1961,9 +1961,9 @@ var mandelbrotExplorer = {
 		return Math.sqrt( Math.abs( Math.pow(c[0], 2) + Math.pow(c[1],2) ) );
 	},
 	"padString": function (str, len, pad, dir) {
-		if (typeof(len) == "undefined") { var len = 0; }
-		if (typeof(pad) == "undefined") { var pad = ' '; }
-		if (typeof(dir) == "undefined") { var dir = STR_PAD_RIGHT; }
+		if (typeof(len) === "undefined") { var len = 0; }
+		if (typeof(pad) === "undefined") { var pad = ' '; }
+		if (typeof(dir) === "undefined") { var dir = STR_PAD_RIGHT; }
 
 		if (len + 1 >= str.length) {
 			switch (dir){

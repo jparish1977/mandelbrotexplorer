@@ -5,26 +5,26 @@ var mandelbrotExplorerPresets = {
 	"cloudLengthFilter": {
 		"iteration8": {
 			func: function(pathIndex, iteration, escapePath){
-				return escapePath.length == 8;
+				return escapePath.length === 8;
 			},
 			getCodeString: function(pathIndex, iteration, escapePath){
-				return "escapePath.length == 8";
+				return "escapePath.length === 8";
 			}
 		},
 		"iterationDecimation": {
 			func: function(pathIndex, iteration, escapePath){
-				return escapePath.length % 10 == 0;
+				return escapePath.length % 10 === 0;
 			},
 			getCodeString: function(pathIndex, iteration, escapePath){
-				return "escapePath.length % 10 == 0";
+				return "escapePath.length % 10 === 0";
 			}
 		},
 		"maxIterations": {
 			func: function(pathIndex, iteration, escapePath){
-				return escapePath.length == mandelbrotExplorer.maxIterations_3d || escapePath.shortened;
+				return escapePath.length === mandelbrotExplorer.maxIterations_3d || escapePath.shortened;
 			},
 			getCodeString: function(pathIndex, iteration, escapePath){
-				return "escapePath.length == mandelbrotExplorer.maxIterations_3d || escapePath.shortened";
+				return "escapePath.length === mandelbrotExplorer.maxIterations_3d || escapePath.shortened";
 			}
 		},
 		"theMeat": {
@@ -41,10 +41,10 @@ var mandelbrotExplorerPresets = {
 		},
 		"happy420_fullPaths": {
 			func: function(pathIndex, iteration, escapePath){
-				return escapePath.length == mandelbrotExplorer.maxIterations_3d;
+				return escapePath.length === mandelbrotExplorer.maxIterations_3d;
 			},
 			getCodeString: function(pathIndex, iteration, escapePath){
-				return "escapePath.length == mandelbrotExplorer.maxIterations_3d";
+				return "escapePath.length === mandelbrotExplorer.maxIterations_3d";
 			}
 		},
 		"longPaths": {
@@ -75,10 +75,10 @@ var mandelbrotExplorerPresets = {
 		},
 		"maxIterations": {
 			func: function(pathIndex, iteration, escapePath){
-				return iteration == mandelbrotExplorer.maxIterations_3d;
+				return iteration === mandelbrotExplorer.maxIterations_3d;
 			},
 			getCodeString: function(pathIndex, iteration, escapePath){
-				return "iteration == mandelbrotExplorer.maxIterations_3d";
+				return "iteration === mandelbrotExplorer.maxIterations_3d";
 			}
 		},
 		"lessThan9": {
@@ -91,18 +91,18 @@ var mandelbrotExplorerPresets = {
 		},
 		"evenIterations": {
 			func: function(pathIndex, iteration, escapePath){
-				return iteration % 2 == 0;
+				return iteration % 2 === 0;
 			},
 			getCodeString: function(pathIndex, iteration, escapePath){
-				return "iteration % 2 == 0";
+				return "iteration % 2 === 0";
 			}
 		},
 		"oddIterations": {
 			func: function(pathIndex, iteration, escapePath){
-				return iteration % 2 == 1;
+				return iteration % 2 === 1;
 			},
 			getCodeString: function(pathIndex, iteration, escapePath){
-				return "iteration % 2 == 1";
+				return "iteration % 2 === 1";
 			}
 		},
 		"firstHalf": {
@@ -492,18 +492,18 @@ var mandelbrotExplorerPresets = {
 			},
 			"alternatingPathOrigin": {
 				func: function(escapePath, pathIndex){
-					return (pathIndex % 2 == 0 ? 1 : -1) * mandelbrotExplorer.getAbsoluteValueOfComplexNumber(escapePath[0]);
+					return (pathIndex % 2 === 0 ? 1 : -1) * mandelbrotExplorer.getAbsoluteValueOfComplexNumber(escapePath[0]);
 				},
 				getCodeString: function(escapePath, pathIndex){
-					return "return (pathIndex % 2 == 0 ? 1 : -1) * mandelbrotExplorer.getAbsoluteValueOfComplexNumber(escapePath[0]);";
+					return "return (pathIndex % 2 === 0 ? 1 : -1) * mandelbrotExplorer.getAbsoluteValueOfComplexNumber(escapePath[0]);";
 				}
 			},
 			pathOriginAndSkewedByPrevious: {
 				func: function(escapePath, pathIndex){
-					return mandelbrotExplorer.getAbsoluteValueOfComplexNumber((escapePath.length == 1 ? escapePath[0] : [escapePath[pathIndex][0] + escapePath[pathIndex-1][0],escapePath[pathIndex][1] + escapePath[pathIndex-1][1]]));
+					return mandelbrotExplorer.getAbsoluteValueOfComplexNumber((escapePath.length === 1 ? escapePath[0] : [escapePath[pathIndex][0] + escapePath[pathIndex-1][0],escapePath[pathIndex][1] + escapePath[pathIndex-1][1]]));
 				},
 				getCodeString: function(escapePath, pathIndex){
-					return "return mandelbrotExplorer.getAbsoluteValueOfComplexNumber((escapePath.length == 1 ? escapePath[0] : [escapePath[pathIndex][0] + escapePath[pathIndex-1][0],escapePath[pathIndex][1] + escapePath[pathIndex-1][1]]));";
+					return "return mandelbrotExplorer.getAbsoluteValueOfComplexNumber((escapePath.length === 1 ? escapePath[0] : [escapePath[pathIndex][0] + escapePath[pathIndex-1][0],escapePath[pathIndex][1] + escapePath[pathIndex-1][1]]));";
 				}
 			},
 			previousPathZ: {
