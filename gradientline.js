@@ -2,12 +2,12 @@
 
 function changeColor( line, options ) {
 
-  var colors = line.geometry.attributes.color.array;
-  var segments = line.geometry.attributes.color.count * 3;
-  var frequency = 1 /  ( options.steps * segments );
-  var color = new THREE.Color();
+  const colors = line.geometry.attributes.color.array;
+  const segments = line.geometry.attributes.color.count * 3;
+  const frequency = 1 /  ( options.steps * segments );
+  const color = new THREE.Color();
 
-  for ( var i = 0, l = segments; i < l; i ++ ) {
+  for ( let i = 0, l = segments; i < l; i ++ ) {
     color.set ( makeColorGradient( i, frequency, options.phase ) );
 
     colors[ i * 3 ] = color.r;
@@ -25,10 +25,10 @@ function changeColor( line, options ) {
 
 function longToByteArray(/*long*/long) {
     // we want to represent the input as a 8-bytes array
-    var byteArray = [0, 0, 0, 0, 0, 0, 0, 0];
+    const byteArray = [0, 0, 0, 0, 0, 0, 0, 0];
 
-    for ( var index = 0; index < byteArray.length; index ++ ) {
-        var byte = long & 0xff;
+    for ( let index = 0; index < byteArray.length; index ++ ) {
+        const byte = long & 0xff;
         byteArray [ index ] = byte;
         long = (long - byte) / 256 ;
     }
@@ -37,14 +37,14 @@ function longToByteArray(/*long*/long) {
 };
 
 function getColoredBufferLine_jap ( palette, steps, geometry ){
-  var vertices = geometry.vertices;
-  var segments = geometry.vertices.length;
+  const vertices = geometry.vertices;
+  const segments = geometry.vertices.length;
 
   // geometry
   var geometry = new THREE.BufferGeometry();
 
   // material
-  var lineMaterial = new THREE.LineBasicMaterial({ vertexColors: THREE.VertexColors });
+  const lineMaterial = new THREE.LineBasicMaterial({ vertexColors: THREE.VertexColors });
 
   
   /*
@@ -63,11 +63,11 @@ function getColoredBufferLine_jap ( palette, steps, geometry ){
   */
   
   // attributes
-  var positions = new Float32Array( segments * 3 ); // 3 vertices per point
-  var colors = new Float32Array( segments * 3 );
+  const positions = new Float32Array( segments * 3 ); // 3 vertices per point
+  const colors = new Float32Array( segments * 3 );
 
-  var frequency = 1 /  ( steps * segments );
-  var color = new THREE.Color();
+  const frequency = 1 /  ( steps * segments );
+  const color = new THREE.Color();
   /*
   var colorIndex = steps;
   while( colorIndex >= palette.length  ) {
@@ -76,9 +76,9 @@ function getColoredBufferLine_jap ( palette, steps, geometry ){
 	//var color = palette[ colorIndex ];
   var color = new THREE.Color( color.R / 255, color.G / 255, color.B / 255 )
 */
-  var x, y, z;
+  let x, y, z;
 
-  for ( var i = 0, l = segments; i < l; i ++ ) {
+  for ( let i = 0, l = segments; i < l; i ++ ) {
 
     x = vertices[ i ].x;
     y = vertices[ i ].y;
@@ -89,7 +89,7 @@ function getColoredBufferLine_jap ( palette, steps, geometry ){
     positions[ i * 3 + 2 ] = z;
 
 	
-    var colorIndex = i % 3;
+    let colorIndex = i % 3;
     while( colorIndex >= palette.length  ) {
       colorIndex -= palette.length;
     }
@@ -126,31 +126,31 @@ function getColoredBufferLine_jap ( palette, steps, geometry ){
   geometry.addAttribute( 'color', new THREE.BufferAttribute( colors, 3 ) );
 
   // line
-  var line = new THREE.Line( geometry, lineMaterial );
+  const line = new THREE.Line( geometry, lineMaterial );
 
   return line;
 }
 
 function getColoredBufferLine_3 ( geometry, palette ){
-  var vertices = geometry.vertices;
-  var segments = geometry.vertices.length;
+  const vertices = geometry.vertices;
+  const segments = geometry.vertices.length;
 
   // geometry
   var geometry = new THREE.BufferGeometry();
 
   // material
-  var lineMaterial = new THREE.LineBasicMaterial({ vertexColors: THREE.VertexColors });
+  const lineMaterial = new THREE.LineBasicMaterial({ vertexColors: THREE.VertexColors });
 
   // attributes
-  var positions = new Float32Array( segments * 3 ); // 3 vertices per point
-  var colors = new Float32Array( segments * 3 );
+  const positions = new Float32Array( segments * 3 ); // 3 vertices per point
+  const colors = new Float32Array( segments * 3 );
 
   //var frequency = 1 /  ( steps * segments );
   //var color = new THREE.Color();
 
-  var x, y, z;
+  let x, y, z;
 
-  for ( var i = 0, l = segments; i < l; i ++ ) {
+  for ( let i = 0, l = segments; i < l; i ++ ) {
 
     x = vertices[ i ].x;
     y = vertices[ i ].y;
@@ -175,32 +175,32 @@ function getColoredBufferLine_3 ( geometry, palette ){
   geometry.addAttribute( 'color', new THREE.BufferAttribute( colors, 3 ) );
 
   // line
-  var line = new THREE.Line( geometry, lineMaterial );
+  const line = new THREE.Line( geometry, lineMaterial );
 
   return line;
 }
 
 function getColoredBufferLine_2 ( steps, phase, geometry, baseColorRGB ) {
 
-  var vertices = geometry.vertices;
-  var segments = geometry.vertices.length;
+  const vertices = geometry.vertices;
+  const segments = geometry.vertices.length;
 
   // geometry
   var geometry = new THREE.BufferGeometry();
 
   // material
-  var lineMaterial = new THREE.LineBasicMaterial({ vertexColors: THREE.VertexColors });
+  const lineMaterial = new THREE.LineBasicMaterial({ vertexColors: THREE.VertexColors });
 
   // attributes
-  var positions = new Float32Array( segments * 3 ); // 3 vertices per point
-  var colors = new Float32Array( segments * 3 );
+  const positions = new Float32Array( segments * 3 ); // 3 vertices per point
+  const colors = new Float32Array( segments * 3 );
 
-  var frequency = 1 /  ( steps * segments );
-  var color = new THREE.Color();
+  const frequency = 1 /  ( steps * segments );
+  const color = new THREE.Color();
 
-  var x, y, z;
+  let x, y, z;
 
-  for ( var i = 0, l = segments; i < l; i ++ ) {
+  for ( let i = 0, l = segments; i < l; i ++ ) {
 
     x = vertices[ i ].x;
     y = vertices[ i ].y;
@@ -222,7 +222,7 @@ function getColoredBufferLine_2 ( steps, phase, geometry, baseColorRGB ) {
   geometry.addAttribute( 'color', new THREE.BufferAttribute( colors, 3 ) );
 
   // line
-  var line = new THREE.Line( geometry, lineMaterial );
+  const line = new THREE.Line( geometry, lineMaterial );
 
   return line;
 
@@ -230,25 +230,25 @@ function getColoredBufferLine_2 ( steps, phase, geometry, baseColorRGB ) {
 // using buffer geometry
 function getColoredBufferLine ( steps, phase, geometry ) {
 
-  var vertices = geometry.vertices;
-  var segments = geometry.vertices.length;
+  const vertices = geometry.vertices;
+  const segments = geometry.vertices.length;
 
   // geometry
   var geometry = new THREE.BufferGeometry();
 
   // material
-  var lineMaterial = new THREE.LineBasicMaterial({ vertexColors: THREE.VertexColors });
+  const lineMaterial = new THREE.LineBasicMaterial({ vertexColors: THREE.VertexColors });
 
   // attributes
-  var positions = new Float32Array( segments * 3 ); // 3 vertices per point
-  var colors = new Float32Array( segments * 3 );
+  const positions = new Float32Array( segments * 3 ); // 3 vertices per point
+  const colors = new Float32Array( segments * 3 );
 
-  var frequency = 1 /  ( steps * segments );
-  var color = new THREE.Color();
+  const frequency = 1 /  ( steps * segments );
+  const color = new THREE.Color();
 
-  var x, y, z;
+  let x, y, z;
 
-  for ( var i = 0, l = segments; i < l; i ++ ) {
+  for ( let i = 0, l = segments; i < l; i ++ ) {
 
     x = vertices[ i ].x;
     y = vertices[ i ].y;
@@ -270,7 +270,7 @@ function getColoredBufferLine ( steps, phase, geometry ) {
   geometry.addAttribute( 'color', new THREE.BufferAttribute( colors, 3 ) );
 
   // line
-  var line = new THREE.Line( geometry, lineMaterial );
+  const line = new THREE.Line( geometry, lineMaterial );
 
   return line;
 
@@ -279,22 +279,22 @@ function getColoredBufferLine ( steps, phase, geometry ) {
 /* COLORS */			 
 function makeColorGradient_2 ( i, frequency, phase, baseColorRGB ) {  
 
-  var center = 128;
-  var width = 127;
+  const center = 128;
+  const width = 127;
   
   //baseColorRGB.R;//0-255
   //baseColorRGB.G;
   //baseColorRGB.B;
 	
-  var redFrequency, grnFrequency, bluFrequency;
+  let redFrequency, grnFrequency, bluFrequency;
  	grnFrequency = bluFrequency = redFrequency = frequency;
   
-  var phase2 = phase + 2;
-  var phase3 = phase + 4;
+  const phase2 = phase + 2;
+  const phase3 = phase + 4;
 
-  var red   = Math.sin( redFrequency * i + phase ) * width + center;
-  var green = Math.sin( grnFrequency * i + phase2 ) * width + center;
-  var blue  = Math.sin( bluFrequency * i + phase3 ) * width + center;
+  let red   = Math.sin( redFrequency * i + phase ) * width + center;
+  let green = Math.sin( grnFrequency * i + phase2 ) * width + center;
+  let blue  = Math.sin( bluFrequency * i + phase3 ) * width + center;
 
   red = 255-((red + baseColorRGB.R)%255);
   green = 255-((green + baseColorRGB.G)%255);
@@ -305,23 +305,23 @@ function makeColorGradient_2 ( i, frequency, phase, baseColorRGB ) {
 
 function makeColorGradient ( i, frequency, phase ) {  
 
-  var center = 128;
-  var width = 127;
+  const center = 128;
+  const width = 127;
 	
-  var redFrequency, grnFrequency, bluFrequency;
+  let redFrequency, grnFrequency, bluFrequency;
  	grnFrequency = bluFrequency = redFrequency = frequency;
   
-  var phase2 = phase + 2;
-  var phase3 = phase + 4;
+  const phase2 = phase + 2;
+  const phase3 = phase + 4;
 
-  var red   = Math.sin( redFrequency * i + phase ) * width + center;
-  var green = Math.sin( grnFrequency * i + phase2 ) * width + center;
-  var blue  = Math.sin( bluFrequency * i + phase3 ) * width + center;
+  const red   = Math.sin( redFrequency * i + phase ) * width + center;
+  const green = Math.sin( grnFrequency * i + phase2 ) * width + center;
+  const blue  = Math.sin( bluFrequency * i + phase3 ) * width + center;
 
   return parseInt( '0x' + _byte2Hex( red ) + _byte2Hex( green ) + _byte2Hex( blue ) );
 }
 
 function _byte2Hex (n) {
-  var nybHexString = "0123456789ABCDEF";
+  const nybHexString = "0123456789ABCDEF";
   return String( nybHexString.substr( ( n >> 4 ) & 0x0F, 1 ) ) + nybHexString.substr( n & 0x0F, 1 );
 }

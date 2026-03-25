@@ -1,0 +1,52 @@
+name: Code Quality
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+
+jobs:
+  js-css-html:
+    name: JS / CSS / HTML
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Clone JP_TOOLS
+        run: git clone https://github.com/jparish1977/JP_TOOLS.git /tmp/jp_tools
+      - name: Install JS tools
+        run: cd /tmp/jp_tools && npm install
+      - name: Check JS
+        run: |
+          for f in mandelbrotexplorer.js ui.js altUI-core.js altUI-config.js altUI-events.js altUI-completion.js altUI-codeMirror.js gradientline.js palettes.js presets.js settingsManager.js threeRenderer.js shaderLoader.js; do
+            echo "--- $f ---"
+            python /tmp/jp_tools/check.py "$f" --lang js --pretty
+          done
+      - name: Check CSS
+        run: python /tmp/jp_tools/check.py styles.css --lang css --pretty
+      - name: Check HTML
+        run: python /tmp/jp_tools/check.py index.html --lang html --pretty
+
+  php:
+    name: PHP
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+      - name: Clone JP_TOOLS
+        run: git clone https://github.com/jparish1977/JP_TOOLS.git /tmp/jp_tools
+      - name: Install PHP tools
+        run: cd /tmp/jp_tools && composer install --no-interaction
+      - name: Check PHP
+        run: python /tmp/jp_tools/check.py phpbrot.php --lang php --pretty

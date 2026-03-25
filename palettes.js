@@ -1,7 +1,7 @@
 // Palette definitions for Mandelbrot Explorer
 // Extracted from mandelbrotexplorer.js
 
-var paletteColors = {
+const paletteColors = {
 	"lightyellow1":			{"R": 255, "G": 255, "B": 204, "A": 255},
  	"lightyellow2":			{"R": 255, "G": 255, "B": 153, "A": 255},
  	"lightyellow3":			{"R": 255, "G": 255, "B": 102, "A": 255},
@@ -69,7 +69,7 @@ var paletteColors = {
  	"palevioletred":		{"R": 219, "G": 112, "B": 147, "A": 255},
 };
 
-var palettes = {
+const palettes = {
 	"palette1": [
 		{"B": 15, "R": 10, "G":  5, "A":255},
 		{"R": 15, "G": 10, "B":  5, "A":255},
@@ -357,10 +357,10 @@ var palettes = {
 	"rainbow": [{"R":128,"G":243,"B":32,"A":255},{"R":166,"G":223,"B":12,"A":255},{"R":200,"G":193,"B":2,"A":255},{"R":227,"G":158,"B":3,"A":255},{"R":246,"G":121,"B":16,"A":255},{"R":255,"G":83,"B":38,"A":255},{"R":252,"G":50,"B":69,"A":255},{"R":238,"G":24,"B":105,"A":255},{"R":214,"G":7,"B":143,"A":255},{"R":182,"G":1,"B":179,"A":255},{"R":146,"G":6,"B":211,"A":255},{"R":108,"G":22,"B":236,"A":255},{"R":72,"G":48,"B":251,"A":255},{"R":41,"G":81,"B":255,"A":255},{"R":17,"G":117,"B":247,"A":255},{"R":4,"G":155,"B":229,"A":255},{"R":1,"G":191,"B":202,"A":255},{"R":10,"G":221,"B":169,"A":255},{"R":30,"G":242,"B":131,"A":255},{"R":58,"G":253,"B":93,"A":255},{"R":93,"G":254,"B":59,"A":255},{"R":130,"G":243,"B":31,"A":255},{"R":168,"G":221,"B":11,"A":255},{"R":201,"G":192,"B":2,"A":255},{"R":229,"G":156,"B":4,"A":255},{"R":247,"G":118,"B":17,"A":255},{"R":255,"G":81,"B":40,"A":255},{"R":251,"G":49,"B":71,"A":255},{"R":237,"G":23,"B":107,"A":255},{"R":212,"G":7,"B":145,"A":255},{"R":180,"G":1,"B":181,"A":255},{"R":144,"G":7,"B":213,"A":255}],
 	"variable_rainbow": [],
 	get buildRainbow(){
-		if(this.variable_rainbow.length == 0){
-			var result = [];
-			var frequency = .3;
-			for (var i = 0; i < 32; ++i){
+		if(this.variable_rainbow.length === 0){
+			const result = [];
+			const frequency = .3;
+			for (let i = 0; i < 32; ++i){
 			   red   = Math.round( (Math.sin(frequency*i + 0) * 127 + 128) % 255, 0);
 			   green = Math.round( (Math.sin(frequency*i + 2) * 127 + 128) % 255, 0);
 			   blue  = Math.round( (Math.sin(frequency*i + 4) * 127 + 128) % 255, 0);
@@ -374,11 +374,11 @@ var palettes = {
 		return this.variable_rainbow;
 	},
 	"getColorIndex": function(colorPalette, color){
-		for( var index = 0; index < colorPalette.length; index++ ){
-			if(    colorPalette[index].R == color.R 
-				&& colorPalette[index].G == color.G 
-				&& colorPalette[index].B == color.B 
-				&& colorPalette[index].A == color.A )
+		for( let index = 0; index < colorPalette.length; index++ ){
+			if(    colorPalette[index].R === color.R 
+				&& colorPalette[index].G === color.G 
+				&& colorPalette[index].B === color.B 
+				&& colorPalette[index].A === color.A )
 			{
 				return index;
 			}

@@ -1,1 +1,7 @@
-screencaps
+screencaps/
+node_modules/
+*.code-workspace
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

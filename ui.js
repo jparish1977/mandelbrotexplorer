@@ -2,16 +2,16 @@
 // Extracted from mandelbrotexplorer.htm
 
 // Global variables
-var tjStats = null;
-var animationFrameId;
-var restoreContextTimer = null;
-var originalHomeState = null;
+let tjStats = null;
+let animationFrameId;
+let restoreContextTimer = null;
+let originalHomeState = null;
 
 // Screen capture functionality
 function openScreenCap(){
-    var newWindow = window.open("");
+    const newWindow = window.open("");
     
-    var img = document.getElementById("screen_cap").cloneNode(false);
+    const img = document.getElementById("screen_cap").cloneNode(false);
     img.removeAttribute('height');
     img.removeAttribute('onclick');
     
@@ -19,13 +19,13 @@ function openScreenCap(){
 }
 
 function getScreenCap(){
-    var dataUrl = mandelbrotExplorer.threeRenderer.renderer.domElement.toDataURL();
+    const dataUrl = mandelbrotExplorer.threeRenderer.renderer.domElement.toDataURL();
     
-    var img = document.getElementById("screen_cap");
+    let img = document.getElementById("screen_cap");
     if( !img ) {
-        var table = document.getElementById("controls_table");
-        var row = document.createElement('tr');
-        var cell = document.createElement('td');
+        const table = document.getElementById("controls_table");
+        const row = document.createElement('tr');
+        const cell = document.createElement('td');
         img = document.createElement('img');
         img.id = 'screen_cap'
         
@@ -40,13 +40,13 @@ function getScreenCap(){
 
 // Utility functions
 function dumpBrot(){
-    var values =[];
-    var tries = [];
-    for(var i = 0; i < 1000; i++){
+    const values =[];
+    const tries = [];
+    for(let i = 0; i < 1000; i++){
     
-        for(var i2 = 0;i2 < 2; i2++){
-            var useX = Math.random() * 2;
-            var useY = Math.random() * 2;
+        for(let i2 = 0;i2 < 2; i2++){
+            let useX = Math.random() * 2;
+            let useY = Math.random() * 2;
             while(tries.indexOf(useX + "," + useY) > -1){
                 useX = Math.random() * 2;
                 useY = Math.random() * 2;
@@ -55,12 +55,12 @@ function dumpBrot(){
             tries.push(useX + "," + useY);
             tries.push((-useX) + "," + (-useY));
             
-            var escapePaths = getSymetricalEscapePaths(useX, useY, 1024);
-            if(escapePaths[0].length == 1024){
+            const escapePaths = getSymetricalEscapePaths(useX, useY, 1024);
+            if(escapePaths[0].length === 1024){
                 values.push(useX + "," + useY);
             }
             
-            if(escapePaths[1].length == 1024){
+            if(escapePaths[1].length === 1024){
                 values.push((-useX) + "," + (-useY));
             }
         }
@@ -70,7 +70,7 @@ function dumpBrot(){
 }
 
 function getSymetricalEscapePaths(x, y, maxIterations){
-    var result = [];
+    const result = [];
     
     result.push(mandelbrotExplorer.getJuliaEscapePath([x,y], [0,0], maxIterations));
     result.push(mandelbrotExplorer.getJuliaEscapePath([-x,-y], [0,0], maxIterations));
@@ -134,10 +134,10 @@ function resizeCloud(){
 // Zoom and interaction functions
 function zoomToDblClick( sender, evt ){
     cancelAnimationFrame(animationFrameId); 
-    var horizontalRange = Math.abs( mandelbrotExplorer.startX - mandelbrotExplorer.endX );
-    var horizontalRangeOffset = horizontalRange * mandelbrotExplorer.zoomFactor;
-    var verticalRange = Math.abs( mandelbrotExplorer.startY - mandelbrotExplorer.endY );
-    var verticalRangeOffset = verticalRange * mandelbrotExplorer.zoomFactor;
+    let horizontalRange = Math.abs( mandelbrotExplorer.startX - mandelbrotExplorer.endX );
+    const horizontalRangeOffset = horizontalRange * mandelbrotExplorer.zoomFactor;
+    let verticalRange = Math.abs( mandelbrotExplorer.startY - mandelbrotExplorer.endY );
+    const verticalRangeOffset = verticalRange * mandelbrotExplorer.zoomFactor;
     
     if( evt.ctrlKey ){
         // zoom out
@@ -150,12 +150,12 @@ function zoomToDblClick( sender, evt ){
         verticalRange -= verticalRangeOffset;
     }
     
-    var canvasX = evt.pageX - sender.offsetLeft;
-    var canvasY = evt.pageY - sender.offsetTop;
+    const canvasX = evt.pageX - sender.offsetLeft;
+    const canvasY = evt.pageY - sender.offsetTop;
 
-    var selectedC = [(( canvasX - mandelbrotExplorer.xOffset ) * mandelbrotExplorer.xScale_2d ), (( mandelbrotExplorer.yOffset - canvasY ) * mandelbrotExplorer.yScale_2d )];
-    var startX = (( canvasX - mandelbrotExplorer.xOffset ) * mandelbrotExplorer.xScale_2d ) - (horizontalRange / 2);
-    var startY = (( mandelbrotExplorer.yOffset - canvasY ) * mandelbrotExplorer.yScale_2d ) + (verticalRange / 2);
+    const selectedC = [(( canvasX - mandelbrotExplorer.xOffset ) * mandelbrotExplorer.xScale_2d ), (( mandelbrotExplorer.yOffset - canvasY ) * mandelbrotExplorer.yScale_2d )];
+    const startX = (( canvasX - mandelbrotExplorer.xOffset ) * mandelbrotExplorer.xScale_2d ) - (horizontalRange / 2);
+    const startY = (( mandelbrotExplorer.yOffset - canvasY ) * mandelbrotExplorer.yScale_2d ) + (verticalRange / 2);
     
     if(evt.shiftKey){
         mandelbrotExplorer.juliaC = "["+ selectedC[0] + "," + selectedC[1] +"]";
@@ -295,7 +295,7 @@ function toggleIterationCycle(){
 }
 
 function toggleControls(){
-    if( document.getElementById("controls_maximized").style.display == "none" ){
+    if( document.getElementById("controls_maximized").style.display === "none" ){
         document.getElementById("controls_maximized").style.display = "";
         document.getElementById("controls_minimized").style.opacity = document.getElementById("controls").style.opacity;
         document.getElementById("controls_minimized").style["border-bottom-right-radius"] = "0em";
@@ -310,7 +310,7 @@ function toggleControls(){
 }
 
 function toggleBackground(){
-    var color = new THREE.Color( 0x000000 );
+    let color = new THREE.Color( 0x000000 );
     document.body.style.backgroundColor = 'rgb(0, 0, 0)';
     if(document.getElementById("toggleBackground").checked) {
         color = new THREE.Color( 0xFFFFFF );
@@ -361,7 +361,7 @@ function highliteControls(){
 function dimControls(){
     document.getElementById("controls").style.opacity = 0.5;
     document.getElementById("controls_minimized").style.opacity = 0.5;
-    if( document.getElementById("controls_maximized").style.display == "none" ){
+    if( document.getElementById("controls_maximized").style.display === "none" ){
         document.getElementById("controls_minimized").style.opacity = 0.25;
     }
     document.getElementById("controls_maximized").style.opacity = 0.5;
@@ -388,17 +388,17 @@ function hide2D(forceHide){
 }
 
 function drawPlanes(){
-    var width = 4;
-    var height = 4;
-    var widthSegments = 32;
-    var heightSegments = 32;
+    const width = 4;
+    const height = 4;
+    const widthSegments = 32;
+    const heightSegments = 32;
 
-    var geometry = new THREE.PlaneGeometry( width, height, widthSegments, heightSegments );
-    var material = new THREE.MeshBasicMaterial( {color: {"R": 255, "G": 0, "B": 0, "A": 0.25}, side: THREE.DoubleSide} );
-    var plane1 = new THREE.Mesh( geometry, material );
-    var plane2 = new THREE.Mesh( geometry, material );
+    const geometry = new THREE.PlaneGeometry( width, height, widthSegments, heightSegments );
+    const material = new THREE.MeshBasicMaterial( {color: {"R": 255, "G": 0, "B": 0, "A": 0.25}, side: THREE.DoubleSide} );
+    const plane1 = new THREE.Mesh( geometry, material );
+    const plane2 = new THREE.Mesh( geometry, material );
     plane2.rotation.x = Math.PI / 2;
-    var plane3 = new THREE.Mesh( geometry, material );
+    const plane3 = new THREE.Mesh( geometry, material );
     plane3.rotation.y = Math.PI / 2;
     if (mandelbrotExplorer.threeRenderer && mandelbrotExplorer.threeRenderer.scene) {
         mandelbrotExplorer.threeRenderer.scene.add( plane1 );
@@ -416,7 +416,13 @@ function loadParameterValues(){
     document.getElementById("maxIterations_3d").value = mandelbrotExplorer.maxIterations_3d;
     document.getElementById("cloudResolution").value = mandelbrotExplorer.cloudResolution;
     document.getElementById("randomStepCheckbox").checked = mandelbrotExplorer.randomizeCloudStepping;
-    document.getElementById("gpuAccelerationCheckbox").checked = mandelbrotExplorer.useGPU;
+    // Set GPU checkbox without triggering the onchange event
+    const gpuCheckbox = document.getElementById("gpuAccelerationCheckbox");
+    if (gpuCheckbox) {
+      gpuCheckbox.onchange = null; // Temporarily disable event handler
+      gpuCheckbox.checked = mandelbrotExplorer.useGPU;
+      gpuCheckbox.onchange = toggleGPUAcceleration; // Re-enable event handler
+    }
     document.getElementById("initialZ").value = mandelbrotExplorer.initialZ;
     document.getElementById("escapingZ").value = mandelbrotExplorer.escapingZ;
     document.getElementById("iterationCycleTime").value = mandelbrotExplorer.iterationCycleTime;
@@ -446,25 +452,25 @@ function loadParameterValues(){
 }
 
 function loadQueryStringParams(){
-    var params = new URLSearchParams(window.location.search);
+    const params = new URLSearchParams(window.location.search);
     
-    var useAntialiasing = params.get('antialias') === '1' ? 
+    const useAntialiasing = params.get('antialias') === '1' ? 
         true 
         : params.get('antialias') === '0' ? 
             false : 
             ThreeJSRenderer.rendererOptions.antialias;
     
-    var precisionValues = [
+    const precisionValues = [
         'highp', 
         'mediump', 
         'lowp'
     ];
-    var requestedPrecision = params.get('precision');
-    var usePrecision = precisionValues.includes(requestedPrecision) ? 
+    const requestedPrecision = params.get('precision');
+    const usePrecision = precisionValues.includes(requestedPrecision) ? 
         requestedPrecision 
         : ThreeJSRenderer.rendererOptions.precision;
     
-    var show2d = params.get('show2d') === '1' ? true : false;
+    const show2d = params.get('show2d') === '1' ? true : false;
     
     return {
         antialias: useAntialiasing,
@@ -476,14 +482,14 @@ function loadQueryStringParams(){
 function loadPaletteOptions()
 {
     clearSelectOptions(document.getElementById("palette"));
-    for( var name in palettes )
+    for( const name in palettes )
     {
         if( Array.isArray(palettes[name]) )
         {
-            var option = document.createElement("option");
+            const option = document.createElement("option");
             option.text = name;
             option.value = name;
-            if( palettes[name] == mandelbrotExplorer.palette )
+            if( palettes[name] === mandelbrotExplorer.palette )
             {
                 option.selected = true;
             }
@@ -496,7 +502,7 @@ function loadFilterOptions()
 {
     clearSelectOptions(document.getElementById("cloudLengthFilterPresets"));
     
-    var lengthOption = document.createElement("option");
+    let lengthOption = document.createElement("option");
     lengthOption.text = "----";
     lengthOption.value = "";
         
@@ -514,7 +520,7 @@ function loadFilterOptions()
     // Load escapingZ presets
     clearSelectOptions(document.getElementById("escapingZPresets"));
     
-    var escapingZOption = document.createElement("option");
+    let escapingZOption = document.createElement("option");
     escapingZOption.text = "----";
     escapingZOption.value = "";
     document.getElementById("escapingZPresets").add(escapingZOption);
@@ -531,7 +537,7 @@ function loadFilterOptions()
     // Load particle filter presets
     clearSelectOptions(document.getElementById("particleFilterPresets"));
     
-    var particleFilterOption = document.createElement("option");
+    let particleFilterOption = document.createElement("option");
     particleFilterOption.text = "----";
     particleFilterOption.value = "";
     document.getElementById("particleFilterPresets").add(particleFilterOption);
@@ -548,7 +554,7 @@ function loadFilterOptions()
     // Load dualZ multiplier presets
     clearSelectOptions(document.getElementById("dualZMultiplierPresets"));
     
-    var dualZMultiplierOption = document.createElement("option");
+    let dualZMultiplierOption = document.createElement("option");
     dualZMultiplierOption.text = "----";
     dualZMultiplierOption.value = "";
     document.getElementById("dualZMultiplierPresets").add(dualZMultiplierOption);
@@ -565,7 +571,7 @@ function loadFilterOptions()
     // Load particle size presets
     clearSelectOptions(document.getElementById("particleSizePresets"));
     
-    var particleSizeOption = document.createElement("option");
+    let particleSizeOption = document.createElement("option");
     particleSizeOption.text = "----";
     particleSizeOption.value = "";
     document.getElementById("particleSizePresets").add(particleSizeOption);
@@ -582,7 +588,7 @@ function loadFilterOptions()
     // Load cloud iteration filter presets
     clearSelectOptions(document.getElementById("cloudIterationFilterPresets"));
     
-    var cloudIterationFilterOption = document.createElement("option");
+    let cloudIterationFilterOption = document.createElement("option");
     cloudIterationFilterOption.text = "----";
     cloudIterationFilterOption.value = "";
     document.getElementById("cloudIterationFilterPresets").add(cloudIterationFilterOption);
@@ -599,7 +605,7 @@ function loadFilterOptions()
     // Load initialZ presets
     clearSelectOptions(document.getElementById("initialZPresets"));
     
-    var initialZOption = document.createElement("option");
+    let initialZOption = document.createElement("option");
     initialZOption.text = "----";
     initialZOption.value = "";
     document.getElementById("initialZPresets").add(initialZOption);
@@ -616,7 +622,7 @@ function loadFilterOptions()
 
 function clearSelectOptions( selectObj )
 {
-    var i;
+    let i;
     for(i=selectObj.options.length-1;i>=0;i--)
     {
         selectObj.remove(i);
@@ -624,14 +630,14 @@ function clearSelectOptions( selectObj )
 }
 
 function setCloudLengthFilterFromPreset(){
-    var selectedPreset = document.getElementById("cloudLengthFilterPresets").value;
+    const selectedPreset = document.getElementById("cloudLengthFilterPresets").value;
     if (selectedPreset && mandelbrotExplorer.presets.cloudLengthFilter[selectedPreset]) {
-        var preset = mandelbrotExplorer.presets.cloudLengthFilter[selectedPreset];
+        const preset = mandelbrotExplorer.presets.cloudLengthFilter[selectedPreset];
         if (typeof preset === 'object' && preset.getCodeString) {
             // For object presets with getCodeString method
-            var samplePathIndex = 1;
-            var sampleIteration = 2;
-            var sampleEscapePath = [[0,0], [1,1], [2,2]];
+            const samplePathIndex = 1;
+            const sampleIteration = 2;
+            const sampleEscapePath = [[0,0], [1,1], [2,2]];
             mandelbrotExplorer.cloudLengthFilter = preset.getCodeString(samplePathIndex, sampleIteration, sampleEscapePath);
         } else if (typeof preset === 'string') {
             // For string presets, use directly
@@ -643,13 +649,13 @@ function setCloudLengthFilterFromPreset(){
 }
 
 function setEscapingZFromPreset(){
-    var selectedPreset = document.getElementById("escapingZPresets").value;
+    const selectedPreset = document.getElementById("escapingZPresets").value;
     if (selectedPreset && mandelbrotExplorer.presets.mandelbrot.escapingZ[selectedPreset]) {
-        var preset = mandelbrotExplorer.presets.mandelbrot.escapingZ[selectedPreset];
+        const preset = mandelbrotExplorer.presets.mandelbrot.escapingZ[selectedPreset];
         if (typeof preset === 'object' && preset.getCodeString) {
             // For object presets with getCodeString method
-            var sampleEscapePath = [[0,0], [1,1], [2,2]];
-            var samplePathIndex = 1;
+            const sampleEscapePath = [[0,0], [1,1], [2,2]];
+            const samplePathIndex = 1;
             mandelbrotExplorer.escapingZ = preset.getCodeString(sampleEscapePath, samplePathIndex);
         } else if (typeof preset === 'string') {
             // For string presets, use directly
@@ -660,14 +666,14 @@ function setEscapingZFromPreset(){
 }
 
 function setParticleFilterFromPreset(){
-    var selectedPreset = document.getElementById("particleFilterPresets").value;
+    const selectedPreset = document.getElementById("particleFilterPresets").value;
     if (selectedPreset && mandelbrotExplorer.presets.particleFilter[selectedPreset]) {
-        var preset = mandelbrotExplorer.presets.particleFilter[selectedPreset];
+        const preset = mandelbrotExplorer.presets.particleFilter[selectedPreset];
         if (typeof preset === 'object' && preset.getCodeString) {
             // For object presets with getCodeString method
-            var sampleNewX = 0.25;
-            var sampleNewY = 0.25;
-            var sampleParticleVector = new THREE.Vector3(0.25, 0.25, 0);
+            const sampleNewX = 0.25;
+            const sampleNewY = 0.25;
+            const sampleParticleVector = new THREE.Vector3(0.25, 0.25, 0);
             mandelbrotExplorer.particleFilter = preset.getCodeString(sampleNewX, sampleNewY, sampleParticleVector);
         } else if (typeof preset === 'string') {
             // For string presets, use directly
@@ -678,17 +684,17 @@ function setParticleFilterFromPreset(){
 }
 
 function setDualZMultiplierFromPreset(){
-    var selectedPreset = document.getElementById("dualZMultiplierPresets").value;
+    const selectedPreset = document.getElementById("dualZMultiplierPresets").value;
     if (selectedPreset && mandelbrotExplorer.presets.dualZMultiplier[selectedPreset]) {
-        var preset = mandelbrotExplorer.presets.dualZMultiplier[selectedPreset];
+        const preset = mandelbrotExplorer.presets.dualZMultiplier[selectedPreset];
         if (typeof preset === 'object' && preset.getCodeString) {
             // For object presets with getCodeString method
-            var samplePathIndex = 1;
-            var sampleIteration = 2;
-            var sampleEscapePath = [[0,0], [1,1], [2,2]];
-            var sampleNewX = 1;
-            var sampleNewY = 1;
-            var sampleZ = 0.5;
+            const samplePathIndex = 1;
+            const sampleIteration = 2;
+            const sampleEscapePath = [[0,0], [1,1], [2,2]];
+            const sampleNewX = 1;
+            const sampleNewY = 1;
+            const sampleZ = 0.5;
             mandelbrotExplorer.dualZMultiplier = preset.getCodeString(samplePathIndex, sampleIteration, sampleEscapePath, sampleNewX, sampleNewY, sampleZ);
         } else if (typeof preset === 'string') {
             // For string presets, use directly
@@ -699,13 +705,13 @@ function setDualZMultiplierFromPreset(){
 }
 
 function setParticleSizeFromPreset(){
-    var selectedPreset = document.getElementById("particleSizePresets").value;
+    const selectedPreset = document.getElementById("particleSizePresets").value;
     if (selectedPreset && mandelbrotExplorer.presets.particleSize[selectedPreset]) {
-        var preset = mandelbrotExplorer.presets.particleSize[selectedPreset];
+        const preset = mandelbrotExplorer.presets.particleSize[selectedPreset];
         if (typeof preset === 'object' && preset.getCodeString) {
             // For object presets with getCodeString method
-            var sampleIndex = 0;
-            var sampleIterationParticles = [];
+            const sampleIndex = 0;
+            const sampleIterationParticles = [];
             mandelbrotExplorer.particleSize = preset.getCodeString(sampleIndex, sampleIterationParticles);
         } else if (typeof preset === 'string') {
             // For string presets, use directly
@@ -716,14 +722,14 @@ function setParticleSizeFromPreset(){
 }
 
 function setCloudIterationFilterFromPreset(){
-    var selectedPreset = document.getElementById("cloudIterationFilterPresets").value;
+    const selectedPreset = document.getElementById("cloudIterationFilterPresets").value;
     if (selectedPreset && mandelbrotExplorer.presets.cloudIterationFilter[selectedPreset]) {
-        var preset = mandelbrotExplorer.presets.cloudIterationFilter[selectedPreset];
+        const preset = mandelbrotExplorer.presets.cloudIterationFilter[selectedPreset];
         if (typeof preset === 'object' && preset.getCodeString) {
             // For object presets with getCodeString method
-            var samplePathIndex = 1;
-            var sampleIteration = 2;
-            var sampleEscapePath = [[0,0], [1,1], [2,2]];
+            const samplePathIndex = 1;
+            const sampleIteration = 2;
+            const sampleEscapePath = [[0,0], [1,1], [2,2]];
             mandelbrotExplorer.cloudIterationFilter = preset.getCodeString(samplePathIndex, sampleIteration, sampleEscapePath);
         } else if (typeof preset === 'string') {
             // For string presets, use directly
@@ -735,12 +741,12 @@ function setCloudIterationFilterFromPreset(){
 }
 
 function setInitialZFromPreset(){
-    var selectedPreset = document.getElementById("initialZPresets").value;
+    const selectedPreset = document.getElementById("initialZPresets").value;
     if (selectedPreset && mandelbrotExplorer.presets.initialZ[selectedPreset]) {
-        var preset = mandelbrotExplorer.presets.initialZ[selectedPreset];
+        const preset = mandelbrotExplorer.presets.initialZ[selectedPreset];
         if (typeof preset === 'object' && preset.getCodeString) {
             // For object presets with getCodeString method
-            var sampleEscapePath = [[0,0], [1,1], [2,2]];
+            const sampleEscapePath = [[0,0], [1,1], [2,2]];
             mandelbrotExplorer.initialZ = preset.getCodeString(sampleEscapePath);
         } else if (typeof preset === 'string') {
             // For string presets, use directly
@@ -753,7 +759,7 @@ function setInitialZFromPreset(){
 
 // Store the original home state for the camera and controls
 function saveOriginalHomeState() {
-    var controls = mandelbrotExplorer.threeRenderer.controls;
+    const controls = mandelbrotExplorer.threeRenderer.controls;
     if (controls && !originalHomeState) {
         originalHomeState = {
             position: controls.position0.clone(),
@@ -763,8 +769,8 @@ function saveOriginalHomeState() {
 }
 
 function restoreCameraAndControlsFromStorage() {
-    var settings = JSON.parse(localStorage.getItem(SettingsManager.storageKey));
-    var controls = mandelbrotExplorer.threeRenderer.controls;
+    const settings = JSON.parse(localStorage.getItem(SettingsManager.storageKey));
+    const controls = mandelbrotExplorer.threeRenderer.controls;
     if (controls) controls.enabled = false; // Disable controls during restore
     if (settings && settings.cameraState) {
         SettingsManager.restoreCameraState(mandelbrotExplorer, settings.cameraState);
@@ -794,7 +800,7 @@ function restoreCameraAndControlsFromStorage() {
 
 // Add a function to reset to the original home state
 function resetCameraToOriginalHome() {
-    var controls = mandelbrotExplorer.threeRenderer.controls;
+    const controls = mandelbrotExplorer.threeRenderer.controls;
     if (controls && originalHomeState) {
         controls.target0.copy(originalHomeState.target);
         controls.position0.copy(originalHomeState.position);
@@ -827,7 +833,7 @@ function loadSettingsFromStorage(){
 }
 
 function showToast(message, duration = 2500) {
-    var toast = document.getElementById("toast");
+    const toast = document.getElementById("toast");
     toast.textContent = message;
     toast.className = "toast show";
     setTimeout(function() {
@@ -844,14 +850,14 @@ function generateHair(){
         mandelbrotExplorer.canvas_3d = document.getElementById("mandelbrotCanvas3d");
     }
     
-    var aspect = mandelbrotExplorer.canvas_3d.height / mandelbrotExplorer.canvas_3d.width;
-    var startX = mandelbrotExplorer.startX == null ? -2 : mandelbrotExplorer.startX;
-    var endX = mandelbrotExplorer.endX == null ? 2 : mandelbrotExplorer.endX;
-    var horizontalRange = Math.abs( startX - endX );
-    var verticalRange = horizontalRange * aspect;
+    const aspect = mandelbrotExplorer.canvas_3d.height / mandelbrotExplorer.canvas_3d.width;
+    const startX = mandelbrotExplorer.startX === null ? -2 : mandelbrotExplorer.startX;
+    const endX = mandelbrotExplorer.endX === null ? 2 : mandelbrotExplorer.endX;
+    const horizontalRange = Math.abs( startX - endX );
+    const verticalRange = horizontalRange * aspect;
     
-    var startY = mandelbrotExplorer.startY == null ? (verticalRange / 2) : mandelbrotExplorer.startY;
-    var endY = mandelbrotExplorer.endY == null ? (verticalRange / -2) : mandelbrotExplorer.endY;
+    const startY = mandelbrotExplorer.startY === null ? (verticalRange / 2) : mandelbrotExplorer.startY;
+    const endY = mandelbrotExplorer.endY === null ? (verticalRange / -2) : mandelbrotExplorer.endY;
 
     mandelbrotExplorer.drawMandelbrotsHair({
         "startX": mandelbrotExplorer.startX,
@@ -868,7 +874,7 @@ function generateHair(){
         }, false);
 
         mandelbrotExplorer.threeRenderer.renderer.context.canvas.addEventListener("webglcontextrestored", function(event) {
-            if(restoreContextTimer != null){
+            if(restoreContextTimer !== null){
                 cancelTimeout(restoreContextTimer);
             }
             restoreContextTimer = setTimeout(function(){restoreContext();animate();}, 500)
@@ -883,14 +889,14 @@ function generateCloud(){
         mandelbrotExplorer.canvas_3d = document.getElementById("mandelbrotCanvas3d");
     }
     
-    var aspect = mandelbrotExplorer.canvas_3d.height / mandelbrotExplorer.canvas_3d.width;
-    var startX = mandelbrotExplorer.startX == null ? -2 : mandelbrotExplorer.startX;
-    var endX = mandelbrotExplorer.endX == null ? 2 : mandelbrotExplorer.endX;
-    var horizontalRange = Math.abs( startX - endX );
-    var verticalRange = horizontalRange * aspect;
+    const aspect = mandelbrotExplorer.canvas_3d.height / mandelbrotExplorer.canvas_3d.width;
+    const startX = mandelbrotExplorer.startX === null ? -2 : mandelbrotExplorer.startX;
+    const endX = mandelbrotExplorer.endX === null ? 2 : mandelbrotExplorer.endX;
+    const horizontalRange = Math.abs( startX - endX );
+    const verticalRange = horizontalRange * aspect;
     
-    var startY = mandelbrotExplorer.startY == null ? (verticalRange / 2) : mandelbrotExplorer.startY;
-    var endY = mandelbrotExplorer.endY == null ? (verticalRange / -2) : mandelbrotExplorer.endY;
+    const startY = mandelbrotExplorer.startY === null ? (verticalRange / 2) : mandelbrotExplorer.startY;
+    const endY = mandelbrotExplorer.endY === null ? (verticalRange / -2) : mandelbrotExplorer.endY;
 
     mandelbrotExplorer.drawMandelbrotCloud({
         "startX": mandelbrotExplorer.startX,
@@ -907,7 +913,7 @@ function generateCloud(){
         }, false);
 
         mandelbrotExplorer.threeRenderer.renderer.context.canvas.addEventListener("webglcontextrestored", function(event) {
-            if(restoreContextTimer != null){
+            if(restoreContextTimer !== null){
                 cancelTimeout(restoreContextTimer);
             }
             restoreContextTimer = setTimeout(function(){restoreContext();animate();}, 500)
@@ -930,14 +936,14 @@ function restoreContext(){
     });
     
     // Recreate particle systems
-    for( var systemIndex in mandelbrotExplorer.particleSystems ){
-        var colorIndex = systemIndex;
+    for( const systemIndex in mandelbrotExplorer.particleSystems ){
+        let colorIndex = systemIndex;
         while( colorIndex >= mandelbrotExplorer.palette.length  ) {
             colorIndex -= mandelbrotExplorer.palette.length;
         }
-        var color = mandelbrotExplorer.palette[ colorIndex ];
+        const color = mandelbrotExplorer.palette[ colorIndex ];
         
-        var pMaterial = mandelbrotExplorer.threeRenderer.createParticleMaterial(color, 0);
+        const pMaterial = mandelbrotExplorer.threeRenderer.createParticleMaterial(color, 0);
         
         mandelbrotExplorer.particleSystems[systemIndex] = mandelbrotExplorer.threeRenderer.addParticleSystem(
             mandelbrotExplorer.particleSystems[parseInt(systemIndex)].geometry,
@@ -953,13 +959,13 @@ function restoreContext(){
 }
 
 // Animation and rendering
-var lastFrameTime = 0;
+let lastFrameTime = 0;
 
 function animate() {
     animationFrameId = requestAnimationFrame( animate );
-    var currentTime = performance.now();
-    var deltaTime = currentTime - lastFrameTime;
-    var frameInterval = 1000 / mandelbrotExplorer.targetFrameRate; // Time between frames in milliseconds
+    const currentTime = performance.now();
+    const deltaTime = currentTime - lastFrameTime;
+    const frameInterval = 1000 / mandelbrotExplorer.targetFrameRate; // Time between frames in milliseconds
     // Only render if enough time has passed since last frame
     if (deltaTime >= frameInterval) {
         tjStats.update();
@@ -984,20 +990,20 @@ function init()
     tjStats.domElement.style.top = '';
     tjStats.domElement.style.zIndex = '2000';
     document.body.appendChild( tjStats.domElement );
-    var params = loadQueryStringParams();
+    const params = loadQueryStringParams();
     
     dimControls();
     loadPaletteOptions();
     loadFilterOptions();
                 
-    var canvas_2d = document.getElementById("mandelbrotCanvas2d");
+    const canvas_2d = document.getElementById("mandelbrotCanvas2d");
     canvas_2d.width = window.innerWidth / 2;
     canvas_2d.height = window.innerHeight;
-    var aspect = canvas_2d.height / canvas_2d.width;
-    var startX = -2;
-    var endX = 2;
-    var horizontalRange = Math.abs( startX - endX );
-    var verticalRange = horizontalRange * aspect;
+    const aspect = canvas_2d.height / canvas_2d.width;
+    const startX = -2;
+    const endX = 2;
+    const horizontalRange = Math.abs( startX - endX );
+    const verticalRange = horizontalRange * aspect;
     
     mandelbrotExplorer.palette = palettes[ document.getElementById("palette").value ];
     mandelbrotExplorer.canvas_2d = canvas_2d;
@@ -1013,7 +1019,7 @@ function init()
     // Check GPU availability and provide feedback
     const gpuInfo = window.checkGPUAvailability();
     if (gpuInfo.available) {
-        console.log('GPU available:', gpuInfo.renderer, gpuInfo.version);
+        	// debugLog('gpu', 'GPU available:', gpuInfo.renderer, gpuInfo.version);
         showToast(`GPU detected: ${gpuInfo.renderer}`, 3000);
     } else {
         console.warn('GPU not available:', gpuInfo.reason);
@@ -1042,13 +1048,20 @@ function init()
     }
 } 
 
-// --- ALTERNATE UI EXTRACTION START ---
-// The following code is now in altUI.js:
-// - buildAlternativeUI
-// - showAltToast
-// - initAltUICodeMirror5
-// - refreshVisibleAltUICM
-// - syncAltUICMWithPreset
-// - DOMContentLoaded event for toggleBtn and alternativeUI
-// Remove these from this file and import from altUI.js instead.
-// --- ALTERNATE UI EXTRACTION END --- 
+// ── Bootstrap ────────────────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', function() {
+    init();
+    setTimeout(function() {
+        try {
+            if (window.buildAlternativeUI) {
+                buildAlternativeUI();
+                document.getElementById('controls').style.display = 'none';
+                document.getElementById('alternativeUI').style.display = '';
+            } else {
+                console.warn('Alternative UI not available, keeping classic UI');
+            }
+        } catch (error) {
+            console.error('Error loading alternative UI:', error);
+        }
+    }, 500);
+});

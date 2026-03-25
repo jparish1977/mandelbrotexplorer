@@ -1,6 +1,13 @@
 body{
 	background: black;
 }
+
+#alternativeUI {
+	position: fixed;
+	top: 20px;
+	right: 20px;
+	z-index: 1000;
+}
 #mandelbrotCanvas2d {
 	padding:0px;
 	margin:0px;
@@ -378,11 +385,13 @@ body{
 .alt-ui-fieldgroup .CodeMirror {
   width: 100%;
   min-height: 3em;
+  max-height: 6em;
   margin-top: 0.1em;
   background: #23272e !important;
   color: #f5f6fa !important;
   border: 2px solid #4f8cff !important;
   border-radius: 0.4em;
+  resize: vertical;
 } 
 
 .alt-ui-cm-popout {
@@ -430,13 +439,20 @@ body{
   flex-direction: column;
   z-index: 1;
 }
+
 .alt-ui-cm-modal-header {
   display: flex;
-  align-items: center;
   justify-content: space-between;
-  font-size: 1.1em;
+  align-items: center;
+  margin-bottom: 1em;
+  padding-bottom: 0.5em;
+  border-bottom: 1px solid var(--alt-border);
+}
+
+.alt-ui-cm-modal-header h3 {
+  margin: 0;
+  font-size: 1.2em;
   font-weight: 600;
-  margin-bottom: 0.7em;
 }
 #alt-ui-cm-modal-close {
   background: none;
