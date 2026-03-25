@@ -5,18 +5,12 @@
 
 class Complex
 {
-    //A complex number has a real and imaginary part
-    public $real = 0;
-    public $imaginary = 0;
-
-    public function __construct($real = 0, $imaginary = 0)
+    public function __construct(public $real = 0, public $imaginary = 0)
     {
-        $this->real = $real;
-        $this->imaginary = $imaginary;
     }
 
     //Returns the product of two complex numbers
-    public function times($other)
+    public function times($other): \Complex
     {
         $result = new Complex();
         $result->real =      ($this->real * $other->real)      - ($this->imaginary * $other->imaginary);
@@ -25,43 +19,51 @@ class Complex
     }
 
     //Returns the sum of two complex numbers
-    public function plus($other)
+    public function plus($other): \Complex
     {
         $result = new Complex();
         $result->real = $this->real + $other->real;
         $result->imaginary = $this->imaginary + $other->imaginary;
         return $result;
     }
+
     //Returns the Euclidean distance between the complex number and the origin on the complex plane
-    public function magnitude()
+    public function magnitude(): float
     {
-        return sqrt(pow($this->real, 2) + pow($this->imaginary, 2));
+        return sqrt($this->real ** 2 + $this->imaginary ** 2);
     }
 }
 
-function getMandelbrotEscapePath($c, $maxIterations = 255, $filterRepeating = true)
+/**
+ * @return mixed[]
+ */
+function getMandelbrotEscapePath($c, $maxIterations = 255, $filterRepeating = true): array
 {
 
     $z = new Complex();
     $z->real = 0;
     $z->imaginary = 0;
+
     $iteration = 0;
     $zValues = [];
     $previousZ = $z;
-    $quit = false;
     while ($z->magnitude() < 2 && $iteration < $maxIterations) {
         $iteration++;
         $z = $previousZ->times($previousZ)->plus($c);
         if ($filterRepeating && $z->real == $previousZ->real && $z->imaginary == $previousZ->imaginary) {
             continue;
         }
+
         $zValues[] = $z;
     }
 
     return $zValues;
 }
 
-function getCsWithFullPaths($stepping = 0.1, $maxIterations = 1024)
+/**
+ * @return mixed[]
+ */
+function getCsWithFullPaths($stepping = 0.1, $maxIterations = 1024): array
 {
 
     $fullPaths = [];
@@ -77,7 +79,7 @@ function getCsWithFullPaths($stepping = 0.1, $maxIterations = 1024)
                 ];
                 foreach ($multipliers as $multiplier) {
                     $sampleCount++;
-                    $path = getMandelbrotEscapePath(new complex($x * $multiplier[0], $y * $multiplier[1]), $maxIterations);
+                    $path = getMandelbrotEscapePath(new Complex($x * $multiplier[0], $y * $multiplier[1]), $maxIterations);
                     if (count($path) == $maxIterations) {
                         $fullPaths[] = $path[0];
                     //[0];
@@ -86,11 +88,15 @@ function getCsWithFullPaths($stepping = 0.1, $maxIterations = 1024)
             }
         }
     }
+
     echo('sampleCount: ' . $sampleCount . PHP_EOL);
     return $fullPaths;
 }
 
-function getCsWithNearlyFullPaths($stepping = 0.1, $maxIterations = 1024)
+/**
+ * @return mixed[]
+ */
+function getCsWithNearlyFullPaths($stepping = 0.1, $maxIterations = 1024): array
 {
 
     $fullPaths = [];
@@ -107,11 +113,12 @@ function getCsWithNearlyFullPaths($stepping = 0.1, $maxIterations = 1024)
                 ];
                 foreach ($multipliers as $multiplier) {
                     $sampleCount++;
-                    $path = getMandelbrotEscapePath(new complex($x * $multiplier[0], $y * $multiplier[1]), $maxIterations);
+                    $path = getMandelbrotEscapePath(new Complex($x * $multiplier[0], $y * $multiplier[1]), $maxIterations);
                     $count = count($path);
                     if (!array_key_exists($count, $pathCounts)) {
                         $pathCounts[$count] = [];
                     }
+
                     $pathCounts[$count][] = $path[0];
                     if ($count == $maxIterations - 1) {
                         $fullPaths[] = $path[0];
@@ -121,12 +128,13 @@ function getCsWithNearlyFullPaths($stepping = 0.1, $maxIterations = 1024)
             }
         }
     }
+
     //echo('sampleCount: ' . $sampleCount . PHP_EOL);
     //dd($pathCounts);
     return $fullPaths;
 }
 
-count(getCsWithNearlyFullPaths(4 / 11, 255))
+count(getCsWithNearlyFullPaths(4 / 11, 255));
 
 /*
 $c = new Complex();
