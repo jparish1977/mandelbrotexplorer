@@ -655,30 +655,3 @@ window.populateAltUIFields = populateAltUIFields;
 window.setupAltUITabs = setupAltUITabs;
 window.syncAltUIToModel = syncAltUIToModel;
 
-// Debug function to test if everything is working
-window.testAltUISync = function() {
-  console.log('🧪 testAltUISync() called');
-  console.log('🔍 syncAltUIToModel exists:', typeof window.syncAltUIToModel);
-  console.log('🔍 mandelbrotExplorer exists:', typeof mandelbrotExplorer);
-  console.log('🔍 MBEUI exists:', typeof window.MBEUI);
-  if (window.MBEUI) {
-    console.log('🔍 MBEUI.fieldMappings exists:', typeof window.MBEUI.fieldMappings);
-  }
-  
-  // Try to call the sync function
-  try {
-    window.syncAltUIToModel();
-  } catch (error) {
-    console.error('❌ Error calling syncAltUIToModel:', error);
-  }
-};
-
-// Simple test to check basic setup
-window.testBasicSetup = function() {
-  console.log('🧪 testBasicSetup() called');
-  console.log('🔍 buildAlternativeUI exists:', typeof window.buildAlternativeUI);
-  console.log('🔍 alternativeUI element exists:', !!document.getElementById('alternativeUI'));
-  console.log('🔍 controls element exists:', !!document.getElementById('controls'));
-  console.log('🔍 alternativeUI display style:', document.getElementById('alternativeUI')?.style.display);
-  console.log('🔍 controls display style:', document.getElementById('controls')?.style.display);
-}; 

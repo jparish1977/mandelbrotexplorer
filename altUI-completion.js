@@ -126,14 +126,6 @@ function createMandelbrotCompleter(editorType) {
       
       const allGlobals = [...globalVars, ...additionalGlobals];
       
-      // Debug: Check what globals we found
-      if (currentWord.toLowerCase().includes('man')) {
-        console.log('Global vars found:', globalVars.filter(k => k.toLowerCase().includes('man')));
-        console.log('Additional globals found:', additionalGlobals.filter(k => k.toLowerCase().includes('man')));
-        console.log('mandelbrotExplorer exists:', 'mandelbrotExplorer' in window);
-        console.log('mandelbrotExplorer own property:', window.hasOwnProperty('mandelbrotExplorer'));
-      }
-      
       allGlobals.forEach(key => {
         if (key.toLowerCase().startsWith(currentWord.toLowerCase())) {
           try {
