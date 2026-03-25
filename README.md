@@ -6,7 +6,7 @@ Interactive Mandelbrot and Julia set explorer with 2D canvas rendering, 3D parti
 
 ![Screenshot](docs/screenshot.png)
 
-**[Live Demo](https://jparish1977.github.io/mandelbrotexplorer/)**
+**[Live Demo — iteration8.com](https://iteration8.com)** | [GitHub Pages mirror](https://jparish1977.github.io/mandelbrotexplorer/)
 
 ## Features
 
@@ -22,7 +22,7 @@ Interactive Mandelbrot and Julia set explorer with 2D canvas rendering, 3D parti
 
 Open `index.html` in a browser. No build step, no server required.
 
-Or visit the **[live demo](https://jparish1977.github.io/mandelbrotexplorer/)**.
+Or visit **[iteration8.com](https://iteration8.com)**.
 
 ## Technology
 
@@ -36,8 +36,12 @@ Or visit the **[live demo](https://jparish1977.github.io/mandelbrotexplorer/)**.
 
 ```
 index.html                  Entry point
-mandelbrotexplorer.js       Core fractal math, GPU acceleration, escape paths
-ui.js                       Classic UI controls and initialization
+mandelbrotexplorer.js       Core properties, init, 2D rendering, color cycling, math
+gpuAcceleration.js          WebGL shaders, GPU escape paths, CPU fallback
+cloudMethods.js             Eval wrappers, scene setup, cache management
+cloudGeneration.js          Particle generation, hair rendering
+uiHandlers.js               Update, toggle, and preset setter handlers
+ui.js                       Init, render loop, camera, settings, zoom
 altUI-*.js                  Modern tabbed UI (5 modules)
 threeRenderer.js            Three.js scene management
 shaderLoader.js             GLSL shader loading with file:// fallback
