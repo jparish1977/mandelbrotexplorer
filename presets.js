@@ -1,5 +1,8 @@
 // Mandelbrot Explorer Presets
 // This file contains all preset configurations for the Mandelbrot Explorer
+// Preset values are intentional constants — not magic numbers
+/* eslint-disable no-magic-numbers */
+/* eslint-disable no-unused-vars */
 
 /* global mandelbrotExplorer */
 const mandelbrotExplorerPresets = {
