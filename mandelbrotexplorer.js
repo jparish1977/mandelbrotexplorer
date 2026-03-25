@@ -159,6 +159,7 @@ const mandelbrotExplorer = {
 		for( let xValue = this.startX, imageX = 0; imageX < this.canvas_2d.width; xValue += this.xScale_2d, imageX++ ){
 			for( let yValue = this.startY, imageY = 0; imageY < this.canvas_2d.height; yValue -= this.yScale_2d, imageY++ ){
 				let c = [xValue, yValue];
+				// eslint-disable-next-line no-eval -- user-defined Julia C expression
 				let juliaC = eval(this.juliaC);
 				let color;
 				if( this.getAbsoluteValueOfComplexNumber( juliaC ) !== 0 ){
@@ -411,6 +412,7 @@ const mandelbrotExplorer = {
 		gl.useProgram(this.gpuProgram);
 		
 		// Set uniforms
+		// eslint-disable-next-line no-eval -- user-defined Julia C expression
 		let juliaC = eval(this.juliaC);
 		gl.uniform2f(this.gpuUniforms.resolution, xPoints, yPoints);
 		gl.uniform1f(this.gpuUniforms.startX, startX);
@@ -572,6 +574,7 @@ const mandelbrotExplorer = {
 		gl.useProgram(this.gpuProgram);
 		
 		// Set uniforms
+		// eslint-disable-next-line no-eval -- user-defined Julia C expression
 		let juliaC = eval(this.juliaC);
 		gl.uniform2f(this.gpuUniforms.resolution, xPoints, yPoints);
 		gl.uniform1f(this.gpuUniforms.startX, startX);
@@ -678,6 +681,7 @@ const mandelbrotExplorer = {
 		const results = [];
 		for (let i = 0; i < points.length; i++) {
 			let c = points[i];
+			// eslint-disable-next-line no-eval -- user-defined Julia C expression
 			let juliaC = eval(mandelbrotExplorer.juliaC);
 			
 			let escapePath;
@@ -696,6 +700,7 @@ const mandelbrotExplorer = {
         "evalInitialZ": function(escapePath) {
             if( typeof mandelbrotExplorer.cloudMethods.functionsFromEval.initialZ === 'undefined' ) {
                 if (mandelbrotExplorer.initialZ) {
+                    // eslint-disable-next-line no-eval -- dynamic function from user-defined initialZ expression
                     eval("mandelbrotExplorer.cloudMethods.functionsFromEval.initialZ = function (escapePath){\n " + mandelbrotExplorer.initialZ + "\n}");
                 } else {
                     mandelbrotExplorer.cloudMethods.functionsFromEval.initialZ = function(escapePath){
@@ -710,6 +715,7 @@ const mandelbrotExplorer = {
             if( typeof mandelbrotExplorer.cloudMethods.functionsFromEval.cloudLengthFilter === 'undefined' ) {
                 if (mandelbrotExplorer.cloudLengthFilter) {
                     let functionDefinition = "function (pathIndex, iteration, escapePath){\nreturn " + mandelbrotExplorer.cloudLengthFilter + ";\n}";
+                    // eslint-disable-next-line no-eval -- dynamic function from user-defined cloud length filter
                     eval('mandelbrotExplorer.cloudMethods.functionsFromEval.cloudLengthFilter = ' + functionDefinition + ';');
                 } else {
                     mandelbrotExplorer.cloudMethods.functionsFromEval.cloudLengthFilter = function(){
@@ -724,6 +730,7 @@ const mandelbrotExplorer = {
             if( typeof mandelbrotExplorer.cloudMethods.functionsFromEval.cloudIterationFilter === 'undefined' ) {
                 if (mandelbrotExplorer.cloudIterationFilter) {
                     let functionDefinition = "function (pathIndex, iteration, escapePath){\nreturn " + mandelbrotExplorer.cloudIterationFilter + ";\n}";
+                    // eslint-disable-next-line no-eval -- dynamic function from user-defined cloud iteration filter
                     eval('mandelbrotExplorer.cloudMethods.functionsFromEval.cloudIterationFilter = ' + functionDefinition + ';');
                 } else {
                     mandelbrotExplorer.cloudMethods.functionsFromEval.cloudIterationFilter = function(){
@@ -740,6 +747,7 @@ const mandelbrotExplorer = {
                     let functionDefinition = "function (pathIndex, iteration, escapePath){\n" 
                             + mandelbrotExplorer.escapingZ 
                         + ";\n}";
+                    // eslint-disable-next-line no-eval -- dynamic function from user-defined escaping Z expression
                     eval('mandelbrotExplorer.cloudMethods.functionsFromEval.escapingZ = ' + functionDefinition + ';');
                 } else {
                     mandelbrotExplorer.cloudMethods.functionsFromEval.escapingZ = function(){
@@ -757,12 +765,14 @@ const mandelbrotExplorer = {
                             + "var allowed = " + mandelbrotExplorer.particleFilter + ";\n"
                             + "return {newX: newX, newY: newY, particleVector: particleVector, allowed: allowed};\n"
                         + "}";
+                    // eslint-disable-next-line no-eval -- dynamic function from user-defined particle filter
                     eval('mandelbrotExplorer.cloudMethods.functionsFromEval.particleFilter = ' + functionDefinition + ';');
                 } else {
                     let functionDefinition = "function (newX, newY, particleVector){\n" 
                             + "var allowed = true;\n"
                             + "return {newX: newX, newY: newY, particleVector: particleVector, allowed: allowed};\n"
                         + "}";
+                    // eslint-disable-next-line no-eval -- dynamic function from default particle filter
                     eval('mandelbrotExplorer.cloudMethods.functionsFromEval.particleFilter = ' + functionDefinition + ';');
                 }
             }
@@ -771,11 +781,13 @@ const mandelbrotExplorer = {
         },
         "processDualZMultiplier": function(pathIndex, iteration, escapePath, newX, newY, z) {
 			let newZ = z;
+            // eslint-disable-next-line no-eval -- user-defined dual Z multiplier expression
             let dualZMultiplier = eval(mandelbrotExplorer.dualZMultiplier);
             
             return [newX, newY, newZ];
         },
         "evalJuliaC": function(c) {
+            // eslint-disable-next-line no-eval -- user-defined Julia C expression
             return eval(mandelbrotExplorer.juliaC);
         },
         "handleCloudSteppingAdjustments": function(c){
@@ -1433,6 +1445,7 @@ const mandelbrotExplorer = {
                 }
                 
                 let color = mandelbrotExplorer.palette[ mandelbrotExplorer.getColorIndex(index) ];
+                // eslint-disable-next-line no-eval -- user-defined particle size expression
                 let size = mandelbrotExplorer.particleSize ? eval(mandelbrotExplorer.particleSize): 0;
                 
                 let pMaterial = mandelbrotExplorer.threeRenderer.createParticleMaterial(color, size);
@@ -1520,7 +1533,9 @@ const mandelbrotExplorer = {
 						escapePath.forEach(function(pathValue, pathIndex, source){
 							let iteration = pathIndex + 1;
 							
+							// eslint-disable-next-line no-eval -- user-defined cloud length filter expression
 							if( mandelbrotExplorer.cloudLengthFilter.length > 0 && eval( mandelbrotExplorer.cloudLengthFilter ) === false ) return true;
+							// eslint-disable-next-line no-eval -- user-defined cloud iteration filter expression
 							if( mandelbrotExplorer.cloudIterationFilter.length > 0 && eval( mandelbrotExplorer.cloudIterationFilter ) === false ) return true;
 							let direction = [1,1];
 							if(pathIndex > 0){
@@ -1543,6 +1558,7 @@ const mandelbrotExplorer = {
 							let newY = escapePath[pathIndex][1];
 							let particleVector = new THREE.Vector3(newX, newY, z);
 							if(mandelbrotExplorer.particleFilter){
+								// eslint-disable-next-line no-eval -- user-defined particle filter expression
 								let allowed = eval( mandelbrotExplorer.particleFilter );
 								if( !allowed ){
 									return true;
@@ -1755,6 +1771,7 @@ const mandelbrotExplorer = {
 			for( const index in this.particleSystems ){
 				this.threeRenderer.removeObject( this.particleSystems[index] );
 				let iteration = parseInt(index) + 1;
+				// eslint-disable-next-line no-eval -- user-defined cloud iteration filter expression
 				if( this.cloudIterationFilter.length > 0 && eval( this.cloudIterationFilter ) === false ) continue;
 				
 				if( this.particleSystems[index] && 
