@@ -5,290 +5,290 @@
 const mandelbrotExplorerPresets = {
 	"cloudLengthFilter": {
 		"iteration8": {
-			func: function(pathIndex, iteration, escapePath){
+			func(pathIndex, iteration, escapePath){
 				return escapePath.length === 8;
 			},
-			getCodeString: function(pathIndex, iteration, escapePath){
+			getCodeString(pathIndex, iteration, escapePath){
 				return "escapePath.length === 8";
 			}
 		},
 		"iterationDecimation": {
-			func: function(pathIndex, iteration, escapePath){
+			func(pathIndex, iteration, escapePath){
 				return escapePath.length % 10 === 0;
 			},
-			getCodeString: function(pathIndex, iteration, escapePath){
+			getCodeString(pathIndex, iteration, escapePath){
 				return "escapePath.length % 10 === 0";
 			}
 		},
 		"maxIterations": {
-			func: function(pathIndex, iteration, escapePath){
+			func(pathIndex, iteration, escapePath){
 				return escapePath.length === mandelbrotExplorer.maxIterations_3d || escapePath.shortened;
 			},
-			getCodeString: function(pathIndex, iteration, escapePath){
+			getCodeString(pathIndex, iteration, escapePath){
 				return "escapePath.length === mandelbrotExplorer.maxIterations_3d || escapePath.shortened";
 			}
 		},
 		"theMeat": {
-			func: function(pathIndex, iteration, escapePath){
+			func(pathIndex, iteration, escapePath){
 				return escapePath.length > parseInt( mandelbrotExplorer.maxIterations_3d * .1 )
 					&& escapePath.length < parseInt( mandelbrotExplorer.maxIterations_3d * .9 )
 					&& escapePath.length > 5;
 			},
-			getCodeString: function(pathIndex, iteration, escapePath){
+			getCodeString(pathIndex, iteration, escapePath){
 				return "escapePath.length > parseInt( mandelbrotExplorer.maxIterations_3d * .1 )"
 					+ "&& escapePath.length < parseInt( mandelbrotExplorer.maxIterations_3d * .9 )"
 					+ "&& escapePath.length  > 5";
 			}
 		},
 		"happy420_fullPaths": {
-			func: function(pathIndex, iteration, escapePath){
+			func(pathIndex, iteration, escapePath){
 				return escapePath.length === mandelbrotExplorer.maxIterations_3d;
 			},
-			getCodeString: function(pathIndex, iteration, escapePath){
+			getCodeString(pathIndex, iteration, escapePath){
 				return "escapePath.length === mandelbrotExplorer.maxIterations_3d";
 			}
 		},
 		"longPaths": {
-			func: function(pathIndex, iteration, escapePath){
+			func(pathIndex, iteration, escapePath){
 				return escapePath.length > parseInt( mandelbrotExplorer.maxIterations_3d * .8 );
 			},
-			getCodeString: function(pathIndex, iteration, escapePath){
+			getCodeString(pathIndex, iteration, escapePath){
 				return "escapePath.length > parseInt( mandelbrotExplorer.maxIterations_3d * .8 )";
 			}
 		},
 		"shortPaths": {
-			func: function(pathIndex, iteration, escapePath){
+			func(pathIndex, iteration, escapePath){
 				return escapePath.length < parseInt( mandelbrotExplorer.maxIterations_3d * .2 );
 			},
-			getCodeString: function(pathIndex, iteration, escapePath){
+			getCodeString(pathIndex, iteration, escapePath){
 				return "escapePath.length < parseInt( mandelbrotExplorer.maxIterations_3d * .2 )";
 			}
 		}
 	},
 	"cloudIterationFilter": {
 		"default": {
-			func: function(pathIndex, iteration, escapePath){
+			func(pathIndex, iteration, escapePath){
 				return iteration > 8;
 			},
-			getCodeString: function(pathIndex, iteration, escapePath){
+			getCodeString(pathIndex, iteration, escapePath){
 				return "iteration > 8";
 			}
 		},
 		"maxIterations": {
-			func: function(pathIndex, iteration, escapePath){
+			func(pathIndex, iteration, escapePath){
 				return iteration === mandelbrotExplorer.maxIterations_3d;
 			},
-			getCodeString: function(pathIndex, iteration, escapePath){
+			getCodeString(pathIndex, iteration, escapePath){
 				return "iteration === mandelbrotExplorer.maxIterations_3d";
 			}
 		},
 		"lessThan9": {
-			func: function(pathIndex, iteration, escapePath){
+			func(pathIndex, iteration, escapePath){
 				return iteration < 9;
 			},
-			getCodeString: function(pathIndex, iteration, escapePath){
+			getCodeString(pathIndex, iteration, escapePath){
 				return "iteration < 9";
 			}
 		},
 		"evenIterations": {
-			func: function(pathIndex, iteration, escapePath){
+			func(pathIndex, iteration, escapePath){
 				return iteration % 2 === 0;
 			},
-			getCodeString: function(pathIndex, iteration, escapePath){
+			getCodeString(pathIndex, iteration, escapePath){
 				return "iteration % 2 === 0";
 			}
 		},
 		"oddIterations": {
-			func: function(pathIndex, iteration, escapePath){
+			func(pathIndex, iteration, escapePath){
 				return iteration % 2 === 1;
 			},
-			getCodeString: function(pathIndex, iteration, escapePath){
+			getCodeString(pathIndex, iteration, escapePath){
 				return "iteration % 2 === 1";
 			}
 		},
 		"firstHalf": {
-			func: function(pathIndex, iteration, escapePath){
+			func(pathIndex, iteration, escapePath){
 				return iteration <= mandelbrotExplorer.maxIterations_3d / 2;
 			},
-			getCodeString: function(pathIndex, iteration, escapePath){
+			getCodeString(pathIndex, iteration, escapePath){
 				return "iteration <= mandelbrotExplorer.maxIterations_3d / 2";
 			}
 		},
 		"secondHalf": {
-			func: function(pathIndex, iteration, escapePath){
+			func(pathIndex, iteration, escapePath){
 				return iteration > mandelbrotExplorer.maxIterations_3d / 2;
 			},
-			getCodeString: function(pathIndex, iteration, escapePath){
+			getCodeString(pathIndex, iteration, escapePath){
 				return "iteration > mandelbrotExplorer.maxIterations_3d / 2";
 			}
 		}
 	},
 	"particleSize": {
 		"default": {
-			func: function(index, iterationParticles){
+			func(index, iterationParticles){
 				return mandelbrotExplorer.xScale_3d/mandelbrotExplorer.maxIterations_3d;
 			},
-			getCodeString: function(index, iterationParticles){
+			getCodeString(index, iterationParticles){
 				return "mandelbrotExplorer.xScale_3d/mandelbrotExplorer.maxIterations_3d";
 			}
 		},
 		"zero": {
-			func: function(index, iterationParticles){
+			func(index, iterationParticles){
 				return 0;
 			},
-			getCodeString: function(index, iterationParticles){
+			getCodeString(index, iterationParticles){
 				return "0";
 			}
 		},
 		"indexBased": {
-			func: function(index, iterationParticles){
+			func(index, iterationParticles){
 				return index/mandelbrotExplorer.iterationParticles.length;
 			},
-			getCodeString: function(index, iterationParticles){
+			getCodeString(index, iterationParticles){
 				return "index/mandelbrotExplorer.iterationParticles.length";
 			}
 		},
 		"constant": {
-			func: function(index, iterationParticles){
+			func(index, iterationParticles){
 				return 0.1;
 			},
-			getCodeString: function(index, iterationParticles){
+			getCodeString(index, iterationParticles){
 				return "0.1";
 			}
 		},
 		"scaleBased": {
-			func: function(index, iterationParticles){
+			func(index, iterationParticles){
 				return mandelbrotExplorer.xScale_3d;
 			},
-			getCodeString: function(index, iterationParticles){
+			getCodeString(index, iterationParticles){
 				return "mandelbrotExplorer.xScale_3d";
 			}
 		},
 		"happy420_scale": {
-			func: function(index, iterationParticles){
+			func(index, iterationParticles){
 				return mandelbrotExplorer.xScale_3d/mandelbrotExplorer.maxIterations_3d;
 			},
-			getCodeString: function(index, iterationParticles){
+			getCodeString(index, iterationParticles){
 				return "mandelbrotExplorer.xScale_3d/mandelbrotExplorer.maxIterations_3d";
 			}
 		},
 		"dynamic": {
-			func: function(index, iterationParticles){
+			func(index, iterationParticles){
 				return Math.max(0.01, mandelbrotExplorer.xScale_3d * (1 - index / mandelbrotExplorer.maxIterations_3d));
 			},
-			getCodeString: function(index, iterationParticles){
+			getCodeString(index, iterationParticles){
 				return "Math.max(0.01, mandelbrotExplorer.xScale_3d * (1 - index / mandelbrotExplorer.maxIterations_3d))";
 			}
 		},
 		"pulse": {
-			func: function(index, iterationParticles){
+			func(index, iterationParticles){
 				return 0.05 + 0.05 * Math.sin(index * 0.5);
 			},
-			getCodeString: function(index, iterationParticles){
+			getCodeString(index, iterationParticles){
 				return "0.05 + 0.05 * Math.sin(index * 0.5)";
 			}
 		}
 	},
 	"dualZMultiplier": {
 		"default": {
-			func: function(pathIndex, iteration, escapePath, newX, newY, z){
+			func(pathIndex, iteration, escapePath, newX, newY, z){
 				return [escapePath[pathIndex][0], escapePath[pathIndex][1], z * -1];
 			},
-			getCodeString: function(pathIndex, iteration, escapePath, newX, newY, z){
+			getCodeString(pathIndex, iteration, escapePath, newX, newY, z){
 				return "newX = escapePath[pathIndex][0];\nnewY = escapePath[pathIndex][1];\nnewZ = z * -1;";
 			}
 		},
 		"addPrevious": {
-			func: function(pathIndex, iteration, escapePath, newX, newY, z){
+			func(pathIndex, iteration, escapePath, newX, newY, z){
 				if(pathIndex > 0) {
 					return [newX + escapePath[pathIndex-1][0], newY + escapePath[pathIndex-1][1], z * -1];
 				}
 				return [newX, newY, z * -1];
 			},
-			getCodeString: function(pathIndex, iteration, escapePath, newX, newY, z){
+			getCodeString(pathIndex, iteration, escapePath, newX, newY, z){
 				return "if(pathIndex > 0) {\n  newX += escapePath[pathIndex-1][0];\n  newY += escapePath[pathIndex-1][1];\n}\nnewZ = z * -1;";
 			}
 		},
 		"subtractPrevious": {
-			func: function(pathIndex, iteration, escapePath, newX, newY, z){
+			func(pathIndex, iteration, escapePath, newX, newY, z){
 				const prevIndex = pathIndex > 1 ? pathIndex - 1 : 0;
 				return [newX + escapePath[prevIndex][0] * -1, newY + escapePath[prevIndex][1] * -1, z * -1];
 			},
-			getCodeString: function(pathIndex, iteration, escapePath, newX, newY, z){
+			getCodeString(pathIndex, iteration, escapePath, newX, newY, z){
 				return "var prevIndex = pathIndex > 1 ? pathIndex - 1 : 0;\nnewX += escapePath[prevIndex][0] * -1;\nnewY += escapePath[prevIndex][1] * -1;\nnewZ = z * -1;";
 			}
 		},
 		"mirrorX": {
-			func: function(pathIndex, iteration, escapePath, newX, newY, z){
+			func(pathIndex, iteration, escapePath, newX, newY, z){
 				return [newX * -1, newY, z * -1];
 			},
-			getCodeString: function(pathIndex, iteration, escapePath, newX, newY, z){
+			getCodeString(pathIndex, iteration, escapePath, newX, newY, z){
 				return "newX = newX * -1;\nnewY = newY;\nnewZ = z * -1;";
 			}
 		},
 		"mirrorY": {
-			func: function(pathIndex, iteration, escapePath, newX, newY, z){
+			func(pathIndex, iteration, escapePath, newX, newY, z){
 				return [newX, newY * -1, z * -1];
 			},
-			getCodeString: function(pathIndex, iteration, escapePath, newX, newY, z){
+			getCodeString(pathIndex, iteration, escapePath, newX, newY, z){
 				return "newX = newX;\nnewY = newY * -1;\nnewZ = z * -1;";
 			}
 		},
 		"mirrorBoth": {
-			func: function(pathIndex, iteration, escapePath, newX, newY, z){
+			func(pathIndex, iteration, escapePath, newX, newY, z){
 				return [newX * -1, newY * -1, z * -1];
 			},
-			getCodeString: function(pathIndex, iteration, escapePath, newX, newY, z){
+			getCodeString(pathIndex, iteration, escapePath, newX, newY, z){
 				return "newX = newX * -1;\nnewY = newY * -1;\nnewZ = z * -1;";
 			}
 		},
 		"flower": {
-			func: function(pathIndex, iteration, escapePath, newX, newY, z){
+			func(pathIndex, iteration, escapePath, newX, newY, z){
 				if(pathIndex > 0) {
 					newX = newX - escapePath[0][0];
 					newY = newY - escapePath[0][1];
 				}
 				return [newX, newY, z * -1];
 			},
-			getCodeString: function(pathIndex, iteration, escapePath, newX, newY, z){
+			getCodeString(pathIndex, iteration, escapePath, newX, newY, z){
 				return "if(pathIndex > 0) {\n  newX = newX - escapePath[0][0];\n  newY = newY - escapePath[0][1];\n}\nnewZ = z * -1;";
 			}
 		},
 		"happy420_originOffset": {
-			func: function(pathIndex, iteration, escapePath, newX, newY, z){
+			func(pathIndex, iteration, escapePath, newX, newY, z){
 				newX = newX - escapePath[0][0];
 				newY = newY - escapePath[0][1];
 				return [newX, newY, z * -1];
 			},
-			getCodeString: function(pathIndex, iteration, escapePath, newX, newY, z){
+			getCodeString(pathIndex, iteration, escapePath, newX, newY, z){
 				return "newX = newX - escapePath[0][0];\nnewY = newY - escapePath[0][1];\nnewZ = z * -1;";
 			}
 		},
 		"spiral": {
-			func: function(pathIndex, iteration, escapePath, newX, newY, z){
+			func(pathIndex, iteration, escapePath, newX, newY, z){
 				const angle = pathIndex * 0.5;
 				const radius = 0.1;
 				newX = newX + Math.cos(angle) * radius;
 				newY = newY + Math.sin(angle) * radius;
 				return [newX, newY, z * -1];
 			},
-			getCodeString: function(pathIndex, iteration, escapePath, newX, newY, z){
+			getCodeString(pathIndex, iteration, escapePath, newX, newY, z){
 				return "var angle = pathIndex * 0.5;\nvar radius = 0.1;\nnewX = newX + Math.cos(angle) * radius;\nnewY = newY + Math.sin(angle) * radius;\nnewZ = z * -1;";
 			}
 		},
 		"wave": {
-			func: function(pathIndex, iteration, escapePath, newX, newY, z){
+			func(pathIndex, iteration, escapePath, newX, newY, z){
 				const wave = Math.sin(pathIndex * 0.3) * 0.05;
 				newX = newX + wave;
 				newY = newY + wave;
 				return [newX, newY, z * -1];
 			},
-			getCodeString: function(pathIndex, iteration, escapePath, newX, newY, z){
+			getCodeString(pathIndex, iteration, escapePath, newX, newY, z){
 				return "var wave = Math.sin(pathIndex * 0.3) * 0.05;\nnewX = newX + wave;\nnewY = newY + wave;\nnewZ = z * -1;";
 			}
 		},
 		"magnitudeDifference": {
-			func: function(pathIndex, iteration, escapePath, newX, newY, z){
+			func(pathIndex, iteration, escapePath, newX, newY, z){
 				if(pathIndex > 0) {
 					const currentMag = mandelbrotExplorer.getAbsoluteValueOfComplexNumber(escapePath[pathIndex]);
 					const prevMag = mandelbrotExplorer.getAbsoluteValueOfComplexNumber(escapePath[pathIndex-1]);
@@ -296,12 +296,12 @@ const mandelbrotExplorerPresets = {
 				}
 				return [newX, newY, z * -1];
 			},
-			getCodeString: function(pathIndex, iteration, escapePath, newX, newY, z){
+			getCodeString(pathIndex, iteration, escapePath, newX, newY, z){
 				return "if(pathIndex > 0) {\n  var currentMag = mandelbrotExplorer.getAbsoluteValueOfComplexNumber(escapePath[pathIndex]);\n  var prevMag = mandelbrotExplorer.getAbsoluteValueOfComplexNumber(escapePath[pathIndex-1]);\n  newZ = currentMag - prevMag;\n} else {\n  newZ = z * -1;\n}";
 			}
 		},
 		"magnitudeSum": {
-			func: function(pathIndex, iteration, escapePath, newX, newY, z){
+			func(pathIndex, iteration, escapePath, newX, newY, z){
 				if(pathIndex > 0) {
 					const sumX = escapePath[pathIndex][0] + escapePath[pathIndex-1][0];
 					const sumY = escapePath[pathIndex][1] + escapePath[pathIndex-1][1];
@@ -309,119 +309,119 @@ const mandelbrotExplorerPresets = {
 				}
 				return [newX, newY, z * -1];
 			},
-			getCodeString: function(pathIndex, iteration, escapePath, newX, newY, z){
+			getCodeString(pathIndex, iteration, escapePath, newX, newY, z){
 				return "if(pathIndex > 0) {\n  var sumX = escapePath[pathIndex][0] + escapePath[pathIndex-1][0];\n  var sumY = escapePath[pathIndex][1] + escapePath[pathIndex-1][1];\n  newZ = mandelbrotExplorer.getAbsoluteValueOfComplexNumber([sumX, sumY]);\n} else {\n  newZ = z * -1;\n}";
 			}
 		},
 		"multiplyPrevious": {
-			func: function(pathIndex, iteration, escapePath, newX, newY, z){
+			func(pathIndex, iteration, escapePath, newX, newY, z){
 				if(pathIndex > 0) {
 					newX = newX * escapePath[pathIndex-1][0];
 					newY = newY * escapePath[pathIndex-1][1];
 				}
 				return [newX, newY, z * -1];
 			},
-			getCodeString: function(pathIndex, iteration, escapePath, newX, newY, z){
+			getCodeString(pathIndex, iteration, escapePath, newX, newY, z){
 				return "if(pathIndex > 0) {\n  newX = newX * escapePath[pathIndex-1][0];\n  newY = newY * escapePath[pathIndex-1][1];\n}\nnewZ = z * -1;";
 			}
 		}
 	},
 	"particleFilter": {
 		"xRange": {
-			func: function(newX, newY, particleVector){
+			func(newX, newY, particleVector){
 				return (newX > 0.24 && newX < 0.26);
 			},
-			getCodeString: function(newX, newY, particleVector){
+			getCodeString(newX, newY, particleVector){
 				return "(newX > 0.24 && newX < 0.26)";
 			}
 		},
 		"xOrYRange": {
-			func: function(newX, newY, particleVector){
+			func(newX, newY, particleVector){
 				return (newX > 0.24 && newX < 0.26) || (newY > 0.24 && newY < 0.26);
 			},
-			getCodeString: function(newX, newY, particleVector){
+			getCodeString(newX, newY, particleVector){
 				return "(newX > 0.24 && newX < 0.26) || (newY > 0.24 && newY < 0.26)";
 			}
 		},
 		"distanceFromOrigin": {
-			func: function(newX, newY, particleVector){
+			func(newX, newY, particleVector){
 				return (mandelbrotExplorer.getAbsoluteValueOfComplexNumber([newX, newY]) > 0.24 && mandelbrotExplorer.getAbsoluteValueOfComplexNumber([newX, newY]) < 0.26);
 			},
-			getCodeString: function(newX, newY, particleVector){
+			getCodeString(newX, newY, particleVector){
 				return "(mandelbrotExplorer.getAbsoluteValueOfComplexNumber([newX, newY]) > 0.24 && mandelbrotExplorer.getAbsoluteValueOfComplexNumber([newX, newY]) < 0.26)";
 			}
 		},
 		"positiveX": {
-			func: function(newX, newY, particleVector){
+			func(newX, newY, particleVector){
 				return newX > 0;
 			},
-			getCodeString: function(newX, newY, particleVector){
+			getCodeString(newX, newY, particleVector){
 				return "newX > 0";
 			}
 		},
 		"positiveY": {
-			func: function(newX, newY, particleVector){
+			func(newX, newY, particleVector){
 				return newY > 0;
 			},
-			getCodeString: function(newX, newY, particleVector){
+			getCodeString(newX, newY, particleVector){
 				return "newY > 0";
 			}
 		},
 		"withinUnitCircle": {
-			func: function(newX, newY, particleVector){
+			func(newX, newY, particleVector){
 				return mandelbrotExplorer.getAbsoluteValueOfComplexNumber([newX, newY]) < 1;
 			},
-			getCodeString: function(newX, newY, particleVector){
+			getCodeString(newX, newY, particleVector){
 				return "mandelbrotExplorer.getAbsoluteValueOfComplexNumber([newX, newY]) < 1";
 			}
 		},
 		"happy420_all": {
-			func: function(newX, newY, particleVector){
+			func(newX, newY, particleVector){
 				return true; // Accept all particles
 			},
-			getCodeString: function(newX, newY, particleVector){
+			getCodeString(newX, newY, particleVector){
 				return "true";
 			}
 		},
 		"quadrant1": {
-			func: function(newX, newY, particleVector){
+			func(newX, newY, particleVector){
 				return newX > 0 && newY > 0;
 			},
-			getCodeString: function(newX, newY, particleVector){
+			getCodeString(newX, newY, particleVector){
 				return "newX > 0 && newY > 0";
 			}
 		},
 		"quadrant2": {
-			func: function(newX, newY, particleVector){
+			func(newX, newY, particleVector){
 				return newX < 0 && newY > 0;
 			},
-			getCodeString: function(newX, newY, particleVector){
+			getCodeString(newX, newY, particleVector){
 				return "newX < 0 && newY > 0";
 			}
 		},
 		"quadrant3": {
-			func: function(newX, newY, particleVector){
+			func(newX, newY, particleVector){
 				return newX < 0 && newY < 0;
 			},
-			getCodeString: function(newX, newY, particleVector){
+			getCodeString(newX, newY, particleVector){
 				return "newX < 0 && newY < 0";
 			}
 		},
 		"quadrant4": {
-			func: function(newX, newY, particleVector){
+			func(newX, newY, particleVector){
 				return newX > 0 && newY < 0;
 			},
-			getCodeString: function(newX, newY, particleVector){
+			getCodeString(newX, newY, particleVector){
 				return "newX > 0 && newY < 0";
 			}
 		},
 		"spiralZone": {
-			func: function(newX, newY, particleVector){
+			func(newX, newY, particleVector){
 				const distance = mandelbrotExplorer.getAbsoluteValueOfComplexNumber([newX, newY]);
 				const angle = Math.atan2(newY, newX);
 				return distance > 0.2 && distance < 0.8 && angle > 0;
 			},
-			getCodeString: function(newX, newY, particleVector){
+			getCodeString(newX, newY, particleVector){
 				return "(function(){var distance = mandelbrotExplorer.getAbsoluteValueOfComplexNumber([newX, newY]); var angle = Math.atan2(newY, newX); return distance > 0.2 && distance < 0.8 && angle > 0;})()";
 			}
 		}
@@ -476,71 +476,71 @@ const mandelbrotExplorerPresets = {
 	"mandelbrot": {
 		"escapingZ": {
 			"currentZLessPreviousZ_percentOfMax3D": {
-				func: function(escapePath, pathIndex){
+				func(escapePath, pathIndex){
 					return ((pathIndex + 1)/mandelbrotExplorer.maxIterations_3d)*(mandelbrotExplorer.getAbsoluteValueOfComplexNumber(escapePath[pathIndex]) - mandelbrotExplorer.getAbsoluteValueOfComplexNumber(escapePath[pathIndex-1]));
 				},
-				getCodeString: function(escapePath, pathIndex){
+				getCodeString(escapePath, pathIndex){
 					return "return ((pathIndex + 1)/mandelbrotExplorer.maxIterations_3d)*(mandelbrotExplorer.getAbsoluteValueOfComplexNumber(escapePath[pathIndex]) - mandelbrotExplorer.getAbsoluteValueOfComplexNumber(escapePath[pathIndex-1]));";
 				}
 			},
 			"currentZLessPreviousZ": {
-				func: function(escapePath, pathIndex){
+				func(escapePath, pathIndex){
 					return mandelbrotExplorer.getAbsoluteValueOfComplexNumber(escapePath[pathIndex]) - mandelbrotExplorer.getAbsoluteValueOfComplexNumber(escapePath[pathIndex-1]);
 				},
-				getCodeString: function(escapePath, pathIndex){
+				getCodeString(escapePath, pathIndex){
 					return "return mandelbrotExplorer.getAbsoluteValueOfComplexNumber(escapePath[pathIndex]) - mandelbrotExplorer.getAbsoluteValueOfComplexNumber(escapePath[pathIndex-1]);";
 				}
 			},
 			"alternatingPathOrigin": {
-				func: function(escapePath, pathIndex){
+				func(escapePath, pathIndex){
 					return (pathIndex % 2 === 0 ? 1 : -1) * mandelbrotExplorer.getAbsoluteValueOfComplexNumber(escapePath[0]);
 				},
-				getCodeString: function(escapePath, pathIndex){
+				getCodeString(escapePath, pathIndex){
 					return "return (pathIndex % 2 === 0 ? 1 : -1) * mandelbrotExplorer.getAbsoluteValueOfComplexNumber(escapePath[0]);";
 				}
 			},
 			pathOriginAndSkewedByPrevious: {
-				func: function(escapePath, pathIndex){
+				func(escapePath, pathIndex){
 					return mandelbrotExplorer.getAbsoluteValueOfComplexNumber((escapePath.length === 1 ? escapePath[0] : [escapePath[pathIndex][0] + escapePath[pathIndex-1][0],escapePath[pathIndex][1] + escapePath[pathIndex-1][1]]));
 				},
-				getCodeString: function(escapePath, pathIndex){
+				getCodeString(escapePath, pathIndex){
 					return "return mandelbrotExplorer.getAbsoluteValueOfComplexNumber((escapePath.length === 1 ? escapePath[0] : [escapePath[pathIndex][0] + escapePath[pathIndex-1][0],escapePath[pathIndex][1] + escapePath[pathIndex-1][1]]));";
 				}
 			},
 			previousPathZ: {
-				func: function(escapePath, pathIndex){
+				func(escapePath, pathIndex){
 					return mandelbrotExplorer.getAbsoluteValueOfComplexNumber(escapePath[pathIndex - 1]);
 				},
-				getCodeString: function(escapePath, pathIndex){
+				getCodeString(escapePath, pathIndex){
 					return "return mandelbrotExplorer.getAbsoluteValueOfComplexNumber(escapePath[pathIndex - 1]);";
 				}
 			},
 			pathEnd: {
-				func: function(escapePath, pathIndex){
+				func(escapePath, pathIndex){
 					return mandelbrotExplorer.getAbsoluteValueOfComplexNumber(escapePath[escapePath.length - 1]);
 				},
-				getCodeString: function(escapePath, pathIndex){
+				getCodeString(escapePath, pathIndex){
 					return "return mandelbrotExplorer.getAbsoluteValueOfComplexNumber(escapePath[escapePath.length - 1]);";
 				}
 			},
 			pathOrigin: {
-				func: function(escapePath, pathIndex){
+				func(escapePath, pathIndex){
 					return mandelbrotExplorer.getAbsoluteValueOfComplexNumber(escapePath[0]);
 				},
-				getCodeString: function(escapePath, pathIndex){
+				getCodeString(escapePath, pathIndex){
 					return "return mandelbrotExplorer.getAbsoluteValueOfComplexNumber(escapePath[0]);";
 				}
 			},
 			currentPathZ: {
-				func: function(escapePath, pathIndex){
+				func(escapePath, pathIndex){
 					return mandelbrotExplorer.getAbsoluteValueOfComplexNumber(escapePath[pathIndex]);
 				},
-				getCodeString: function(){
+				getCodeString(){
 					return "return mandelbrotExplorer.getAbsoluteValueOfComplexNumber(escapePath[pathIndex]);";
 				}
 			},
 			"valleyOfElephantsInsideOut": {
-				func: function(escapePath, pathIndex){
+				func(escapePath, pathIndex){
 					if(pathIndex > 0) {
 						const currentZ = mandelbrotExplorer.getAbsoluteValueOfComplexNumber(escapePath[pathIndex]);
 						const previousZ = mandelbrotExplorer.getAbsoluteValueOfComplexNumber(escapePath[pathIndex-1]);
@@ -553,12 +553,12 @@ const mandelbrotExplorerPresets = {
 					}
 					return mandelbrotExplorer.getAbsoluteValueOfComplexNumber(escapePath[pathIndex]);
 				},
-				getCodeString: function(escapePath, pathIndex){
+				getCodeString(escapePath, pathIndex){
 					return "if(pathIndex > 0) {\n  currentZ = mandelbrotExplorer.getAbsoluteValueOfComplexNumber(escapePath[pathIndex]);\n  previousZ = mandelbrotExplorer.getAbsoluteValueOfComplexNumber(escapePath[pathIndex-1]);\n  useZ = currentZ - previousZ;\n  useX = escapePath[pathIndex-1][0] + ((escapePath[pathIndex][0]/currentZ) * currentZ);\n  useY = escapePath[pathIndex-1][1] + ((escapePath[pathIndex][1]/currentZ) * currentZ);\n  escapePath[pathIndex][0] = useX;\n  escapePath[pathIndex][1] = useY;\n  return useZ;\n}\nreturn mandelbrotExplorer.getAbsoluteValueOfComplexNumber(escapePath[pathIndex]);";
 				}
 			},
 			"valleyOfElephantsInverted": {
-				func: function(escapePath, pathIndex){
+				func(escapePath, pathIndex){
 					if(pathIndex > 0) {
 						const currentZ = mandelbrotExplorer.getAbsoluteValueOfComplexNumber(escapePath[pathIndex]);
 						const previousZ = mandelbrotExplorer.getAbsoluteValueOfComplexNumber(escapePath[pathIndex-1]);
@@ -571,12 +571,12 @@ const mandelbrotExplorerPresets = {
 					}
 					return mandelbrotExplorer.getAbsoluteValueOfComplexNumber(escapePath[pathIndex]);
 				},
-				getCodeString: function(escapePath, pathIndex){
+				getCodeString(escapePath, pathIndex){
 					return "if(pathIndex > 0) {\n  currentZ = mandelbrotExplorer.getAbsoluteValueOfComplexNumber(escapePath[pathIndex]);\n  previousZ = mandelbrotExplorer.getAbsoluteValueOfComplexNumber(escapePath[pathIndex-1]);\n  useZ = previousZ - currentZ;\n  useX = escapePath[pathIndex-1][0] + ((escapePath[pathIndex][0]/currentZ) * currentZ);\n  useY = escapePath[pathIndex-1][1] + ((escapePath[pathIndex][1]/currentZ) * currentZ);\n  escapePath[pathIndex][0] = useX;\n  escapePath[pathIndex][1] = useY;\n  return useZ;\n}\nreturn mandelbrotExplorer.getAbsoluteValueOfComplexNumber(escapePath[pathIndex]);";
 				}
 			},
 			"stuffedInTheCorner": {
-				func: function(escapePath, pathIndex){
+				func(escapePath, pathIndex){
 					if(pathIndex > 0) {
 						const currentZ = mandelbrotExplorer.getAbsoluteValueOfComplexNumber(escapePath[pathIndex]);
 						const previousZ = mandelbrotExplorer.getAbsoluteValueOfComplexNumber(escapePath[pathIndex-1]);
@@ -589,7 +589,7 @@ const mandelbrotExplorerPresets = {
 					}
 					return mandelbrotExplorer.getAbsoluteValueOfComplexNumber(escapePath[pathIndex]);
 				},
-				getCodeString: function(escapePath, pathIndex){
+				getCodeString(escapePath, pathIndex){
 					return "if(pathIndex > 0) {\n  currentZ = mandelbrotExplorer.getAbsoluteValueOfComplexNumber(escapePath[pathIndex]);\n  previousZ = mandelbrotExplorer.getAbsoluteValueOfComplexNumber(escapePath[pathIndex-1]);\n  useX = escapePath[pathIndex][0] + (escapePath[pathIndex][0] * (escapePath[pathIndex][0]/Math.sqrt(currentZ)));\n  useY = escapePath[pathIndex][1] + (escapePath[pathIndex][1] * (escapePath[pathIndex][1]/Math.sqrt(currentZ)));\n  useZ = mandelbrotExplorer.getAbsoluteValueOfComplexNumber([useX, useY]) - previousZ;\n  escapePath[pathIndex][0] = useX;\n  escapePath[pathIndex][1] = useY;\n  return useZ;\n}\nreturn mandelbrotExplorer.getAbsoluteValueOfComplexNumber(escapePath[pathIndex]);";
 				}
 			},
@@ -598,54 +598,54 @@ const mandelbrotExplorerPresets = {
 	},
 	"initialZ": {
 		"default": {
-			func: function(escapePath){
+			func(escapePath){
 				return 0;
 			},
-			getCodeString: function(escapePath){
+			getCodeString(escapePath){
 				return "return 0;";
 			}
 		},
 		"pathOrigin": {
-			func: function(escapePath){
+			func(escapePath){
 				return mandelbrotExplorer.getAbsoluteValueOfComplexNumber(escapePath[0]);
 			},
-			getCodeString: function(escapePath){
+			getCodeString(escapePath){
 				return "return mandelbrotExplorer.getAbsoluteValueOfComplexNumber(escapePath[0]);";
 			}
 		},
 		"pathEnd": {
-			func: function(escapePath){
+			func(escapePath){
 				return mandelbrotExplorer.getAbsoluteValueOfComplexNumber(escapePath[escapePath.length - 1]);
 			},
-			getCodeString: function(escapePath){
+			getCodeString(escapePath){
 				return "return mandelbrotExplorer.getAbsoluteValueOfComplexNumber(escapePath[escapePath.length - 1]);";
 			}
 		},
 		"constant": {
-			func: function(escapePath){
+			func(escapePath){
 				return 0.5;
 			},
-			getCodeString: function(escapePath){
+			getCodeString(escapePath){
 				return "return 0.5;";
 			}
 		},
 		"pathLength": {
-			func: function(escapePath){
+			func(escapePath){
 				return escapePath.length;
 			},
-			getCodeString: function(escapePath){
+			getCodeString(escapePath){
 				return "return escapePath.length;";
 			}
 		},
 		"averagePathValue": {
-			func: function(escapePath){
+			func(escapePath){
 				let sum = 0;
 				for(let i = 0; i < escapePath.length; i++) {
 					sum += mandelbrotExplorer.getAbsoluteValueOfComplexNumber(escapePath[i]);
 				}
 				return sum / escapePath.length;
 			},
-			getCodeString: function(escapePath){
+			getCodeString(escapePath){
 				return "var sum = 0;\nfor(var i = 0; i < escapePath.length; i++) {\n  sum += mandelbrotExplorer.getAbsoluteValueOfComplexNumber(escapePath[i]);\n}\nreturn sum / escapePath.length;";
 			}
 		}

@@ -3,7 +3,7 @@
 const SettingsManager = {
 	storageKey: 'mandelbrotExplorer_settings',
 	
-	saveSettings: function(explorer) {
+	saveSettings(explorer) {
 		try {
 			const settings = {
 				startX: explorer.startX,
@@ -41,7 +41,7 @@ const SettingsManager = {
 		}
 	},
 	
-	loadSettings: function(explorer) {
+	loadSettings(explorer) {
 		try {
 			const savedSettings = localStorage.getItem(this.storageKey);
 			if (savedSettings) {
@@ -76,7 +76,7 @@ const SettingsManager = {
 		return false;
 	},
 	
-	clearSettings: function() {
+	clearSettings() {
 		try {
 			localStorage.removeItem(this.storageKey);
 			// debugLog('settings', 'Settings cleared from localStorage');
@@ -86,7 +86,7 @@ const SettingsManager = {
 	},
 	
 	// Get current camera state
-	getCameraState: function(explorer) {
+	getCameraState(explorer) {
 		if (explorer.threeRenderer && explorer.threeRenderer.camera) {
 			const camera = explorer.threeRenderer.camera;
 			return {
@@ -110,7 +110,7 @@ const SettingsManager = {
 	},
 	
 	// Get current controls state
-	getControlsState: function(explorer) {
+	getControlsState(explorer) {
 		if (explorer.threeRenderer && explorer.threeRenderer.controls) {
 			const controls = explorer.threeRenderer.controls;
 			return {
@@ -144,7 +144,7 @@ const SettingsManager = {
 	},
 	
 	// Restore camera state
-	restoreCameraState: function(explorer, cameraState) {
+	restoreCameraState(explorer, cameraState) {
 		if (explorer.threeRenderer && explorer.threeRenderer.camera && cameraState) {
 			const camera = explorer.threeRenderer.camera;
 			
@@ -170,7 +170,7 @@ const SettingsManager = {
 	},
 	
 	// Restore controls state
-	restoreControlsState: function(explorer, controlsState) {
+	restoreControlsState(explorer, controlsState) {
 		// TODO: Theres some strangeness when restoring the camera and controls....
 		if (explorer.threeRenderer && explorer.threeRenderer.controls && controlsState) {
 			const controls = explorer.threeRenderer.controls;

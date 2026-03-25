@@ -42,7 +42,8 @@ function getColoredBufferLine_jap ( palette, steps, geometry ){
   const segments = geometry.vertices.length;
 
   // geometry
-  // eslint-disable-next-line no-redeclare -- separate function, same var name
+   
+  // eslint-disable-next-line no-redeclare -- var re-declaration in shared scope
   var geometry = new THREE.BufferGeometry();
 
   // material
@@ -114,7 +115,7 @@ function getColoredBufferLine_jap ( palette, steps, geometry ){
 */
 
 //	color.set ( makeColorGradient( i, frequency, phase ) );	
-	let colorHex = '0x' + _byte2Hex( palette[colorIndex].R ) + _byte2Hex( palette[colorIndex].G ) + _byte2Hex( palette[colorIndex].B );
+	const colorHex = `0x${  _byte2Hex( palette[colorIndex].R )  }${_byte2Hex( palette[colorIndex].G )  }${_byte2Hex( palette[colorIndex].B )}`;
 
     color.set ( parseInt(colorHex) );
 
@@ -138,7 +139,8 @@ function getColoredBufferLine_3 ( geometry, palette ){
   const segments = geometry.vertices.length;
 
   // geometry
-  // eslint-disable-next-line no-redeclare -- separate function, same var name
+   
+  // eslint-disable-next-line no-redeclare -- var re-declaration in shared scope
   var geometry = new THREE.BufferGeometry();
 
   // material
@@ -166,7 +168,7 @@ function getColoredBufferLine_3 ( geometry, palette ){
 //    color.set ( makeColorGradient_2( Math.Floor(i/3), palette ) );
 //console.log(makeColorGradient( i, frequency, phase ));
 
-	let colorIndex = ( Math.floor(i/3) % palette.length );
+	const colorIndex = ( Math.floor(i/3) % palette.length );
 
     colors[ i * 3 ] = palette[colorIndex].R/255;//color.r;
     colors[ i * 3 + 1 ] = palette[colorIndex].G/255;
@@ -189,7 +191,8 @@ function getColoredBufferLine_2 ( steps, phase, geometry, baseColorRGB ) {
   const segments = geometry.vertices.length;
 
   // geometry
-  // eslint-disable-next-line no-redeclare -- separate function, same var name
+   
+  // eslint-disable-next-line no-redeclare -- var re-declaration in shared scope
   var geometry = new THREE.BufferGeometry();
 
   // material
@@ -238,7 +241,8 @@ function getColoredBufferLine ( steps, phase, geometry ) {
   const segments = geometry.vertices.length;
 
   // geometry
-  // eslint-disable-next-line no-redeclare -- separate function, same var name
+   
+  // eslint-disable-next-line no-redeclare -- var re-declaration in shared scope
   var geometry = new THREE.BufferGeometry();
 
   // material
@@ -305,7 +309,7 @@ function makeColorGradient_2 ( i, frequency, phase, baseColorRGB ) {
   green = 255-((green + baseColorRGB.G)%255);
   blue = 255-((blue + baseColorRGB.B)%255);
 
-  return parseInt( '0x' + _byte2Hex( red ) + _byte2Hex( green ) + _byte2Hex( blue ) );
+  return parseInt( `0x${  _byte2Hex( red )  }${_byte2Hex( green )  }${_byte2Hex( blue )}` );
 }
 
 function makeColorGradient ( i, frequency, phase ) {  
@@ -323,7 +327,7 @@ function makeColorGradient ( i, frequency, phase ) {
   const green = Math.sin( grnFrequency * i + phase2 ) * width + center;
   const blue  = Math.sin( bluFrequency * i + phase3 ) * width + center;
 
-  return parseInt( '0x' + _byte2Hex( red ) + _byte2Hex( green ) + _byte2Hex( blue ) );
+  return parseInt( `0x${  _byte2Hex( red )  }${_byte2Hex( green )  }${_byte2Hex( blue )}` );
 }
 
 function _byte2Hex (n) {

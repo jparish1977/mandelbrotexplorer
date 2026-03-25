@@ -21,7 +21,7 @@ const ThreeJSRenderer = {
     /**
      * Initialize the Three.js renderer system
      */
-    init: function(canvas, options) {
+    init(canvas, options) {
         this.rendererOptions = Object.assign({}, this.rendererOptions, options);
         this.initRenderer(canvas);
         this.initScene();
@@ -32,9 +32,9 @@ const ThreeJSRenderer = {
     /**
      * Initialize the WebGL renderer
      */
-    initRenderer: function(canvas) {
+    initRenderer(canvas) {
         this.renderer = new THREE.WebGLRenderer({
-            canvas: canvas,
+            canvas,
             alpha: this.rendererOptions.alpha,
             precision: this.rendererOptions.precision,
             antialias: this.rendererOptions.antialias,
@@ -47,14 +47,14 @@ const ThreeJSRenderer = {
     /**
      * Initialize the scene
      */
-    initScene: function() {
+    initScene() {
         this.scene = new THREE.Scene();
     },
     
     /**
      * Initialize the camera with proper aspect ratio
      */
-    initCamera: function(options) {
+    initCamera(options) {
         // Use canvas pixel aspect ratio for correct proportions
         const canvas = this.renderer ? this.renderer.domElement : (options && options.canvas);
         const aspect = canvas ? (canvas.width / canvas.height) : 1;
@@ -65,14 +65,14 @@ const ThreeJSRenderer = {
     /**
      * Initialize trackball controls
      */
-    initControls: function() {
+    initControls() {
         this.controls = new THREE.TrackballControls(this.camera, this.renderer.domElement);
     },
     
     /**
      * Render the scene
      */
-    render: function() {
+    render() {
         if (this.renderer && this.scene && this.camera) {
             this.renderer.render(this.scene, this.camera);
         }
@@ -81,7 +81,7 @@ const ThreeJSRenderer = {
     /**
      * Update controls (call in animation loop)
      */
-    update: function() {
+    update() {
         if (this.controls) {
             this.controls.update();
         }
@@ -90,7 +90,7 @@ const ThreeJSRenderer = {
     /**
      * Clear all objects from the scene
      */
-    clearScene: function() {
+    clearScene() {
         if (this.scene) {
             while(this.scene.children.length > 0) {
                 this.scene.remove(this.scene.children[0]);
@@ -101,7 +101,7 @@ const ThreeJSRenderer = {
     /**
      * Add a particle system to the scene
      */
-    addParticleSystem: function(geometry, material) {
+    addParticleSystem(geometry, material) {
         if (!this.scene) return null;
         
         const points = new THREE.Points(geometry, material);
@@ -112,7 +112,7 @@ const ThreeJSRenderer = {
     /**
      * Add a line to the scene
      */
-    addLine: function(geometry, material) {
+    addLine(geometry, material) {
         if (!this.scene) return null;
         
         const line = new THREE.Line(geometry, material);
@@ -123,7 +123,7 @@ const ThreeJSRenderer = {
     /**
      * Remove an object from the scene
      */
-    removeObject: function(object) {
+    removeObject(object) {
         if (this.scene && object) {
             this.scene.remove(object);
         }
@@ -132,7 +132,7 @@ const ThreeJSRenderer = {
     /**
      * Create a particle material with given color and size
      */
-    createParticleMaterial: function(color, size, opacity) {
+    createParticleMaterial(color, size, opacity) {
         return new THREE.PointsMaterial({
             color: new THREE.Color(color.R / 255, color.G / 255, color.B / 255),
             size: size || 0,
@@ -144,7 +144,7 @@ const ThreeJSRenderer = {
     /**
      * Create a line material
      */
-    createLineMaterial: function(color, linewidth) {
+    createLineMaterial(color, linewidth) {
         return new THREE.LineBasicMaterial({
             color: new THREE.Color(color.R / 255, color.G / 255, color.B / 255),
             linewidth: linewidth || 1
@@ -154,7 +154,7 @@ const ThreeJSRenderer = {
     /**
      * Update camera aspect ratio when viewport changes
      */
-    updateCameraAspect: function(startX, endX, startY, endY) {
+    updateCameraAspect(startX, endX, startY, endY) {
         if (this.camera && this.renderer) {
             const canvas = this.renderer.domElement;
             const aspect = canvas.width / canvas.height;
@@ -166,7 +166,7 @@ const ThreeJSRenderer = {
     /**
      * Dispose of resources
      */
-    dispose: function() {
+    dispose() {
         if (this.controls) {
             this.controls.dispose();
         }

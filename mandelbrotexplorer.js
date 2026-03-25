@@ -203,6 +203,7 @@ const mandelbrotExplorer = {
 			for( let yValue = this.startY, imageY = 0; imageY < this.canvas_2d.height; yValue -= this.yScale_2d, imageY++ ){
 				const c = [xValue, yValue];
 				 
+				 
 				// eslint-disable-next-line no-eval -- user-defined expression
 				const juliaC = eval(this.juliaC);
 				let color;
@@ -457,6 +458,7 @@ const mandelbrotExplorer = {
 		
 		// Set uniforms
 		 
+		 
 		// eslint-disable-next-line no-eval -- user-defined expression
 		const juliaC = eval(this.juliaC);
 		gl.uniform2f(this.gpuUniforms.resolution, xPoints, yPoints);
@@ -620,6 +622,7 @@ const mandelbrotExplorer = {
 		
 		// Set uniforms
 		 
+		 
 		// eslint-disable-next-line no-eval -- user-defined expression
 		const juliaC = eval(this.juliaC);
 		gl.uniform2f(this.gpuUniforms.resolution, xPoints, yPoints);
@@ -728,6 +731,7 @@ const mandelbrotExplorer = {
 		for (let i = 0; i < points.length; i++) {
 			const c = points[i];
 			 
+			 
 			// eslint-disable-next-line no-eval -- user-defined expression
 			const juliaC = eval(mandelbrotExplorer.juliaC);
 			
@@ -748,6 +752,7 @@ const mandelbrotExplorer = {
             if( typeof mandelbrotExplorer.cloudMethods.functionsFromEval.initialZ === 'undefined' ) {
                 if (mandelbrotExplorer.initialZ) {
                      
+                     
                     // eslint-disable-next-line no-eval -- user-defined expression
                     eval(`mandelbrotExplorer.cloudMethods.functionsFromEval.initialZ = function (escapePath){\n ${  mandelbrotExplorer.initialZ  }\n}`);
                 } else {
@@ -764,6 +769,7 @@ const mandelbrotExplorer = {
                 if (mandelbrotExplorer.cloudLengthFilter) {
                     const functionDefinition = `function (pathIndex, iteration, escapePath){\nreturn ${  mandelbrotExplorer.cloudLengthFilter  };\n}`;
                      
+                     
                     // eslint-disable-next-line no-eval -- user-defined expression
                     eval(`mandelbrotExplorer.cloudMethods.functionsFromEval.cloudLengthFilter = ${  functionDefinition  };`);
                 } else {
@@ -779,6 +785,7 @@ const mandelbrotExplorer = {
             if( typeof mandelbrotExplorer.cloudMethods.functionsFromEval.cloudIterationFilter === 'undefined' ) {
                 if (mandelbrotExplorer.cloudIterationFilter) {
                     const functionDefinition = `function (pathIndex, iteration, escapePath){\nreturn ${  mandelbrotExplorer.cloudIterationFilter  };\n}`;
+                     
                      
                     // eslint-disable-next-line no-eval -- user-defined expression
                     eval(`mandelbrotExplorer.cloudMethods.functionsFromEval.cloudIterationFilter = ${  functionDefinition  };`);
@@ -797,6 +804,7 @@ const mandelbrotExplorer = {
                     const functionDefinition = `function (pathIndex, iteration, escapePath){\n${ 
                              mandelbrotExplorer.escapingZ 
                          };\n}`;
+                     
                      
                     // eslint-disable-next-line no-eval -- user-defined expression
                     eval(`mandelbrotExplorer.cloudMethods.functionsFromEval.escapingZ = ${  functionDefinition  };`);
@@ -817,6 +825,7 @@ const mandelbrotExplorer = {
                             + `return {newX: newX, newY: newY, particleVector: particleVector, allowed: allowed};\n`
                         + `}`;
                      
+                     
                     // eslint-disable-next-line no-eval -- user-defined expression
                     eval(`mandelbrotExplorer.cloudMethods.functionsFromEval.particleFilter = ${  functionDefinition  };`);
                 } else {
@@ -824,6 +833,7 @@ const mandelbrotExplorer = {
                             + "var allowed = true;\n"
                             + "return {newX: newX, newY: newY, particleVector: particleVector, allowed: allowed};\n"
                         + "}";
+                     
                      
                     // eslint-disable-next-line no-eval -- user-defined expression
                     eval(`mandelbrotExplorer.cloudMethods.functionsFromEval.particleFilter = ${  functionDefinition  };`);
@@ -835,12 +845,14 @@ const mandelbrotExplorer = {
         "processDualZMultiplier"(pathIndex, iteration, escapePath, newX, newY, z) {
 			const newZ = z;
              
+             
             // eslint-disable-next-line no-eval -- user-defined expression
             const dualZMultiplier = eval(mandelbrotExplorer.dualZMultiplier);
             
             return [newX, newY, newZ];
         },
         "evalJuliaC"(c) {
+             
              
             // eslint-disable-next-line no-eval -- user-defined expression
             return eval(mandelbrotExplorer.juliaC);
@@ -1257,6 +1269,7 @@ const mandelbrotExplorer = {
                                 escapePath = cachedEscapePaths[i];
                             } else {
                                 // Generate new escape path
+                                // eslint-disable-next-line no-redeclare -- var re-declaration in shared scope
                                 var c = mandelbrotExplorer.cloudMethods.handleCloudSteppingAdjustments([point.x, point.y]);
                                 escapePath = mandelbrotExplorer.cloudMethods.getEscapePath(c);
                                 shouldCache = true;
@@ -1288,6 +1301,7 @@ const mandelbrotExplorer = {
                         } else {
                             // Generate new escape path
                              
+                             
                             // eslint-disable-next-line no-redeclare -- var re-declaration in shared scope
                             var c = mandelbrotExplorer.cloudMethods.handleCloudSteppingAdjustments([point.x, point.y]);
                             escapePath = mandelbrotExplorer.cloudMethods.getEscapePath(c);
@@ -1310,6 +1324,7 @@ const mandelbrotExplorer = {
                             escapePath = cachedEscapePaths[i];
                         } else {
                             // Generate new escape path
+                             
                              
                             // eslint-disable-next-line no-redeclare -- var re-declaration in shared scope
                             var c = mandelbrotExplorer.cloudMethods.handleCloudSteppingAdjustments([point.x, point.y]);
@@ -1369,8 +1384,11 @@ const mandelbrotExplorer = {
                         if (typeof mandelbrotExplorer.iterationParticles[iterationIndex] === "undefined") {
                             mandelbrotExplorer.iterationParticles[iterationIndex] = {"particles": []};
                         }
+                        // eslint-disable-next-line no-redeclare -- var re-declaration in shared scope
                         var newX = escapePath[pathIndex][0];
+                        // eslint-disable-next-line no-redeclare -- var re-declaration in shared scope
                         var newY = escapePath[pathIndex][1];
+                        // eslint-disable-next-line no-redeclare -- var re-declaration in shared scope
                         var particleVector = new THREE.Vector3(newX, newY, z);
                         const particleFilterResult = mandelbrotExplorer.cloudMethods.processParticleFilter(newX, newY, particleVector);
                         if (!particleFilterResult['allowed']) {
@@ -1388,12 +1406,15 @@ const mandelbrotExplorer = {
                         
                         if (mandelbrotExplorer.dualZ) {
                              
+                             
                             // eslint-disable-next-line no-redeclare -- var re-declaration in shared scope
                             var newX = particleFilterResult.newX;
+                             
                              
                             // eslint-disable-next-line no-redeclare -- var re-declaration in shared scope
                             var newY = particleFilterResult.newY;
                             const coords = mandelbrotExplorer.cloudMethods.processDualZMultiplier(pathIndex, iteration, escapePath, newX, newY, z);
+                             
                              
                             // eslint-disable-next-line no-redeclare -- var re-declaration in shared scope
                             var particleVector = new THREE.Vector3(coords[0], coords[1], coords[2]);
@@ -1511,6 +1532,7 @@ const mandelbrotExplorer = {
                 
                 const color = mandelbrotExplorer.palette[ mandelbrotExplorer.getColorIndex(index) ];
                  
+                 
                 // eslint-disable-next-line no-eval -- user-defined expression
                 const size = mandelbrotExplorer.particleSize ? eval(mandelbrotExplorer.particleSize): 0;
                 
@@ -1600,8 +1622,10 @@ const mandelbrotExplorer = {
 							const iteration = pathIndex + 1;
 							
 							 
+							 
 							// eslint-disable-next-line no-eval -- user-defined expression
 							if( mandelbrotExplorer.cloudLengthFilter.length > 0 && eval( mandelbrotExplorer.cloudLengthFilter ) === false ) return true;
+							 
 							 
 							// eslint-disable-next-line no-eval -- user-defined expression
 							if( mandelbrotExplorer.cloudIterationFilter.length > 0 && eval( mandelbrotExplorer.cloudIterationFilter ) === false ) return true;
@@ -1614,6 +1638,7 @@ const mandelbrotExplorer = {
 							const zDirection = direction[0] * direction[1];
 							
 							if( pathIndex !== 0 ) {
+								// eslint-disable-next-line no-eval -- user-defined expression
 								z = mandelbrotExplorer.cloudMethods.evalEscapingZ(pathIndex, iteration, escapePath);// eval( mandelbrotExplorer.escapingZ );
 							}
 							
@@ -1626,6 +1651,7 @@ const mandelbrotExplorer = {
 							const newY = escapePath[pathIndex][1];
 							const particleVector = new THREE.Vector3(newX, newY, z);
 							if(mandelbrotExplorer.particleFilter){
+								 
 								 
 								// eslint-disable-next-line no-eval -- user-defined expression
 								const allowed = eval( mandelbrotExplorer.particleFilter );
@@ -1793,12 +1819,14 @@ const mandelbrotExplorer = {
 	},
 	"cycleCloudColors"(){
         const startTime = new Date();
+        // eslint-disable-next-line no-redeclare -- var re-declaration in shared scope
         var index;
         let currentColor;
         let currentColorIndex;
         let nextColorIndex;
         let nextColor;
 
+         
          
         // eslint-disable-next-line no-redeclare -- var re-declaration in shared scope
         for( var index in this.particleSystems )
@@ -1843,6 +1871,7 @@ const mandelbrotExplorer = {
 				this.threeRenderer.removeObject( this.particleSystems[index] );
 				const iteration = parseInt(index) + 1;
 				 
+				 
 				// eslint-disable-next-line no-eval -- user-defined expression
 				if( this.cloudIterationFilter.length > 0 && eval( this.cloudIterationFilter ) === false ) continue;
 				
@@ -1876,6 +1905,8 @@ const mandelbrotExplorer = {
         const canvasContext = this.canvas_2d.getContext("2d", { willReadFrequently: true });
         const canvasImageData = canvasContext.getImageData(0, 0, this.canvas_2d.width, this.canvas_2d.height);
 
+        // eslint-disable-next-line no-redeclare -- var re-declaration in shared scope
+        // eslint-disable-next-line no-redeclare -- var re-declaration in shared scope
         var index;
         let currentColor;
         let currentColorIndex;
@@ -1907,6 +1938,7 @@ const mandelbrotExplorer = {
 
         canvasContext.putImageData(canvasImageData,0,0);
 
+         
          
         // eslint-disable-next-line no-redeclare -- var re-declaration in shared scope
         for( var index in this.particleSystems ){

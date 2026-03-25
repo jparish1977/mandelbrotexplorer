@@ -175,43 +175,43 @@ function setupAltUIEventListeners() {
 
     // Special handlers for specific fields that need custom update functions
     const specialHandlers = {
-      'alt-dualZEnabled': function() {
+      'alt-dualZEnabled'() {
         if (mandelbrotExplorer) {
           mandelbrotExplorer.dualZ = this.checked;
           updateDualZEnabled();
         }
       },
-      'alt-colorCycleCheckbox': function() {
+      'alt-colorCycleCheckbox'() {
         if (mandelbrotExplorer) {
           mandelbrotExplorer.continueColorCycle = this.checked;
           toggleColorCycle();
         }
       },
-      'alt-iterationCycleCheckbox': function() {
+      'alt-iterationCycleCheckbox'() {
         if (mandelbrotExplorer) {
           mandelbrotExplorer.continueIterationCycle = this.checked;
           toggleIterationCycle();
         }
       },
-      'alt-gpuAccelerationCheckbox': function() {
+      'alt-gpuAccelerationCheckbox'() {
         if (mandelbrotExplorer) {
           mandelbrotExplorer.useGPU = this.checked;
           toggleGPUAcceleration();
         }
       },
-      'alt-hide2d': function() {
+      'alt-hide2d'() {
         if (mandelbrotExplorer) {
           mandelbrotExplorer.hide2d = this.checked;
           hide2D();
         }
       },
-      'alt-toggleBackground': function() {
+      'alt-toggleBackground'() {
         if (mandelbrotExplorer) {
           mandelbrotExplorer.toggleBackground = this.checked;
           toggleBackground();
         }
       },
-      'alt-captureBtn': function() {
+      'alt-captureBtn'() {
         getScreenCap();
       }
     };

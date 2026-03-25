@@ -49,26 +49,26 @@ function dumpBrot(){
         for(let i2 = 0;i2 < 2; i2++){
             let useX = Math.random() * 2;
             let useY = Math.random() * 2;
-            while(tries.indexOf(useX + "," + useY) > -1){
+            while(tries.indexOf(`${useX  },${  useY}`) > -1){
                 useX = Math.random() * 2;
                 useY = Math.random() * 2;
             }
             
-            tries.push(useX + "," + useY);
-            tries.push((-useX) + "," + (-useY));
+            tries.push(`${useX  },${  useY}`);
+            tries.push(`${-useX  },${  -useY}`);
             
             const escapePaths = getSymetricalEscapePaths(useX, useY, 1024);
             if(escapePaths[0].length === 1024){
-                values.push(useX + "," + useY);
+                values.push(`${useX  },${  useY}`);
             }
             
             if(escapePaths[1].length === 1024){
-                values.push((-useX) + "," + (-useY));
+                values.push(`${-useX  },${  -useY}`);
             }
         }
     }
     
-    console.log("[" + values.length + "]\n" + values.join('\n'));
+    console.log(`[${  values.length  }]\n${  values.join('\n')}`);
 }
 
 function getSymetricalEscapePaths(x, y, maxIterations){
@@ -109,7 +109,7 @@ function onWindowResize( event ) {
         mandelbrotExplorer.canvas_3d.height = window.innerHeight;
     }
     else{
-        mandelbrotExplorer.canvas_3d.style.left = window.innerWidth / 2 + "px";
+        mandelbrotExplorer.canvas_3d.style.left = `${window.innerWidth / 2  }px`;
         mandelbrotExplorer.canvas_3d.width = window.innerWidth / 2;
         mandelbrotExplorer.canvas_3d.height = window.innerHeight;
         
@@ -160,7 +160,7 @@ function zoomToDblClick( sender, evt ){
     const startY = (( mandelbrotExplorer.yOffset - canvasY ) * mandelbrotExplorer.yScale_2d ) + (verticalRange / 2);
     
     if(evt.shiftKey){
-        mandelbrotExplorer.juliaC = "["+ selectedC[0] + "," + selectedC[1] +"]";
+        mandelbrotExplorer.juliaC = `[${ selectedC[0]  },${  selectedC[1] }]`;
         document.getElementById("juliaC").value = mandelbrotExplorer.juliaC;
     }
     else{
@@ -222,12 +222,14 @@ function updateEscapingZ(){
 }
 
 function updateIterationCycleTime(){
-    // eslint-disable-next-line no-eval -- user expression evaluation from URL params
+     
+    // eslint-disable-next-line no-eval -- user-defined expression
     mandelbrotExplorer.iterationCycleTime = parseInt( eval( document.getElementById("iterationCycleTime").value ) );
 }
 
 function updateIterationCycleFrame(){
-    // eslint-disable-next-line no-eval -- user expression evaluation from URL params
+     
+    // eslint-disable-next-line no-eval -- user-defined expression
     mandelbrotExplorer.iterationCycleFrame = parseInt( eval( document.getElementById("iterationCycleFrame").value ) );
 }
 
@@ -382,7 +384,7 @@ function hide2D(forceHide){
     }
     else{
         mandelbrotExplorer.canvas_2d.style.display = "";
-        mandelbrotExplorer.canvas_3d.style.left = window.innerWidth / 2 + "px";
+        mandelbrotExplorer.canvas_3d.style.left = `${window.innerWidth / 2  }px`;
         mandelbrotExplorer.canvas_3d.width = window.innerWidth / 2;
         mandelbrotExplorer.canvas_3d.height = window.innerHeight;
         mandelbrotExplorer.drawMandelbrot();
@@ -479,7 +481,7 @@ function loadQueryStringParams(){
     return {
         antialias: useAntialiasing,
         precision: usePrecision,
-        show2d: show2d
+        show2d
     }
 }
 
@@ -529,7 +531,8 @@ function loadFilterOptions()
     escapingZOption.value = "";
     document.getElementById("escapingZPresets").add(escapingZOption);
     
-    // eslint-disable-next-line no-redeclare -- var re-declaration in shared scope
+     
+    // eslint-disable-next-line no-redeclare -- var re-declaration in for-in loop
     for( var presetName in mandelbrotExplorer.presets.mandelbrot.escapingZ )
     {
         escapingZOption = document.createElement("option");
@@ -547,7 +550,8 @@ function loadFilterOptions()
     particleFilterOption.value = "";
     document.getElementById("particleFilterPresets").add(particleFilterOption);
     
-    // eslint-disable-next-line no-redeclare -- var re-declaration in shared scope
+     
+    // eslint-disable-next-line no-redeclare -- var re-declaration in for-in loop
     for( var presetName in mandelbrotExplorer.presets.particleFilter )
     {
         particleFilterOption = document.createElement("option");
@@ -565,7 +569,8 @@ function loadFilterOptions()
     dualZMultiplierOption.value = "";
     document.getElementById("dualZMultiplierPresets").add(dualZMultiplierOption);
     
-    // eslint-disable-next-line no-redeclare -- var re-declaration in shared scope
+     
+    // eslint-disable-next-line no-redeclare -- var re-declaration in for-in loop
     for( var presetName in mandelbrotExplorer.presets.dualZMultiplier )
     {
         dualZMultiplierOption = document.createElement("option");
@@ -583,7 +588,8 @@ function loadFilterOptions()
     particleSizeOption.value = "";
     document.getElementById("particleSizePresets").add(particleSizeOption);
     
-    // eslint-disable-next-line no-redeclare -- var re-declaration in shared scope
+     
+    // eslint-disable-next-line no-redeclare -- var re-declaration in for-in loop
     for( var presetName in mandelbrotExplorer.presets.particleSize )
     {
         particleSizeOption = document.createElement("option");
@@ -601,7 +607,8 @@ function loadFilterOptions()
     cloudIterationFilterOption.value = "";
     document.getElementById("cloudIterationFilterPresets").add(cloudIterationFilterOption);
     
-    // eslint-disable-next-line no-redeclare -- var re-declaration in shared scope
+     
+    // eslint-disable-next-line no-redeclare -- var re-declaration in for-in loop
     for( var presetName in mandelbrotExplorer.presets.cloudIterationFilter )
     {
         cloudIterationFilterOption = document.createElement("option");
@@ -619,7 +626,8 @@ function loadFilterOptions()
     initialZOption.value = "";
     document.getElementById("initialZPresets").add(initialZOption);
     
-    // eslint-disable-next-line no-redeclare -- var re-declaration in shared scope
+     
+    // eslint-disable-next-line no-redeclare -- var re-declaration in for-in loop
     for( var presetName in mandelbrotExplorer.presets.initialZ )
     {
         initialZOption = document.createElement("option");
@@ -1019,7 +1027,7 @@ function init()
     mandelbrotExplorer.canvas_2d = canvas_2d;
 
     mandelbrotExplorer.canvas_3d =  document.getElementById("mandelbrotCanvas3d");
-    mandelbrotExplorer.canvas_3d.style.left = window.innerWidth / 2 + "px";
+    mandelbrotExplorer.canvas_3d.style.left = `${window.innerWidth / 2  }px`;
     mandelbrotExplorer.canvas_3d.width = window.innerWidth / 2;
     mandelbrotExplorer.canvas_3d.height = window.innerHeight;
 

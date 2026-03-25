@@ -45,7 +45,7 @@ function createMandelbrotCompleter(editorType) {
     
     if (dotMatch) {
       objectPath = dotMatch[1];
-      prefix = objectPath + '.';
+      prefix = `${objectPath  }.`;
     }
     
     // Dynamically get properties based on current context
@@ -119,7 +119,7 @@ function createMandelbrotCompleter(editorType) {
       
       // Also check for variables that might not be own properties but are in global scope
       const additionalGlobals = [];
-      for (let key in window) {
+      for (const key in window) {
         if (!globalVars.includes(key)) {
           additionalGlobals.push(key);
         }

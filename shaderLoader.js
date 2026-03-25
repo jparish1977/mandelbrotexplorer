@@ -122,7 +122,7 @@ const ShaderLoader = {
 	},
 
 	// Load a shader file and return its content as a string
-	loadShader: function(shaderPath) {
+	loadShader(shaderPath) {
 		return new Promise((resolve, reject) => {
 			// Check cache first
 			if (this.shaderCache[shaderPath]) {
@@ -137,7 +137,7 @@ const ShaderLoader = {
 					this.shaderCache[shaderPath] = embedded;
 					resolve(embedded);
 				} else {
-					reject(new Error('No embedded shader for: ' + shaderPath));
+					reject(new Error(`No embedded shader for: ${  shaderPath}`));
 				}
 				return;
 			}
@@ -146,7 +146,7 @@ const ShaderLoader = {
 			fetch(shaderPath)
 				.then(response => {
 					if (!response.ok) {
-						throw new Error('Failed to load shader: ' + response.status + ' ' + response.statusText);
+						throw new Error(`Failed to load shader: ${  response.status  } ${  response.statusText}`);
 					}
 					return response.text();
 				})
@@ -162,7 +162,7 @@ const ShaderLoader = {
 	},
 
 	// Load both vertex and fragment shaders
-	loadShaders: function(vertexPath, fragmentPath) {
+	loadShaders(vertexPath, fragmentPath) {
 		return Promise.all([
 			this.loadShader(vertexPath),
 			this.loadShader(fragmentPath)
@@ -175,7 +175,7 @@ const ShaderLoader = {
 	},
 
 	// Clear the shader cache
-	clearCache: function() {
+	clearCache() {
 		this.shaderCache = {};
 	}
 };

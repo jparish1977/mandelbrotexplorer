@@ -361,9 +361,9 @@ const palettes = {
 			const result = [];
 			const frequency = .3;
 			for (let i = 0; i < 32; ++i){
-			   let red   = Math.round( (Math.sin(frequency*i + 0) * 127 + 128) % 255, 0);
-			   let green = Math.round( (Math.sin(frequency*i + 2) * 127 + 128) % 255, 0);
-			   let blue  = Math.round( (Math.sin(frequency*i + 4) * 127 + 128) % 255, 0);
+			   const red   = Math.round( (Math.sin(frequency*i + 0) * 127 + 128) % 255, 0);
+			   const green = Math.round( (Math.sin(frequency*i + 2) * 127 + 128) % 255, 0);
+			   const blue  = Math.round( (Math.sin(frequency*i + 4) * 127 + 128) % 255, 0);
 
 			   result.push({"R": red, "G": green, "B": blue, "A": 255});
 			}
@@ -373,7 +373,7 @@ const palettes = {
 
 		return this.variable_rainbow;
 	},
-	"getColorIndex": function(colorPalette, color){
+	"getColorIndex"(colorPalette, color){
 		for( let index = 0; index < colorPalette.length; index++ ){
 			if(    colorPalette[index].R === color.R 
 				&& colorPalette[index].G === color.G 
