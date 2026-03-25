@@ -4,9 +4,7 @@
 
 Interactive Mandelbrot and Julia set explorer with 2D canvas rendering, 3D particle visualization, and GPU-accelerated computation.
 
-<!-- TODO: Replace with actual screenshot
 ![Screenshot](docs/screenshot.png)
--->
 
 **[Live Demo](https://jparish1977.github.io/mandelbrotexplorer/)**
 
