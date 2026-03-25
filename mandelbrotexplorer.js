@@ -65,9 +65,48 @@ function warningLog(...args) {
     }
 }
 
+// ── Constants ────────────────────────────────────────────────────────────────
 const STR_PAD_LEFT = 1;
 const STR_PAD_RIGHT = 2;
 const STR_PAD_BOTH = 3;
+
+// WebGL / GPU
+const GL_QUAD_VERTICES = 4;              // vertices in a triangle strip quad
+const RGBA_COMPONENTS = 4;               // floats per pixel in RGBA
+const RGB_COMPONENTS = 3;                // components per vertex color
+
+// Fractal math
+const ESCAPE_RADIUS = 2.0;              // |z| threshold for escape detection
+const SHADER_MAX_LOOP = 1000;           // max loop iterations in GLSL (hard limit)
+const DEFAULT_MAX_ITERATIONS = 1024;     // default iteration cap for calculations
+
+// Color
+const COLOR_CHANNEL_MAX = 255;           // 8-bit color channel max
+const HEX_BASE = 16;                    // base for hex string conversion
+const HEX_PAD_LENGTH = 2;               // pad hex strings to 2 chars
+
+// Cache management
+const BYTES_PER_ESCAPE_PATH = 16;       // approximate bytes per cached escape path entry
+const BYTES_PER_MB = 1024 * 1024;       // bytes in a megabyte
+const MIN_CACHE_SIZE_MB = 500;          // minimum escape path cache size
+const MAX_CACHE_SIZE_MB = 9000;         // maximum escape path cache size
+const CACHE_SIZE_MULTIPLIER = 1.5;      // headroom multiplier for estimated cache
+const MIN_CACHE_ENTRIES = 3;            // minimum number of cache entries
+const MAX_CACHE_ENTRIES = 5;            // maximum number of cache entries
+const CACHE_BUDGET_MB = 1000;           // budget per entry for calculating max entries
+
+// Cloud generation
+const GPU_BATCH_SIZE = 1000;            // points per batch in GPU mode
+const CPU_BATCH_SIZE = 50;              // points per batch in CPU mode
+const PROGRESS_LOG_INTERVAL = 1000;     // log every N points during generation
+const PROGRESS_PERCENT = 100;           // percentage scale factor
+
+// Rendering
+const CURVE_POINTS = 50;                // points per CatmullRom curve
+const TIMEOUT_SHORT = 100;              // short setTimeout delay (ms)
+const TIMEOUT_MEDIUM = 500;             // medium setTimeout delay (ms)
+const ITERATION_CYCLE_FPS = 30;         // frames per second for iteration cycling
+const DEFAULT_SOS_RES = 43;             // default SOS resolution
 
 const mandelbrotExplorer = {
 	// Mathematical properties
@@ -115,7 +154,7 @@ const mandelbrotExplorer = {
 							+ "mandelbrotExplorer.getAbsoluteValueOfComplexNumber(escapePath[pathIndex]) - mandelbrotExplorer.getAbsoluteValueOfComplexNumber(escapePath[pathIndex-1])"
                             + "\n);",
 	"nextCycleIteration":	1,
-	"iterationCycleTime":	parseInt(1000/30),
+	"iterationCycleTime":	parseInt(SHADER_MAX_LOOP / ITERATION_CYCLE_FPS),
 	"juliaC":				  "[0,0]",
 	"_cloudIterationCyclerId": null,
 	"useGPU": true, // GPU acceleration toggle
@@ -463,11 +502,11 @@ const mandelbrotExplorer = {
 			gl.uniform1i(this.gpuIterationUniforms.previousIteration, 0);
 			
 			// Render
-			gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+			gl.drawArrays(gl.TRIANGLE_STRIP, 0, GL_QUAD_VERTICES);
 		}
 		
 		// Read back final results
-		let pixels = new Float32Array(xPoints * yPoints * 4);
+		let pixels = new Float32Array(xPoints * yPoints * RGBA_COMPONENTS);
 		gl.readPixels(0, 0, xPoints, yPoints, gl.RGBA, gl.FLOAT, pixels);
 		
 		// Convert results back to escape paths
@@ -478,8 +517,8 @@ const mandelbrotExplorer = {
 			
 			// Find when this point escaped
 			for (let iteration = 0; iteration < maxIterations; iteration++) {
-				let pixelIndex = (iteration * xPoints + pointIndex) * 4;
-				let escapeFlag = pixels[pixelIndex + 3];
+				let pixelIndex = (iteration * xPoints + pointIndex) * RGBA_COMPONENTS;
+				let escapeFlag = pixels[pixelIndex + RGB_COMPONENTS];
 				
 				if (escapeFlag > 0.5 && !escaped) {
 					escaped = true;
@@ -607,10 +646,10 @@ const mandelbrotExplorer = {
 		gl.vertexAttribPointer(positionLocation, 2, gl.FLOAT, false, 0, 0);
 		
 		// Single efficient render pass
-		gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+		gl.drawArrays(gl.TRIANGLE_STRIP, 0, GL_QUAD_VERTICES);
 		
 		// Read back results
-		let pixels = new Uint8Array(xPoints * yPoints * 4);
+		let pixels = new Uint8Array(xPoints * yPoints * RGBA_COMPONENTS);
 		gl.readPixels(0, 0, xPoints, yPoints, gl.RGBA, gl.UNSIGNED_BYTE, pixels);
 		
 		// Convert GPU results back to escape paths
@@ -618,7 +657,7 @@ const mandelbrotExplorer = {
 		let escapedPoints = [];
 		
 		for (let i = 0; i < maxPoints; i++) {
-			let pixelIndex = i * 4;
+			let pixelIndex = i * RGBA_COMPONENTS;
 			let iterations = pixels[pixelIndex + 2];
 			
 			// Use the original points array to avoid coordinate reconstruction errors
@@ -872,7 +911,7 @@ const mandelbrotExplorer = {
 			)
 			
 			if(sosRes === 0) {
-				sosRes = 43;
+				sosRes = DEFAULT_SOS_RES;
 			}
 
 			// TODO: I want to allow for multiple scales in the same render...
@@ -923,11 +962,11 @@ const mandelbrotExplorer = {
 			const entry = mandelbrotExplorer.cloudCache[key];
 			if (entry.escapePaths) {
 				// Avoid circular references by only counting the array length
-				totalSize += entry.escapePaths.length * 16; // Approximate bytes per escape path
+				totalSize += entry.escapePaths.length * BYTES_PER_ESCAPE_PATH; // Approximate bytes per escape path
 			}
 		}
             
-            return Math.round(totalSize / (1024 * 1024)); // Convert to MB
+            return Math.round(totalSize / BYTES_PER_MB); // Convert to MB
         },
 
         
@@ -947,11 +986,11 @@ const mandelbrotExplorer = {
             const maxIterations = mandelbrotExplorer.maxIterations_3d;
             
             // Estimate cache size: resolution² × iterations × 16 bytes per coordinate pair
-            const estimatedCacheSizeMB = (maxResolution * maxResolution * maxIterations * 16) / (1024 * 1024);
+            const estimatedCacheSizeMB = (maxResolution * maxResolution * maxIterations * BYTES_PER_ESCAPE_PATH) / BYTES_PER_MB;
             
             // Set limits based on estimated size, with reasonable bounds
-            const MAX_ESCAPE_PATH_CACHE_SIZE_MB = Math.max(500, Math.min(9000, estimatedCacheSizeMB * 1.5)); // 500MB-9GB range
-            const MAX_CACHE_ENTRIES = Math.max(3, Math.min(5, Math.floor(1000 / estimatedCacheSizeMB))); // Fewer entries for larger data
+            const MAX_ESCAPE_PATH_CACHE_SIZE_MB = Math.max(MIN_CACHE_SIZE_MB, Math.min(MAX_CACHE_SIZE_MB, estimatedCacheSizeMB * CACHE_SIZE_MULTIPLIER)); // 500MB-9GB range
+            const MAX_CACHE_ENTRIES = Math.max(MIN_CACHE_ENTRIES, Math.min(MAX_CACHE_ENTRIES, Math.floor(CACHE_BUDGET_MB / estimatedCacheSizeMB))); // Fewer entries for larger data
             
             		debugLog('cache', 'Cache size estimation:', {
                 maxResolution,
@@ -962,14 +1001,14 @@ const mandelbrotExplorer = {
             });
             
             // Warn if cache size would be very large
-            if (estimatedCacheSizeMB > 1000) {
+            if (estimatedCacheSizeMB > CACHE_BUDGET_MB) {
                 console.warn('⚠️ Large cache size detected:', Math.round(estimatedCacheSizeMB), 'MB. Consider reducing resolution or iterations for better performance.');
                 
                 // Suggest specific optimizations
-                const suggestedRes = Math.floor(Math.sqrt(estimatedCacheSizeMB * 1024 * 1024 / (maxIterations * 16)));
+                const suggestedRes = Math.floor(Math.sqrt(estimatedCacheSizeMB * BYTES_PER_MB / (maxIterations * BYTES_PER_ESCAPE_PATH)));
                 		debugLog('cache', '💡 Suggestions:');
 		debugLog('cache', '   - Reduce resolution to ~', suggestedRes, 'for ~1GB cache');
-		debugLog('cache', '   - Or reduce iterations to ~', Math.floor(256), 'for current resolution');
+		debugLog('cache', '   - Or reduce iterations to ~', Math.floor(COLOR_CHANNEL_MAX + 1), 'for current resolution');
 		debugLog('cache', '   - Or disable caching for this render (will be slower but use less memory)');
             }
             
@@ -992,10 +1031,10 @@ const mandelbrotExplorer = {
 				const entry = mandelbrotExplorer.cloudCache[key];
 				if (entry.escapePaths) {
 					// Avoid circular references by only counting the array length
-					escapePathCacheSize += entry.escapePaths.length * 16; // Approximate bytes per escape path
+					escapePathCacheSize += entry.escapePaths.length * BYTES_PER_ESCAPE_PATH; // Approximate bytes per escape path
 				}
 			}
-			escapePathCacheSize = Math.round(escapePathCacheSize / (1024 * 1024)); // Convert to MB
+			escapePathCacheSize = Math.round(escapePathCacheSize / BYTES_PER_MB); // Convert to MB
             
             if (escapePathCacheSize > MAX_ESCAPE_PATH_CACHE_SIZE_MB) {
                 		debugLog('cache', 'Escape path cache size limit exceeded (' + escapePathCacheSize + 'MB), clearing cache');
@@ -1095,7 +1134,7 @@ const mandelbrotExplorer = {
                         } else if (gpuWaitAttempts < maxGPUWaitAttempts) {
                             gpuWaitAttempts++;
                             		debugLog('gpu', `GPU not ready yet, attempt ${gpuWaitAttempts}/${maxGPUWaitAttempts}`);
-                            setTimeout(waitForGPU, 100);
+                            setTimeout(waitForGPU, TIMEOUT_SHORT);
                         } else {
                             		debugLog('gpu', 'GPU initialization timeout, falling back to CPU');
                             document.getElementById('progress-text').textContent = 'GPU timeout, using CPU...';
@@ -1142,7 +1181,7 @@ const mandelbrotExplorer = {
             });
             
             let currentPointIndex = 0;
-            const BATCH_SIZE = mandelbrotExplorer.useGPU ? 1000 : 50; // Larger batches for GPU
+            const BATCH_SIZE = mandelbrotExplorer.useGPU ? GPU_BATCH_SIZE : CPU_BATCH_SIZE; // Larger batches for GPU
 
 
             
@@ -1180,8 +1219,8 @@ const mandelbrotExplorer = {
                             processedPoints++;
                             
                             // Update progress every 1000 points for GPU processing
-                            if (i % 1000 === 0) {
-                                const progress = Math.min(100, (processedPoints / totalPoints) * 100);
+                            if (i % PROGRESS_LOG_INTERVAL === 0) {
+                                const progress = Math.min(100, (processedPoints / totalPoints) * PROGRESS_PERCENT);
                                 const progressBar = document.getElementById('progress-bar');
                                 if (progressText && progressBar) {
                                     progressText.textContent = `Processing GPU results... ${Math.round(progress)}%`;
@@ -1360,7 +1399,7 @@ const mandelbrotExplorer = {
                     }
                     
                     // Limit cache size periodically during generation
-                    if (processedPoints % 1000 === 0) {
+                    if (processedPoints % PROGRESS_LOG_INTERVAL === 0) {
                         mandelbrotExplorer.cloudMethods.limitCacheSize();
                     }
                 }
@@ -1368,7 +1407,7 @@ const mandelbrotExplorer = {
                 currentPointIndex = endIndex;
                 
                 // Update progress
-                const progress = Math.min(100, (processedPoints / totalPoints) * 100);
+                const progress = Math.min(100, (processedPoints / totalPoints) * PROGRESS_PERCENT);
                 const progressText = document.getElementById('progress-text');
                 const progressBar = document.getElementById('progress-bar');
                 if (progressText && progressBar) {
@@ -1477,7 +1516,7 @@ const mandelbrotExplorer = {
                 
                 // Update progress for particle system creation
                 if (i % 10 === 0 || i === indices.length - 1) {
-                    let progress = Math.min(100, (i / indices.length) * 100);
+                    let progress = Math.min(100, (i / indices.length) * PROGRESS_PERCENT);
                     let progressText = document.getElementById('progress-text');
                     let progressBar = document.getElementById('progress-bar');
                     if (progressText && progressBar) {
@@ -1589,7 +1628,7 @@ const mandelbrotExplorer = {
 
 				const geometry = new THREE.Geometry();
 				const curve = new THREE.CatmullRomCurve3(currentLine, false, 'chordal' );
-				geometry.vertices = curve.getPoints(50);
+				geometry.vertices = curve.getPoints(CURVE_POINTS);
 				
 				//gradientline.js
 				const steps = 0.2;
@@ -1620,7 +1659,7 @@ const mandelbrotExplorer = {
             mandelbrotExplorer.continueIterationCycle = resumeIterationCycle;
             
             // Update cache status after generation
-            setTimeout(showCacheStatus, 100);
+            setTimeout(showCacheStatus, TIMEOUT_SHORT);
             
             		perfTimeEnd("drawMandelbrotCloud");
         };
@@ -1687,8 +1726,8 @@ const mandelbrotExplorer = {
 		}
 	},
 	"setPixel": function( imageData, x, y, c ){
-		const i = ((y * imageData.width) + x) * 4;
-		if( i + 3 < (imageData.width * imageData.height * 4) ){
+		const i = ((y * imageData.width) + x) * RGBA_COMPONENTS;
+		if( i + 3 < (imageData.width * imageData.height * RGBA_COMPONENTS) ){
 			imageData.data[i]=c.R;
 			imageData.data[i+1]=c.G;
 			imageData.data[i+2]=c.B;
@@ -1703,7 +1742,7 @@ const mandelbrotExplorer = {
 
 		let index, currentColor, currentColorIndex, nextColorIndex, nextColor;
 		for( let pixel = 0; pixel < ( canvasImageData.height * canvasImageData.width ); pixel++ ){
-			index = pixel * 4;
+			index = pixel * RGBA_COMPONENTS;
 			currentColor = {
 				"R": canvasImageData.data[ index ],
 				"G": canvasImageData.data[ index + 1 ],
@@ -1746,9 +1785,9 @@ const mandelbrotExplorer = {
 			const materialColor = this.particleSystems[index].material.color;
 			
 			currentColor = {
-				"R": materialColor.r * 255,
-				"G": materialColor.g * 255,
-				"B": materialColor.b * 255,
+				"R": materialColor.r * COLOR_CHANNEL_MAX,
+				"G": materialColor.g * COLOR_CHANNEL_MAX,
+				"B": materialColor.b * COLOR_CHANNEL_MAX,
 				"A": 255
 			};
 			
@@ -1760,9 +1799,9 @@ const mandelbrotExplorer = {
 			}
 			nextColor = this.palette[nextColorIndex];
 			
-			this.particleSystems[index].material.color.setHex(parseInt( "0x" + this.padString( nextColor.R.toString(16), 2, "0", STR_PAD_LEFT )
-									  + this.padString( nextColor.G.toString(16), 2, "0", STR_PAD_LEFT )
-									  + this.padString( nextColor.B.toString(16), 2, "0", STR_PAD_LEFT )
+			this.particleSystems[index].material.color.setHex(parseInt( "0x" + this.padString( nextColor.R.toString(HEX_BASE), 2, "0", STR_PAD_LEFT )
+									  + this.padString( nextColor.G.toString(HEX_BASE), 2, "0", STR_PAD_LEFT )
+									  + this.padString( nextColor.B.toString(HEX_BASE), 2, "0", STR_PAD_LEFT )
 								, 16));
 		}
 
@@ -1821,7 +1860,7 @@ const mandelbrotExplorer = {
         let nextColor;
         for( let pixel = 0; pixel < ( canvasImageData.height * canvasImageData.width ); pixel++ )
 		{
-			index = pixel * 4;
+			index = pixel * RGBA_COMPONENTS;
 			currentColor = {
 				"R": canvasImageData.data[ index ],
 				"G": canvasImageData.data[ index + 1 ],
@@ -1851,10 +1890,10 @@ const mandelbrotExplorer = {
 			const materialColor = this.particleSystems[index].material.color;
 			
 			currentColor = {
-				"R": materialColor.r * 255,
-				"G": materialColor.g * 255,
-				"B": materialColor.b * 255,
-				"A": this.particleSystems[index].material.opacity * 255
+				"R": materialColor.r * COLOR_CHANNEL_MAX,
+				"G": materialColor.g * COLOR_CHANNEL_MAX,
+				"B": materialColor.b * COLOR_CHANNEL_MAX,
+				"A": this.particleSystems[index].material.opacity * COLOR_CHANNEL_MAX
 			};
 			
 			currentColorIndex =  palettes.getColorIndex(this.palette, currentColor);
@@ -1864,16 +1903,16 @@ const mandelbrotExplorer = {
 			}
 			nextColor = newPalette[nextColorIndex];
 			
-			this.particleSystems[index].material.color.setHex(parseInt( "0x" + this.padString( nextColor.R.toString(16), 2, "0", STR_PAD_LEFT )
-									  + this.padString( nextColor.G.toString(16), 2, "0", STR_PAD_LEFT )
-									  + this.padString( nextColor.B.toString(16), 2, "0", STR_PAD_LEFT )
+			this.particleSystems[index].material.color.setHex(parseInt( "0x" + this.padString( nextColor.R.toString(HEX_BASE), 2, "0", STR_PAD_LEFT )
+									  + this.padString( nextColor.G.toString(HEX_BASE), 2, "0", STR_PAD_LEFT )
+									  + this.padString( nextColor.B.toString(HEX_BASE), 2, "0", STR_PAD_LEFT )
 								, 16));
 		}
 
         this.palette = newPalette;
     },
 	"getPixel": function(imageData,x,y){
-		const i = ((y * imageData.width) + x) * 4;
+		const i = ((y * imageData.width) + x) * RGBA_COMPONENTS;
 		if( i + 3 < imageData.width * imageData.height ){
 			return {R:imageData.data[i],
 				  G:imageData.data[i+1],
@@ -2109,7 +2148,7 @@ window.checkGPUAvailability = function() {
 
 // Initialize cache status display when page loads
 window.addEventListener('load', function() {
-    setTimeout(showCacheStatus, 500);
+    setTimeout(showCacheStatus, TIMEOUT_MEDIUM);
 });
 
 // Debug logging control functions
