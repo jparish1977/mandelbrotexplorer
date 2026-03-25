@@ -990,20 +990,20 @@ const mandelbrotExplorer = {
             
             // Set limits based on estimated size, with reasonable bounds
             const MAX_ESCAPE_PATH_CACHE_SIZE_MB = Math.max(MIN_CACHE_SIZE_MB, Math.min(MAX_CACHE_SIZE_MB, estimatedCacheSizeMB * CACHE_SIZE_MULTIPLIER)); // 500MB-9GB range
-            const MAX_CACHE_ENTRIES = Math.max(MIN_CACHE_ENTRIES, Math.min(MAX_CACHE_ENTRIES, Math.floor(CACHE_BUDGET_MB / estimatedCacheSizeMB))); // Fewer entries for larger data
+            const maxCacheEntries = Math.max(MIN_CACHE_ENTRIES, Math.min(MAX_CACHE_ENTRIES, Math.floor(CACHE_BUDGET_MB / estimatedCacheSizeMB))); // Fewer entries for larger data
             
             		debugLog('cache', 'Cache size estimation:', {
                 maxResolution,
                 maxIterations, 
                 estimatedSizeMB: Math.round(estimatedCacheSizeMB),
                 cacheLimitMB: Math.round(MAX_ESCAPE_PATH_CACHE_SIZE_MB),
-                maxEntries: MAX_CACHE_ENTRIES
+                maxEntries: maxCacheEntries
             });
-            
+
             // Warn if cache size would be very large
             if (estimatedCacheSizeMB > CACHE_BUDGET_MB) {
                 console.warn('⚠️ Large cache size detected:', Math.round(estimatedCacheSizeMB), 'MB. Consider reducing resolution or iterations for better performance.');
-                
+
                 // Suggest specific optimizations
                 const suggestedRes = Math.floor(Math.sqrt(estimatedCacheSizeMB * BYTES_PER_MB / (maxIterations * BYTES_PER_ESCAPE_PATH)));
                 		debugLog('cache', '💡 Suggestions:');
@@ -1011,14 +1011,14 @@ const mandelbrotExplorer = {
 		debugLog('cache', '   - Or reduce iterations to ~', Math.floor(COLOR_CHANNEL_MAX + 1), 'for current resolution');
 		debugLog('cache', '   - Or disable caching for this render (will be slower but use less memory)');
             }
-            
+
             if (!mandelbrotExplorer.cloudCache) return;
-            
+
             const cacheKeys = Object.keys(mandelbrotExplorer.cloudCache);
-            
+
             // If we have too many entries, remove oldest ones
-            if (cacheKeys.length > MAX_CACHE_ENTRIES) {
-                const keysToRemove = cacheKeys.slice(0, cacheKeys.length - MAX_CACHE_ENTRIES);
+            if (cacheKeys.length > maxCacheEntries) {
+                const keysToRemove = cacheKeys.slice(0, cacheKeys.length - maxCacheEntries);
                 keysToRemove.forEach(key => {
                     delete mandelbrotExplorer.cloudCache[key];
                 });
