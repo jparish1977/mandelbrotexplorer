@@ -1048,13 +1048,20 @@ function init()
     }
 } 
 
-// --- ALTERNATE UI EXTRACTION START ---
-// The following code is now in altUI.js:
-// - buildAlternativeUI
-// - showAltToast
-// - initAltUICodeMirror5
-// - refreshVisibleAltUICM
-// - syncAltUICMWithPreset
-// - DOMContentLoaded event for toggleBtn and alternativeUI
-// Remove these from this file and import from altUI.js instead.
-// --- ALTERNATE UI EXTRACTION END --- 
+// ── Bootstrap ────────────────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', function() {
+    init();
+    setTimeout(function() {
+        try {
+            if (window.buildAlternativeUI) {
+                buildAlternativeUI();
+                document.getElementById('controls').style.display = 'none';
+                document.getElementById('alternativeUI').style.display = '';
+            } else {
+                console.warn('Alternative UI not available, keeping classic UI');
+            }
+        } catch (error) {
+            console.error('Error loading alternative UI:', error);
+        }
+    }, 500);
+});
