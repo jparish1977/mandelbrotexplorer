@@ -1,6 +1,7 @@
 // altUI-completion.js
 // CodeMirror autocomplete functionality for Mandelbrot Explorer
 
+/* global CodeMirror, MBEUI */
 window.MBEUI = window.MBEUI || {};
 
 // Track CodeMirror instances by field ID

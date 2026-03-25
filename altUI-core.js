@@ -1,6 +1,9 @@
 // altUI-core.js
 // Core alternative UI functionality - building, populating, and managing the UI
 
+/* global MBEUI, MutationObserver, mandelbrotExplorer, palettes,  */
+/* global initAltUICodeMirror5, refreshVisibleAltUICM, setupAltUICMModal,  */
+/* global setupAltUIEventListeners */
 window.MBEUI = window.MBEUI || {};
 
 // Build the alternative UI

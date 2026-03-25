@@ -1,5 +1,6 @@
 // http://jsfiddle.net/L0rdzbej/276/
 
+/* global THREE */
 function changeColor( line, options ) {
 
   const colors = line.geometry.attributes.color.array;
@@ -41,6 +42,7 @@ function getColoredBufferLine_jap ( palette, steps, geometry ){
   const segments = geometry.vertices.length;
 
   // geometry
+  // eslint-disable-next-line no-redeclare -- separate function, same var name
   var geometry = new THREE.BufferGeometry();
 
   // material
@@ -112,7 +114,7 @@ function getColoredBufferLine_jap ( palette, steps, geometry ){
 */
 
 //	color.set ( makeColorGradient( i, frequency, phase ) );	
-	colorHex = '0x' + _byte2Hex( palette[colorIndex].R ) + _byte2Hex( palette[colorIndex].G ) + _byte2Hex( palette[colorIndex].B );
+	let colorHex = '0x' + _byte2Hex( palette[colorIndex].R ) + _byte2Hex( palette[colorIndex].G ) + _byte2Hex( palette[colorIndex].B );
 
     color.set ( parseInt(colorHex) );
 
@@ -136,6 +138,7 @@ function getColoredBufferLine_3 ( geometry, palette ){
   const segments = geometry.vertices.length;
 
   // geometry
+  // eslint-disable-next-line no-redeclare -- separate function, same var name
   var geometry = new THREE.BufferGeometry();
 
   // material
@@ -163,7 +166,7 @@ function getColoredBufferLine_3 ( geometry, palette ){
 //    color.set ( makeColorGradient_2( Math.Floor(i/3), palette ) );
 //console.log(makeColorGradient( i, frequency, phase ));
 
-	colorIndex = ( Math.floor(i/3) % palette.length );
+	let colorIndex = ( Math.floor(i/3) % palette.length );
 
     colors[ i * 3 ] = palette[colorIndex].R/255;//color.r;
     colors[ i * 3 + 1 ] = palette[colorIndex].G/255;
@@ -186,6 +189,7 @@ function getColoredBufferLine_2 ( steps, phase, geometry, baseColorRGB ) {
   const segments = geometry.vertices.length;
 
   // geometry
+  // eslint-disable-next-line no-redeclare -- separate function, same var name
   var geometry = new THREE.BufferGeometry();
 
   // material
@@ -234,6 +238,7 @@ function getColoredBufferLine ( steps, phase, geometry ) {
   const segments = geometry.vertices.length;
 
   // geometry
+  // eslint-disable-next-line no-redeclare -- separate function, same var name
   var geometry = new THREE.BufferGeometry();
 
   // material

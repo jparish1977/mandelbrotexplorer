@@ -1,3 +1,4 @@
+/* global THREE */
 /**
  * ThreeJSRenderer - Handles all Three.js rendering concerns
  * Separates 3D rendering logic from mathematical calculations

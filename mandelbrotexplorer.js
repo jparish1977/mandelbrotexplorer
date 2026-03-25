@@ -1,6 +1,10 @@
 // mandelbrotexplorer.js
 // Mandelbrot Explorer - GPU-accelerated fractal visualization
 
+/* global THREE, ShaderLoader, ThreeJSRenderer, SettingsManager */
+/* global palettes, mandelbrotExplorerPresets, DEBUG_CONFIG */
+/* global getColoredBufferLine_2, getColoredBufferLine_3, showCacheStatus */
+
 // Debug configuration - control console logging levels
 window.DEBUG_CONFIG = {
     // Set to false to disable all debug logging
@@ -1232,6 +1236,7 @@ const mandelbrotExplorer = {
                             escapePath = cachedEscapePaths[i];
                         } else {
                             // Generate new escape path
+                            // eslint-disable-next-line no-redeclare -- var re-declaration in shared scope
                             var c = mandelbrotExplorer.cloudMethods.handleCloudSteppingAdjustments([point.x, point.y]);
                             escapePath = mandelbrotExplorer.cloudMethods.getEscapePath(c);
                             shouldCache = true;
@@ -1253,6 +1258,7 @@ const mandelbrotExplorer = {
                             escapePath = cachedEscapePaths[i];
                         } else {
                             // Generate new escape path
+                            // eslint-disable-next-line no-redeclare -- var re-declaration in shared scope
                             var c = mandelbrotExplorer.cloudMethods.handleCloudSteppingAdjustments([point.x, point.y]);
                             escapePath = mandelbrotExplorer.cloudMethods.getEscapePath(c);
                             shouldCache = true;
@@ -1328,9 +1334,12 @@ const mandelbrotExplorer = {
 
                         
                         if (mandelbrotExplorer.dualZ) {
+                            // eslint-disable-next-line no-redeclare -- var re-declaration in shared scope
                             var newX = particleFilterResult.newX;
+                            // eslint-disable-next-line no-redeclare -- var re-declaration in shared scope
                             var newY = particleFilterResult.newY;
                             const coords = mandelbrotExplorer.cloudMethods.processDualZMultiplier(pathIndex, iteration, escapePath, newX, newY, z);
+                            // eslint-disable-next-line no-redeclare -- var re-declaration in shared scope
                             var particleVector = new THREE.Vector3(coords[0], coords[1], coords[2]);
                             
                             mandelbrotExplorer.iterationParticles[iterationIndex].particles.push(particleVector);
@@ -1730,6 +1739,7 @@ const mandelbrotExplorer = {
         let nextColorIndex;
         let nextColor;
 
+        // eslint-disable-next-line no-redeclare -- var re-declaration in shared scope
         for( var index in this.particleSystems )
 		{
 			if(!this.particleSystems[index] || !this.particleSystems[index].material){ continue; };
@@ -1835,6 +1845,7 @@ const mandelbrotExplorer = {
 
         canvasContext.putImageData(canvasImageData,0,0);
 
+        // eslint-disable-next-line no-redeclare -- var re-declaration in shared scope
         for( var index in this.particleSystems ){
 			if(!this.particleSystems[index]){continue;}
 			const materialColor = this.particleSystems[index].material.color;
@@ -1986,9 +1997,9 @@ const mandelbrotExplorer = {
 		return Math.sqrt( Math.abs( Math.pow(c[0], 2) + Math.pow(c[1],2) ) );
 	},
 	"padString": function (str, len, pad, dir) {
-		if (typeof(len) === "undefined") { var len = 0; }
-		if (typeof(pad) === "undefined") { var pad = ' '; }
-		if (typeof(dir) === "undefined") { var dir = STR_PAD_RIGHT; }
+		if (typeof(len) === "undefined") { len = 0; }
+		if (typeof(pad) === "undefined") { pad = ' '; }
+		if (typeof(dir) === "undefined") { dir = STR_PAD_RIGHT; }
 
 		if (len + 1 >= str.length) {
 			switch (dir){
@@ -1997,7 +2008,8 @@ const mandelbrotExplorer = {
 					break;
 
 				case STR_PAD_BOTH:
-					const right = Math.ceil((padlen = len - str.length) / 2);
+					var padlen = len - str.length; // eslint-disable-line no-var
+					const right = Math.ceil(padlen / 2);
 					const left = padlen - right;
 					str = Array(left+1).join(pad) + str + Array(right+1).join(pad);
 					break;

@@ -1,6 +1,7 @@
 // Mandelbrot Explorer Presets
 // This file contains all preset configurations for the Mandelbrot Explorer
 
+/* global mandelbrotExplorer */
 const mandelbrotExplorerPresets = {
 	"cloudLengthFilter": {
 		"iteration8": {

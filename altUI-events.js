@@ -1,6 +1,10 @@
 // altUI-events.js
 // Event handling and synchronization for the alternative UI
 
+/* global MBEUI, mandelbrotExplorer, getScreenCap, populateAltUIFields,  */
+/* global refreshVisibleAltUICM, showToast, syncAltUICMWithPreset,  */
+/* global toggleBackground, toggleColorCycle, toggleGPUAcceleration,  */
+/* global toggleIterationCycle, updateDualZEnabled, hide2D */
 window.MBEUI = window.MBEUI || {};
 
 // Sync alternative UI from model values

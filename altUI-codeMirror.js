@@ -1,6 +1,10 @@
 // altUI-codeMirror.js
 // CodeMirror setup and management for the alternative UI
 
+/* global CodeMirror, MBEUI, altUICMInstances, createMandelbrotCompleter,  */
+/* global updateCloudIterationFilter, updateCloudLengthFilter,  */
+/* global updateDualZMultiplier, updateEscapingZ, updateInitialZ, updateJuliaC,  */
+/* global updateParticleFilter, updateParticleSize */
 window.MBEUI = window.MBEUI || {};
 
 // Initialize CodeMirror for the alternative UI

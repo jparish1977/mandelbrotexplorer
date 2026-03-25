@@ -2,6 +2,8 @@
 // Extracted from mandelbrotexplorer.htm
 
 // Global variables
+/* global mandelbrotExplorer, cancelTimeout, THREE, ThreeJSRenderer, Stats, SettingsManager,  */
+/* global palettes, buildAlternativeUI, cancelAnimationFrame, URLSearchParams */
 let tjStats = null;
 let animationFrameId;
 let restoreContextTimer = null;
@@ -220,10 +222,12 @@ function updateEscapingZ(){
 }
 
 function updateIterationCycleTime(){
+    // eslint-disable-next-line no-eval -- user expression evaluation from URL params
     mandelbrotExplorer.iterationCycleTime = parseInt( eval( document.getElementById("iterationCycleTime").value ) );
 }
 
 function updateIterationCycleFrame(){
+    // eslint-disable-next-line no-eval -- user expression evaluation from URL params
     mandelbrotExplorer.iterationCycleFrame = parseInt( eval( document.getElementById("iterationCycleFrame").value ) );
 }
 
@@ -525,6 +529,7 @@ function loadFilterOptions()
     escapingZOption.value = "";
     document.getElementById("escapingZPresets").add(escapingZOption);
     
+    // eslint-disable-next-line no-redeclare -- var re-declaration in shared scope
     for( var presetName in mandelbrotExplorer.presets.mandelbrot.escapingZ )
     {
         escapingZOption = document.createElement("option");
@@ -542,6 +547,7 @@ function loadFilterOptions()
     particleFilterOption.value = "";
     document.getElementById("particleFilterPresets").add(particleFilterOption);
     
+    // eslint-disable-next-line no-redeclare -- var re-declaration in shared scope
     for( var presetName in mandelbrotExplorer.presets.particleFilter )
     {
         particleFilterOption = document.createElement("option");
@@ -559,6 +565,7 @@ function loadFilterOptions()
     dualZMultiplierOption.value = "";
     document.getElementById("dualZMultiplierPresets").add(dualZMultiplierOption);
     
+    // eslint-disable-next-line no-redeclare -- var re-declaration in shared scope
     for( var presetName in mandelbrotExplorer.presets.dualZMultiplier )
     {
         dualZMultiplierOption = document.createElement("option");
@@ -576,6 +583,7 @@ function loadFilterOptions()
     particleSizeOption.value = "";
     document.getElementById("particleSizePresets").add(particleSizeOption);
     
+    // eslint-disable-next-line no-redeclare -- var re-declaration in shared scope
     for( var presetName in mandelbrotExplorer.presets.particleSize )
     {
         particleSizeOption = document.createElement("option");
@@ -593,6 +601,7 @@ function loadFilterOptions()
     cloudIterationFilterOption.value = "";
     document.getElementById("cloudIterationFilterPresets").add(cloudIterationFilterOption);
     
+    // eslint-disable-next-line no-redeclare -- var re-declaration in shared scope
     for( var presetName in mandelbrotExplorer.presets.cloudIterationFilter )
     {
         cloudIterationFilterOption = document.createElement("option");
@@ -610,6 +619,7 @@ function loadFilterOptions()
     initialZOption.value = "";
     document.getElementById("initialZPresets").add(initialZOption);
     
+    // eslint-disable-next-line no-redeclare -- var re-declaration in shared scope
     for( var presetName in mandelbrotExplorer.presets.initialZ )
     {
         initialZOption = document.createElement("option");

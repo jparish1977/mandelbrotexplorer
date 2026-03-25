@@ -1,4 +1,5 @@
 // Settings Manager Class for Mandelbrot Explorer
+/* global palettes */
 const SettingsManager = {
 	storageKey: 'mandelbrotExplorer_settings',
 	

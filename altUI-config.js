@@ -1,6 +1,10 @@
 // altUI-config.js
 // Configuration constants and field mappings for the alternative UI
 
+/* global MBEUI, setCloudIterationFilterFromPreset,  */
+/* global setCloudLengthFilterFromPreset, setDualZMultiplierFromPreset,  */
+/* global setEscapingZFromPreset, setInitialZFromPreset,  */
+/* global setParticleFilterFromPreset, setParticleSizeFromPreset */
 window.MBEUI = window.MBEUI || {};
 
 // Field mappings between original UI and alternative UI
