@@ -30,7 +30,7 @@ button.active { background: #4fc3f7; color: #111; }
 <div id="controls">
   <div class="group">
     <label>c:</label>
-    <input type="text" id="c-value" value="-1.25, 0.05" style="width:120px">
+    <input type="text" id="c-value" value="-1.37, 0.02" style="width:120px">
     <button onclick="updateC()">Set</button>
     <span id="pick-info">Click 2D Mandelbrot to pick c</span>
   </div>
@@ -262,15 +262,16 @@ let pointBuffer = gl.createBuffer();
 let pointCount = 0;
 
 // ── Build point grid: (sample_re, sample_im, slice_index) ───────────────────
+let maxBuiltSlices = 0;
+let pointsPerSlice = 0;
+
 function buildPoints() {
   const res = parseInt(document.getElementById('julia-res').value);
-  const depth = parseInt(document.getElementById('tunnel-depth').value);
-  const sliceCount = Math.min(depth, escapePath.length, 256);
+  const totalSlices = Math.min(escapePath.length, 256);
   const points = [];
 
-  // For each slice (each point on the escape path)
-  for (let s = 0; s < sliceCount; s++) {
-    // Sample grid for this Julia set slice
+  // Build ALL slices up front — depth slider just controls how many we draw
+  for (let s = 0; s < totalSlices; s++) {
     for (let i = 0; i < res; i++) {
       for (let j = 0; j < res; j++) {
         const re = -2.0 + (i / res) * 4.0;
@@ -280,12 +281,14 @@ function buildPoints() {
     }
   }
 
+  pointsPerSlice = res * res;
+  maxBuiltSlices = totalSlices;
   pointCount = points.length / 3;
   gl.bindBuffer(gl.ARRAY_BUFFER, pointBuffer);
   gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(points), gl.STATIC_DRAW);
 
   document.getElementById('info').textContent =
-    pointCount.toLocaleString() + ' pts (' + sliceCount + ' slices x ' + (res*res) + ' samples)';
+    pointCount.toLocaleString() + ' pts (' + totalSlices + ' slices x ' + pointsPerSlice + ' samples)';
 }
 
 // ── Upload escape path to shader uniforms ────────────────────────────────────
@@ -335,7 +338,9 @@ function render() {
 
   gl.bindBuffer(gl.ARRAY_BUFFER, pointBuffer);
   gl.vertexAttribPointer(aPoint, 3, gl.FLOAT, false, 0, 0);
-  gl.drawArrays(gl.POINTS, 0, pointCount);
+  // Only draw slices up to the depth slider
+  const drawSlices = Math.min(sliceCount, maxBuiltSlices);
+  gl.drawArrays(gl.POINTS, 0, drawSlices * pointsPerSlice);
 }
 
 // ── Controls ─────────────────────────────────────────────────────────────────
@@ -343,8 +348,7 @@ function updateC() {
   const parts = document.getElementById('c-value').value.split(',').map(Number);
   if (parts.length === 2 && !isNaN(parts[0]) && !isNaN(parts[1])) {
     currentC = parts;
-    const maxIter = parseInt(document.getElementById('tunnel-depth').value);
-    escapePath = computeEscapePath(currentC[0], currentC[1], maxIter);
+    escapePath = computeEscapePath(currentC[0], currentC[1], 256);
     document.getElementById('pick-info').textContent =
       'c = ' + currentC[0].toFixed(4) + ' + ' + currentC[1].toFixed(4) + 'i | path length: ' + escapePath.length;
     buildPoints();
@@ -354,9 +358,7 @@ function updateC() {
 
 document.getElementById('tunnel-depth').addEventListener('input', function() {
   document.getElementById('depth-display').textContent = this.value;
-  escapePath = computeEscapePath(currentC[0], currentC[1], parseInt(this.value));
-  buildPoints();
-  render();
+  render();  // just draw more/fewer slices, no rebuild
 });
 
 document.getElementById('julia-res').addEventListener('change', function() { buildPoints(); render(); });
@@ -415,12 +417,11 @@ function animateDepth(time) {
     lastPlayTime = time;
     const slider = document.getElementById('tunnel-depth');
     let val = parseInt(slider.value) + 1;
-    if (val > 500) val = 500;
+    const maxSlices = Math.min(escapePath.length, 256);
+    if (val > maxSlices) val = 1;  // loop
     slider.value = val;
     document.getElementById('depth-display').textContent = val;
-    escapePath = computeEscapePath(currentC[0], currentC[1], val);
-    buildPoints();
-    render();
+    render();  // no rebuild needed — just draw fewer/more slices
   }
   requestAnimationFrame(animateDepth);
 }
