@@ -5,41 +5,227 @@
 /* global mandelbrotExplorer, cancelTimeout, THREE, ThreeJSRenderer, Stats, SettingsManager,  */
 /* global palettes, buildAlternativeUI, cancelAnimationFrame, URLSearchParams */
 /* global toggleGPUAcceleration, clearSelectOptions, loadFilterOptions */
+/* global indexedDB, syncAltUIFromOriginal, populateFields */
 let tjStats = null;
 let animationFrameId;
 let restoreContextTimer = null;
 let originalHomeState = null;
 
 // Screen capture functionality
-function openScreenCap(){
-    const newWindow = window.open("");
-    
-    const img = document.getElementById("screen_cap").cloneNode(false);
-    img.removeAttribute('height');
-    img.removeAttribute('onclick');
-    
-    newWindow.document.write(img.outerHTML);
+// ── Capture system (IndexedDB-backed) ─────────────────────────────────────
+const CaptureDB = {
+    db: null,
+    DB_NAME: 'mandelbrotCaptures',
+    STORE_NAME: 'captures',
+
+    open() {
+        return new Promise(function(resolve, reject) {
+            if (CaptureDB.db) { resolve(CaptureDB.db); return; }
+            const req = indexedDB.open(CaptureDB.DB_NAME, 1);
+            req.onupgradeneeded = function(e) {
+                const db = e.target.result;
+                if (!db.objectStoreNames.contains(CaptureDB.STORE_NAME)) {
+                    db.createObjectStore(CaptureDB.STORE_NAME, { keyPath: 'id', autoIncrement: true });
+                }
+            };
+            req.onsuccess = function(e) { CaptureDB.db = e.target.result; resolve(CaptureDB.db); };
+            req.onerror = function(e) { reject(e.target.error); };
+        });
+    },
+
+    add(capture) {
+        return CaptureDB.open().then(function(db) {
+            return new Promise(function(resolve, reject) {
+                const tx = db.transaction(CaptureDB.STORE_NAME, 'readwrite');
+                const store = tx.objectStore(CaptureDB.STORE_NAME);
+                const req = store.add(capture);
+                req.onsuccess = function() { resolve(req.result); };
+                req.onerror = function(e) { reject(e.target.error); };
+            });
+        });
+    },
+
+    getAll() {
+        return CaptureDB.open().then(function(db) {
+            return new Promise(function(resolve, reject) {
+                const tx = db.transaction(CaptureDB.STORE_NAME, 'readonly');
+                const store = tx.objectStore(CaptureDB.STORE_NAME);
+                const req = store.getAll();
+                req.onsuccess = function() { resolve(req.result); };
+                req.onerror = function(e) { reject(e.target.error); };
+            });
+        });
+    },
+
+    get(id) {
+        return CaptureDB.open().then(function(db) {
+            return new Promise(function(resolve, reject) {
+                const tx = db.transaction(CaptureDB.STORE_NAME, 'readonly');
+                const store = tx.objectStore(CaptureDB.STORE_NAME);
+                const req = store.get(id);
+                req.onsuccess = function() { resolve(req.result); };
+                req.onerror = function(e) { reject(e.target.error); };
+            });
+        });
+    },
+
+    remove(id) {
+        return CaptureDB.open().then(function(db) {
+            return new Promise(function(resolve, reject) {
+                const tx = db.transaction(CaptureDB.STORE_NAME, 'readwrite');
+                const store = tx.objectStore(CaptureDB.STORE_NAME);
+                const req = store.delete(id);
+                req.onsuccess = function() { resolve(); };
+                req.onerror = function(e) { reject(e.target.error); };
+            });
+        });
+    }
+};
+
+function buildCaptureConfig() {
+    return {
+        startX: mandelbrotExplorer.startX,
+        startY: mandelbrotExplorer.startY,
+        endX: mandelbrotExplorer.endX,
+        endY: mandelbrotExplorer.endY,
+        maxIterations_2d: mandelbrotExplorer.maxIterations_2d,
+        maxIterations_3d: mandelbrotExplorer.maxIterations_3d,
+        cloudResolution: mandelbrotExplorer.cloudResolution,
+        randomizeCloudStepping: mandelbrotExplorer.randomizeCloudStepping,
+        dualZ: mandelbrotExplorer.dualZ,
+        dualZMultiplier: mandelbrotExplorer.dualZMultiplier,
+        particleSize: mandelbrotExplorer.particleSize,
+        particleFilter: mandelbrotExplorer.particleFilter,
+        cloudLengthFilter: mandelbrotExplorer.cloudLengthFilter,
+        cloudIterationFilter: mandelbrotExplorer.cloudIterationFilter,
+        juliaC: mandelbrotExplorer.juliaC,
+        initialZ: mandelbrotExplorer.initialZ,
+        escapingZ: mandelbrotExplorer.escapingZ,
+        iterationCycleTime: mandelbrotExplorer.iterationCycleTime,
+        iterationCycleFrame: mandelbrotExplorer.iterationCycleFrame,
+        curvePoints: mandelbrotExplorer.curvePoints,
+        onlyShortened: mandelbrotExplorer.onlyShortened,
+        onlyFull: mandelbrotExplorer.onlyFull,
+        cameraState: SettingsManager.getCameraState(mandelbrotExplorer),
+        controlsState: SettingsManager.getControlsState(mandelbrotExplorer)
+    };
 }
 
-function getScreenCap(){
-    const dataUrl = mandelbrotExplorer.threeRenderer.renderer.domElement.toDataURL();
-    
-    let img = document.getElementById("screen_cap");
-    if( !img ) {
-        const table = document.getElementById("controls_table");
-        const row = document.createElement('tr');
-        const cell = document.createElement('td');
-        img = document.createElement('img');
-        img.id = 'screen_cap'
-        
-        cell.appendChild(img);
-        row.appendChild(cell);
-        table.appendChild(row);
-    }
-    
-    img.src = dataUrl;
-    img.height = 240;
+function getScreenCap() {
+    const canvas = mandelbrotExplorer.threeRenderer.renderer.domElement;
+
+    // Convert canvas to blob (no base64 overhead)
+    canvas.toBlob(function(imageBlob) {
+        // Also create a small thumbnail as data URL for the gallery
+        const thumbCanvas = document.createElement('canvas');
+        const thumbHeight = 60;
+        const thumbWidth = Math.round(canvas.width * (thumbHeight / canvas.height));
+        thumbCanvas.width = thumbWidth;
+        thumbCanvas.height = thumbHeight;
+        thumbCanvas.getContext('2d').drawImage(canvas, 0, 0, thumbWidth, thumbHeight);
+
+        const capture = {
+            image: imageBlob,
+            thumbnail: thumbCanvas.toDataURL('image/jpeg', 0.7),
+            config: buildCaptureConfig(),
+            timestamp: new Date().toISOString()
+        };
+
+        CaptureDB.add(capture).then(function() {
+            renderCaptureGallery();
+        });
+    }, 'image/png');
 }
+
+function restoreCapture(id) {
+    CaptureDB.get(id).then(function(capture) {
+        if (!capture) return;
+        const config = capture.config;
+        for (const key in config) {
+            if (key === 'cameraState' || key === 'controlsState') continue;
+            if (mandelbrotExplorer.hasOwnProperty(key)) {
+                mandelbrotExplorer[key] = config[key];
+            }
+        }
+        if (config.cameraState) {
+            SettingsManager.restoreCameraState(mandelbrotExplorer, config.cameraState);
+        }
+        if (config.controlsState) {
+            SettingsManager.restoreControlsState(mandelbrotExplorer, config.controlsState);
+        }
+        if (typeof syncAltUIFromOriginal === 'function') syncAltUIFromOriginal();
+        if (typeof populateFields === 'function') populateFields();
+    });
+}
+
+function downloadCapture(id) {
+    CaptureDB.get(id).then(function(capture) {
+        if (!capture) return;
+
+        // Download image
+        const imgUrl = URL.createObjectURL(capture.image);
+        const imgLink = document.createElement('a');
+        imgLink.href = imgUrl;
+        imgLink.download = 'capture-' + id + '.png';
+        imgLink.click();
+        setTimeout(function() { URL.revokeObjectURL(imgUrl); }, 1000);
+
+        // Download config
+        const configBlob = new Blob([JSON.stringify(capture.config, null, 2)], {type: 'application/json'});
+        const configLink = document.createElement('a');
+        configLink.href = URL.createObjectURL(configBlob);
+        configLink.download = 'capture-' + id + '-config.json';
+        setTimeout(function() { configLink.click(); }, 200);
+    });
+}
+
+function deleteCapture(id) {
+    CaptureDB.remove(id).then(function() {
+        renderCaptureGallery();
+    });
+}
+
+function renderCaptureGallery() {
+    CaptureDB.getAll().then(function(captures) {
+        const html = captures.map(function(cap) {
+            const label = new Date(cap.timestamp).toLocaleTimeString();
+            return '<div style="display:inline-block;text-align:center;margin:2px;">' +
+                '<img src="' + cap.thumbnail + '" height="60" ' +
+                'title="' + label + ' - Click to restore" ' +
+                'style="cursor:pointer;border:1px solid #666;" ' +
+                'onclick="restoreCapture(' + cap.id + ')" />' +
+                '<br><small>' +
+                '<a href="#" onclick="downloadCapture(' + cap.id + ');return false;">Save</a> | ' +
+                '<a href="#" onclick="deleteCapture(' + cap.id + ');return false;">Del</a>' +
+                '</small></div>';
+        }).join('');
+
+        // Classic UI gallery
+        let gallery = document.getElementById('capture-gallery');
+        if (!gallery) {
+            const table = document.getElementById('controls_table');
+            if (table) {
+                const row = document.createElement('tr');
+                const cell = document.createElement('td');
+                cell.colSpan = 2;
+                gallery = document.createElement('div');
+                gallery.id = 'capture-gallery';
+                gallery.style.cssText = 'display:flex;flex-wrap:wrap;gap:4px;padding:4px;max-height:200px;overflow-y:auto;';
+                cell.appendChild(gallery);
+                row.appendChild(cell);
+                table.appendChild(row);
+            }
+        }
+        if (gallery) gallery.innerHTML = html || '<small style="color:#888;">No captures yet</small>';
+
+        // Alt UI gallery
+        const altGallery = document.getElementById('alt-capture-gallery');
+        if (altGallery) altGallery.innerHTML = html || '<small style="color:#888;">No captures yet</small>';
+    });
+}
+
+// Load gallery on startup
+setTimeout(renderCaptureGallery, 1000);
 
 // Utility functions
 function dumpBrot(){

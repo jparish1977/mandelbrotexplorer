@@ -149,6 +149,8 @@ function buildAlternativeUI() {
                 <div class="alt-ui-fieldrow">
                   <button id="alt-captureBtn" type="button">Capture</button>
                 </div>
+                <div id="alt-capture-gallery" style="display:flex;flex-wrap:wrap;gap:4px;padding:4px;max-height:200px;overflow-y:auto;">
+                </div>
               </div>
             </div>
           </section>

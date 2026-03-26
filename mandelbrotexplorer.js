@@ -141,6 +141,7 @@ const mandelbrotExplorer = {
 	"iterationParticles": [],//[iterationIndex]{particles: THREE.Geometry}      
 	"presets": mandelbrotExplorerPresets, // Reference to external presets
 	"particleCoords":	[],//[iterationIndex][X1,Y1,Z1,X2,Y2,Y3,...]
+	// Captures stored in IndexedDB via CaptureDB (see ui.js)
 	"particleLimit": 		100000000,
 	"cycleTime": 			10,
 	"continueColorCycle": 	false,
