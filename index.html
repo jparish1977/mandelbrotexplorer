@@ -116,7 +116,7 @@
 							Cloud Length Filter:<select id="cloudLengthFilterPresets" onchange="setCloudLengthFilterFromPreset()"></select>
 						</td>
 						<td>
-							<input type='button' onclick="generateHair();" value='Generate Hair' /><input type='button' onclick="generateCloud()" value='Generate Cloud' />
+							<input type='button' onclick="generateHair();" value='Generate Hair' /><input type='button' onclick="generateCloud()" value='Generate Cloud' /><input type='button' onclick="mandelbrotExplorer.clearMandelbrotHair();" value='Clear Hair' /><input type='button' onclick="mandelbrotExplorer.clearMandelbrotCloud();" value='Clear Cloud' />
 						</td>
 					</tr>
 					<tr>
@@ -167,6 +167,7 @@
 							Iteration Cycle<input type="checkbox" id="iterationCycleCheckbox" onchange="toggleIterationCycle()" />
 							Cycle Time<input type="text" id="iterationCycleTime" style="width:3em;" onchange="updateIterationCycleTime()" />
 							Cycle Frame<input type="text" id="iterationCycleFrame" style="width:3em;" onchange="updateIterationCycleFrame()" />
+							Curve Pts<input type="text" id="curvePoints" value="50" style="width:3em" onchange="mandelbrotExplorer.curvePoints = parseInt(this.value) || 50;" />
 							Target FPS: <input type="text" id="targetFrameRate" value="60" style="width:3em;" onchange="updateTargetFrameRate()" />
 						</td>
 					</tr>

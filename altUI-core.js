@@ -42,6 +42,8 @@ function buildAlternativeUI() {
           <button onclick="mandelbrotExplorer.threeRenderer.controls.reset()">Reset Camera</button>
           <button onclick="syncAltUIToModel(); generateHair();">Generate Hair</button>
           <button onclick="syncAltUIToModel(); generateCloud();">Generate Cloud</button>
+          <button onclick="mandelbrotExplorer.clearMandelbrotHair();">Clear Hair</button>
+          <button onclick="mandelbrotExplorer.clearMandelbrotCloud();">Clear Cloud</button>
         </div>
         <nav class="alt-ui-tabs">
           <button class="alt-ui-tab active" data-tab="parameters">Parameters</button>
@@ -139,6 +141,10 @@ function buildAlternativeUI() {
                   <input type="text" id="alt-iterationCycleFrame" style="width:3em;" />
                   <label for="alt-targetFrameRate" style="margin-left:1.5em;">Target FPS:</label>
                   <input type="text" id="alt-targetFrameRate" style="width:3em;" />
+                </div>
+                <div class="alt-ui-fieldrow">
+                  <label for="alt-curvePoints">Curve Pts:</label>
+                  <input type="text" id="alt-curvePoints" style="width:3em;" />
                 </div>
                 <div class="alt-ui-fieldrow">
                   <button id="alt-captureBtn" type="button">Capture</button>
@@ -393,6 +399,8 @@ function populateAltUIFields() {
         return mandelbrotExplorer.iterationCycleTime;
       case 'iterationCycleFrame':
         return mandelbrotExplorer.iterationCycleFrame;
+      case 'curvePoints':
+        return mandelbrotExplorer.curvePoints;
       case 'targetFrameRate':
         return mandelbrotExplorer.targetFrameRate;
       case 'juliaC':
@@ -611,7 +619,7 @@ function syncAltUIToModel() {
         const modelProperty = getModelPropertyNameForSync(fieldKey);
         if (modelProperty && mandelbrotExplorer.hasOwnProperty(modelProperty)) {
           // Convert numeric fields to numbers
-          if (['startX', 'endX', 'startY', 'endY', 'maxIterations_2d', 'maxIterations_3d', 'iterationCycleTime', 'iterationCycleFrame', 'targetFrameRate'].includes(fieldKey)) {
+          if (['startX', 'endX', 'startY', 'endY', 'maxIterations_2d', 'maxIterations_3d', 'iterationCycleTime', 'iterationCycleFrame', 'curvePoints', 'targetFrameRate'].includes(fieldKey)) {
             mandelbrotExplorer[modelProperty] = parseFloat(altElement.value);
           } else {
             mandelbrotExplorer[modelProperty] = altElement.value;
@@ -642,6 +650,7 @@ function syncAltUIToModel() {
       case 'gpuAccelerationCheckbox': return 'useGPU';
       case 'iterationCycleTime': return 'iterationCycleTime';
       case 'iterationCycleFrame': return 'iterationCycleFrame';
+      case 'curvePoints': return 'curvePoints';
       case 'targetFrameRate': return 'targetFrameRate';
       case 'juliaC': return 'juliaC';
       case 'initialZ': return 'initialZ';
