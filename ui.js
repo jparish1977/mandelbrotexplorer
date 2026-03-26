@@ -2,10 +2,10 @@
 // Extracted from mandelbrotexplorer.htm
 
 // Global variables
-/* global mandelbrotExplorer, cancelTimeout, THREE, ThreeJSRenderer, Stats, SettingsManager,  */
-/* global palettes, buildAlternativeUI, cancelAnimationFrame, URLSearchParams */
+/* global mandelbrotExplorer, cancelTimeout, THREE, ThreeJSRenderer, Stats, SettingsManager */
+/* global palettes, buildAlternativeUI */
 /* global toggleGPUAcceleration, clearSelectOptions, loadFilterOptions */
-/* global indexedDB, syncAltUIFromOriginal, populateFields */
+/* global syncAltUIFromOriginal, populateFields */
 let tjStats = null;
 let animationFrameId;
 let restoreContextTimer = null;
@@ -140,21 +140,7 @@ function getScreenCap() {
 function restoreCapture(id) {
     CaptureDB.get(id).then(function(capture) {
         if (!capture) return;
-        const config = capture.config;
-        for (const key in config) {
-            if (key === 'cameraState' || key === 'controlsState') continue;
-            if (mandelbrotExplorer.hasOwnProperty(key)) {
-                mandelbrotExplorer[key] = config[key];
-            }
-        }
-        if (config.cameraState) {
-            SettingsManager.restoreCameraState(mandelbrotExplorer, config.cameraState);
-        }
-        if (config.controlsState) {
-            SettingsManager.restoreControlsState(mandelbrotExplorer, config.controlsState);
-        }
-        if (typeof syncAltUIFromOriginal === 'function') syncAltUIFromOriginal();
-        if (typeof populateFields === 'function') populateFields();
+        applyConfig(capture.config);
     });
 }
 
@@ -226,6 +212,128 @@ function renderCaptureGallery() {
 
 // Load gallery on startup
 setTimeout(renderCaptureGallery, 1000);
+
+// ── Config sharing: JSON file export/import + URL hash ────────────────────
+
+// Simple URL params (coordinates + iterations only — safe for sharing)
+const SHAREABLE_PARAMS = [
+    'startX', 'startY', 'endX', 'endY',
+    'maxIterations_2d', 'maxIterations_3d',
+    'cloudResolution', 'juliaC', 'dualZ'
+];
+
+function exportConfigFile() {
+    const config = buildCaptureConfig();
+    config.exportedAt = new Date().toISOString();
+    const blob = new Blob([JSON.stringify(config, null, 2)], {type: 'application/json'});
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = 'mandelbrot-config-' + Date.now() + '.json';
+    link.click();
+    setTimeout(function() { URL.revokeObjectURL(link.href); }, 1000);
+}
+
+function importConfigFile() {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.json';
+    input.onchange = function() {
+        const file = input.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            try {
+                const config = JSON.parse(e.target.result);
+                applyConfig(config);
+            } catch (err) {
+                alert('Invalid config file: ' + err.message);
+            }
+        };
+        reader.readAsText(file);
+    };
+    input.click();
+}
+
+function applyConfig(config) {
+    for (const key in config) {
+        if (key === 'cameraState' || key === 'controlsState' || key === 'exportedAt') continue;
+        if (mandelbrotExplorer.hasOwnProperty(key)) {
+            mandelbrotExplorer[key] = config[key];
+        }
+    }
+    if (config.cameraState) {
+        SettingsManager.restoreCameraState(mandelbrotExplorer, config.cameraState);
+    }
+    if (config.controlsState) {
+        SettingsManager.restoreControlsState(mandelbrotExplorer, config.controlsState);
+    }
+    if (typeof syncAltUIFromOriginal === 'function') syncAltUIFromOriginal();
+    if (typeof populateFields === 'function') populateFields();
+}
+
+function generateShareURL() {
+    const config = buildCaptureConfig();
+    // Remove camera/controls — those are local to the viewer
+    delete config.cameraState;
+    delete config.controlsState;
+
+    // encodeURIComponent handles Unicode, btoa only handles Latin1
+    const encoded = btoa(encodeURIComponent(JSON.stringify(config)));
+    const url = window.location.origin + window.location.pathname + '#config=' + encoded;
+
+    // Copy to clipboard — falls back to prompt on non-HTTPS
+    if (navigator.clipboard && window.isSecureContext) {
+        navigator.clipboard.writeText(url).then(function() {
+            alert('Share URL copied to clipboard (' + url.length + ' chars)');
+        }).catch(function() {
+            prompt('Copy this share URL:', url);
+        });
+    } else {
+        prompt('Copy this share URL:', url);
+    }
+}
+
+function loadFromURLHash() {
+    const hash = window.location.hash.substring(1);
+    if (!hash) return false;
+
+    // Full config: #config=base64json
+    if (hash.startsWith('config=')) {
+        try {
+            const encoded = hash.substring(7);
+            const config = JSON.parse(decodeURIComponent(atob(encoded)));
+            applyConfig(config);
+            return true;
+        } catch (err) {
+            console.error('Failed to parse config from URL:', err);
+            return false;
+        }
+    }
+
+    // Simple params fallback: #startX=-2&endX=2&...
+    const params = new URLSearchParams(hash);
+    let applied = false;
+
+    SHAREABLE_PARAMS.forEach(function(key) {
+        if (params.has(key)) {
+            let val = params.get(key);
+            if (val === 'true') val = true;
+            else if (val === 'false') val = false;
+            else if (!isNaN(Number(val)) && val !== '') val = Number(val);
+
+            if (mandelbrotExplorer.hasOwnProperty(key)) {
+                mandelbrotExplorer[key] = val;
+                applied = true;
+            }
+        }
+    });
+
+    if (applied) {
+        if (typeof syncAltUIFromOriginal === 'function') syncAltUIFromOriginal();
+        if (typeof populateFields === 'function') populateFields();
+    }
+    return applied;
+}
 
 // Utility functions
 function dumpBrot(){
@@ -572,6 +680,8 @@ function resetCameraToOriginalHome() {
 
 function loadSettingsFromStorage(){
     if (mandelbrotExplorer.loadSettings()) {
+        // URL hash overrides stored settings (for shared links)
+        loadFromURLHash();
         loadParameterValues();
         loadPaletteOptions(); // Refresh palette dropdown
         // Regenerate the current view with loaded settings
@@ -582,6 +692,8 @@ function loadSettingsFromStorage(){
     } else {
         showToast('No saved settings found.');
 
+        // URL hash overrides defaults (for shared links)
+        loadFromURLHash();
         loadParameterValues();
         loadPaletteOptions(); // Refresh palette dropdown
         // Generate cloud with default values even when no settings are found
@@ -786,7 +898,7 @@ function init()
 
     // Load saved settings after renderer/camera/controls are initialized
     loadSettingsFromStorage();
-    
+
     // Load parameter values after settings are loaded
     loadParameterValues();
     

@@ -148,6 +148,9 @@ function buildAlternativeUI() {
                 </div>
                 <div class="alt-ui-fieldrow">
                   <button id="alt-captureBtn" type="button">Capture</button>
+                  <button onclick="exportConfigFile();return false;">Export Config</button>
+                  <button onclick="importConfigFile();return false;">Import Config</button>
+                  <button onclick="generateShareURL();return false;">Share URL</button>
                 </div>
                 <div id="alt-capture-gallery" style="display:flex;flex-wrap:wrap;gap:4px;padding:4px;max-height:200px;overflow-y:auto;">
                 </div>
