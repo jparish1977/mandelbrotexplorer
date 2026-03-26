@@ -9,7 +9,7 @@ body { background: #111; color: #ccc; font-family: system-ui, sans-serif; overfl
 canvas { flex: 1; display: block; cursor: crosshair; }
 #controls {
   background: #1a1a2e; padding: 10px 20px; display: flex; align-items: center; gap: 20px;
-  border-top: 1px solid #333; flex-shrink: 0;
+  border-top: 1px solid #333; flex-shrink: 0; flex-wrap: wrap;
 }
 #controls label { font-size: 13px; white-space: nowrap; }
 #controls input[type="range"] { width: 300px; }
@@ -37,47 +37,59 @@ button.active { background: #4fc3f7; color: #111; }
     <input type="number" id="max-iter" value="200" min="1" max="2000" style="width:60px">
   </div>
   <div class="group">
-    <label>Color:</label>
-    <select id="color-mode">
-      <option value="0">Magnitude (|z|)</option>
-      <option value="1">Phase (arg z)</option>
-      <option value="2" selected>Position (Re→R, Im→G)</option>
-      <option value="3">Escape flag</option>
+    <label>Resolution:</label>
+    <select id="resolution">
+      <option value="200">200x200 (fast)</option>
+      <option value="400" selected>400x400</option>
+      <option value="800">800x800</option>
+      <option value="1200">1200x1200 (slow)</option>
     </select>
   </div>
   <div class="group">
-    <button id="play-btn" onclick="togglePlay()">Play ▶</button>
+    <label>Point size:</label>
+    <input type="range" id="point-size" min="1" max="8" value="2" style="width:80px">
+  </div>
+  <div class="group">
+    <label>Color:</label>
+    <select id="color-mode">
+      <option value="0" selected>By source position</option>
+      <option value="1">By escape distance</option>
+      <option value="2">By iteration survived</option>
+    </select>
+  </div>
+  <div class="group">
+    <button id="play-btn" onclick="togglePlay()">Play &#9654;</button>
     <label>Speed:</label>
-    <input type="range" id="speed" min="1" max="30" value="10" style="width:80px">
+    <input type="range" id="speed" min="1" max="30" value="8" style="width:80px">
   </div>
   <div class="group">
     <button onclick="resetView()">Reset View</button>
   </div>
-  <span id="info">Scroll to zoom, drag to pan</span>
+  <span id="info">Scroll to zoom, drag to pan | Points move to z_N position for each starting c</span>
 </div>
 
 <script>
 const canvas = document.getElementById('canvas');
-const gl = canvas.getContext('webgl2') || canvas.getContext('webgl');
+const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
 if (!gl) { document.body.innerHTML = '<h1 style="color:red;padding:40px">WebGL not supported</h1>'; }
 
 // ── View state ───────────────────────────────────────────────────────────────
-let centerX = -0.5, centerY = 0.0, zoom = 1.5;
+let centerX = 0.0, centerY = 0.0, zoom = 3.0;
 let playing = false, animFrame = null;
 
-// ── Shader sources ───────────────────────────────────────────────────────────
+// ── Shaders ──────────────────────────────────────────────────────────────────
+// Vertex shader: each vertex is a starting point c.
+// Iterates z = z^2 + c exactly u_iteration times,
+// then positions the vertex at z_N's location in the complex plane.
 const vertexSrc = `
-  attribute vec2 a_position;
-  void main() { gl_Position = vec4(a_position, 0.0, 1.0); }
-`;
-
-const fragmentSrc = `
-  precision highp float;
-  uniform vec2 u_resolution;
+  attribute vec2 a_c;  // starting point in complex plane
+  uniform int u_iteration;
   uniform vec2 u_center;
   uniform float u_zoom;
-  uniform int u_iteration;
+  uniform float u_aspect;
+  uniform float u_pointSize;
   uniform int u_colorMode;
+  varying vec4 v_color;
 
   vec3 hsv2rgb(float h, float s, float v) {
     vec3 c = vec3(h * 6.0, s, v);
@@ -86,66 +98,73 @@ const fragmentSrc = `
   }
 
   void main() {
-    vec2 uv = (gl_FragCoord.xy / u_resolution) * 2.0 - 1.0;
-    float aspect = u_resolution.x / u_resolution.y;
-    uv.x *= aspect;
-
-    // Map pixel to complex plane
-    float re = uv.x * u_zoom + u_center.x;
-    float im = uv.y * u_zoom + u_center.y;
-
-    vec2 c = vec2(re, im);
+    vec2 c = a_c;
     vec2 z = vec2(0.0, 0.0);
 
+    float maxMag = 0.0;
+    int lastIter = 0;
     bool escaped = false;
-    int escapeIter = 0;
 
-    // Iterate exactly u_iteration times
+    // Iterate z = z^2 + c exactly u_iteration times
     for (int i = 0; i < 2000; i++) {
       if (i >= u_iteration) break;
-
-      // z = z^2 + c
       float zx = z.x * z.x - z.y * z.y + c.x;
       float zy = 2.0 * z.x * z.y + c.y;
       z = vec2(zx, zy);
 
       float mag = z.x * z.x + z.y * z.y;
-      if (mag > 4.0 && !escaped) {
+      if (mag > maxMag) maxMag = mag;
+      if (mag > 100.0 && !escaped) {
         escaped = true;
-        escapeIter = i;
+        lastIter = i;
       }
     }
 
-    float mag = sqrt(z.x * z.x + z.y * z.y);
-    float phase = atan(z.y, z.x);
-    vec3 color;
+    // Position this point at where z ended up
+    vec2 pos = z;
 
+    // Map to screen coordinates
+    pos = (pos - u_center) / u_zoom;
+    pos.x /= u_aspect;
+
+    gl_Position = vec4(pos, 0.0, 1.0);
+    gl_PointSize = u_pointSize;
+
+    // Color
     if (u_colorMode == 0) {
-      // Magnitude — map |z| to color, cap at 4
-      float t = clamp(mag / 4.0, 0.0, 1.0);
-      color = hsv2rgb(t * 0.8, 0.9, escaped ? 0.9 : 0.3);
+      // Color by original c position
+      float hue = (atan(c.y, c.x) + 3.14159) / 6.28318;
+      float sat = clamp(sqrt(c.x * c.x + c.y * c.y) / 2.0, 0.3, 1.0);
+      float val = escaped ? 0.2 : 0.9;
+      v_color = vec4(hsv2rgb(hue, sat, val), escaped ? 0.15 : 0.8);
     }
     else if (u_colorMode == 1) {
-      // Phase — angle of z mapped to hue
-      float hue = (phase + 3.14159) / 6.28318;
-      float brightness = escaped ? 0.15 : clamp(1.0 - mag / 4.0, 0.2, 1.0);
-      color = hsv2rgb(hue, 0.8, brightness);
-    }
-    else if (u_colorMode == 2) {
-      // Position — Re(z) → red, Im(z) → green, |z| → blue
-      float r = clamp((z.x + 2.0) / 4.0, 0.0, 1.0);
-      float g = clamp((z.y + 2.0) / 4.0, 0.0, 1.0);
-      float b = clamp(mag / 4.0, 0.0, 1.0);
-      color = escaped ? vec3(r, g, b) * 0.15 : vec3(r, g, b);
+      // Color by how far z traveled
+      float t = clamp(sqrt(maxMag) / 4.0, 0.0, 1.0);
+      v_color = vec4(hsv2rgb(t * 0.7, 0.8, escaped ? 0.15 : 0.9), escaped ? 0.1 : 0.7);
     }
     else {
-      // Escape flag — bright if still bounded, dim if escaped
-      float t = escaped ? 0.1 : 0.9;
-      float hue = float(escapeIter) / 50.0;
-      color = escaped ? hsv2rgb(hue, 0.6, 0.3) : vec3(t);
+      // Color by which iteration it escaped (if it did)
+      float hue = escaped ? float(lastIter) / 50.0 : 0.6;
+      float val = escaped ? 0.15 : 0.9;
+      v_color = vec4(hsv2rgb(hue, 0.7, val), escaped ? 0.1 : 0.7);
     }
 
-    gl_FragColor = vec4(color, 1.0);
+    // Hide points that flew way off screen
+    if (abs(pos.x) > 3.0 || abs(pos.y) > 3.0) {
+      gl_Position = vec4(10.0, 10.0, 10.0, 1.0); // offscreen
+    }
+  }
+`;
+
+const fragmentSrc = `
+  precision mediump float;
+  varying vec4 v_color;
+  void main() {
+    // Circular point
+    vec2 pc = gl_PointCoord * 2.0 - 1.0;
+    if (dot(pc, pc) > 1.0) discard;
+    gl_FragColor = v_color;
   }
 `;
 
@@ -167,23 +186,45 @@ const program = gl.createProgram();
 gl.attachShader(program, vs);
 gl.attachShader(program, fs);
 gl.linkProgram(program);
+if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
+  console.error('Link error:', gl.getProgramInfoLog(program));
+}
 gl.useProgram(program);
 
-// Full-screen quad
-const quad = new Float32Array([-1,-1, 1,-1, -1,1, 1,1]);
-const buf = gl.createBuffer();
-gl.bindBuffer(gl.ARRAY_BUFFER, buf);
-gl.bufferData(gl.ARRAY_BUFFER, quad, gl.STATIC_DRAW);
-const aPos = gl.getAttribLocation(program, 'a_position');
-gl.enableVertexAttribArray(aPos);
-gl.vertexAttribPointer(aPos, 2, gl.FLOAT, false, 0, 0);
-
 // Uniforms
-const uRes = gl.getUniformLocation(program, 'u_resolution');
 const uCenter = gl.getUniformLocation(program, 'u_center');
 const uZoom = gl.getUniformLocation(program, 'u_zoom');
+const uAspect = gl.getUniformLocation(program, 'u_aspect');
 const uIter = gl.getUniformLocation(program, 'u_iteration');
+const uPointSize = gl.getUniformLocation(program, 'u_pointSize');
 const uColorMode = gl.getUniformLocation(program, 'u_colorMode');
+
+// Attribute
+const aC = gl.getAttribLocation(program, 'a_c');
+gl.enableVertexAttribArray(aC);
+
+// Point buffer — will be rebuilt when resolution changes
+let pointBuffer = gl.createBuffer();
+let pointCount = 0;
+
+function buildPoints() {
+  const res = parseInt(document.getElementById('resolution').value);
+  const points = [];
+
+  // Grid of starting points c in the complex plane
+  // Cover -2.5 to 1.5 (real) and -2 to 2 (imaginary) — the interesting region
+  for (let i = 0; i < res; i++) {
+    for (let j = 0; j < res; j++) {
+      const re = -2.5 + (i / res) * 4.0;
+      const im = -2.0 + (j / res) * 4.0;
+      points.push(re, im);
+    }
+  }
+
+  pointCount = res * res;
+  gl.bindBuffer(gl.ARRAY_BUFFER, pointBuffer);
+  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(points), gl.STATIC_DRAW);
+}
 
 // ── Render ───────────────────────────────────────────────────────────────────
 function render() {
@@ -191,16 +232,29 @@ function render() {
   canvas.height = canvas.clientHeight;
   gl.viewport(0, 0, canvas.width, canvas.height);
 
+  gl.clearColor(0.05, 0.05, 0.08, 1.0);
+  gl.clear(gl.COLOR_BUFFER_BIT);
+
+  // Enable blending for transparency
+  gl.enable(gl.BLEND);
+  gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+
   const iteration = parseInt(document.getElementById('iteration').value);
   const colorMode = parseInt(document.getElementById('color-mode').value);
+  const pointSize = parseFloat(document.getElementById('point-size').value);
+  const aspect = canvas.width / canvas.height;
 
-  gl.uniform2f(uRes, canvas.width, canvas.height);
   gl.uniform2f(uCenter, centerX, centerY);
   gl.uniform1f(uZoom, zoom);
+  gl.uniform1f(uAspect, aspect);
   gl.uniform1i(uIter, iteration);
   gl.uniform1i(uColorMode, colorMode);
+  gl.uniform1f(uPointSize, pointSize);
 
-  gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+  gl.bindBuffer(gl.ARRAY_BUFFER, pointBuffer);
+  gl.vertexAttribPointer(aC, 2, gl.FLOAT, false, 0, 0);
+
+  gl.drawArrays(gl.POINTS, 0, pointCount);
 }
 
 // ── Controls ─────────────────────────────────────────────────────────────────
@@ -219,13 +273,18 @@ maxIterInput.addEventListener('change', function() {
 });
 
 document.getElementById('color-mode').addEventListener('change', render);
+document.getElementById('point-size').addEventListener('input', render);
+document.getElementById('resolution').addEventListener('change', function() {
+  buildPoints();
+  render();
+});
 
 // ── Play/animate ─────────────────────────────────────────────────────────────
 function togglePlay() {
   playing = !playing;
-  document.getElementById('play-btn').textContent = playing ? 'Pause ⏸' : 'Play ▶';
+  document.getElementById('play-btn').textContent = playing ? 'Pause \u23F8' : 'Play \u25B6';
   document.getElementById('play-btn').classList.toggle('active', playing);
-  if (playing) animate();
+  if (playing) requestAnimationFrame(animate);
   else if (animFrame) cancelAnimationFrame(animFrame);
 }
 
@@ -250,7 +309,6 @@ function animate(time) {
 canvas.addEventListener('wheel', function(e) {
   e.preventDefault();
   const factor = e.deltaY > 0 ? 1.1 : 0.9;
-  // Zoom toward mouse position
   const rect = canvas.getBoundingClientRect();
   const mx = (e.clientX - rect.left) / rect.width * 2 - 1;
   const my = -((e.clientY - rect.top) / rect.height * 2 - 1);
@@ -279,12 +337,13 @@ canvas.addEventListener('mouseup', function() { dragging = false; });
 canvas.addEventListener('mouseleave', function() { dragging = false; });
 
 function resetView() {
-  centerX = -0.5; centerY = 0.0; zoom = 1.5;
+  centerX = 0.0; centerY = 0.0; zoom = 3.0;
   render();
 }
 
 // ── Init ─────────────────────────────────────────────────────────────────────
 window.addEventListener('resize', render);
+buildPoints();
 render();
 </script>
 </body>
