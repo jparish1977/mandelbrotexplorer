@@ -30,7 +30,7 @@ button.active { background: #4fc3f7; color: #111; }
 <div id="controls">
   <div class="group">
     <label>c:</label>
-    <input type="text" id="c-value" value="-0.75, 0.1" style="width:120px">
+    <input type="text" id="c-value" value="-1.25, 0.05" style="width:120px">
     <button onclick="updateC()">Set</button>
     <span id="pick-info">Click 2D Mandelbrot to pick c</span>
   </div>
@@ -399,20 +399,30 @@ function resetCamera() { rotX = -0.3; rotY = 0.8; camDist = 10.0; render(); }
 function sideView() { rotX = 0; rotY = Math.PI/2; camDist = 10.0; render(); }
 function frontView() { rotX = 0; rotY = 0; camDist = 10.0; render(); }
 
-// ── Play (rotate camera slowly) ─────────────────────────────────────────────
+// ── Play (walk iterations) ───────────────────────────────────────────────────
+let lastPlayTime = 0;
 function togglePlay() {
   playing = !playing;
   document.getElementById('play-btn').textContent = playing ? 'Pause \u23F8' : 'Play \u25B6';
   document.getElementById('play-btn').classList.toggle('active', playing);
-  if (playing) requestAnimationFrame(autoRotate);
+  if (playing) requestAnimationFrame(animateDepth);
 }
 
-function autoRotate(time) {
+function animateDepth(time) {
   if (!playing) return;
   const speed = parseInt(document.getElementById('speed').value);
-  rotY += 0.002 * speed;
-  render();
-  requestAnimationFrame(autoRotate);
+  if (time - lastPlayTime > 1000 / speed) {
+    lastPlayTime = time;
+    const slider = document.getElementById('tunnel-depth');
+    let val = parseInt(slider.value) + 1;
+    if (val > 500) val = 500;
+    slider.value = val;
+    document.getElementById('depth-display').textContent = val;
+    escapePath = computeEscapePath(currentC[0], currentC[1], val);
+    buildPoints();
+    render();
+  }
+  requestAnimationFrame(animateDepth);
 }
 
 // ── Init ─────────────────────────────────────────────────────────────────────
