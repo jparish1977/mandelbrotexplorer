@@ -209,19 +209,51 @@ let pointCount = 0;
 
 function buildPoints() {
   const res = parseInt(document.getElementById('resolution').value);
+  const maxIter = parseInt(document.getElementById('max-iter').value);
   const points = [];
 
-  // Grid of starting points c in the complex plane
-  // Cover -2.5 to 1.5 (real) and -2 to 2 (imaginary) — the interesting region
+  const t0 = performance.now();
+
+  // Grid of starting points c — prefilter on CPU at max iterations
+  // Only keep points that survive (don't escape) past half the max iterations
+  // This focuses resolution on the interesting boundary region
+  const survivalThreshold = Math.max(2, Math.floor(maxIter * 0.25));
+
+  let sampled = 0;
   for (let i = 0; i < res; i++) {
     for (let j = 0; j < res; j++) {
-      const re = -2.5 + (i / res) * 4.0;
-      const im = -2.0 + (j / res) * 4.0;
-      points.push(re, im);
+      const cRe = -2.5 + (i / res) * 4.0;
+      const cIm = -2.0 + (j / res) * 4.0;
+      sampled++;
+
+      // CPU iteration to filter
+      let zRe = 0, zIm = 0;
+      let escaped = false;
+      let escapeIter = maxIter;
+      for (let k = 0; k < maxIter; k++) {
+        const zRe2 = zRe * zRe - zIm * zIm + cRe;
+        const zIm2 = 2 * zRe * zIm + cIm;
+        zRe = zRe2;
+        zIm = zIm2;
+        if (zRe * zRe + zIm * zIm > 100) {
+          escaped = true;
+          escapeIter = k;
+          break;
+        }
+      }
+
+      // Keep points that survived past the threshold
+      if (escapeIter >= survivalThreshold) {
+        points.push(cRe, cIm);
+      }
     }
   }
 
-  pointCount = res * res;
+  pointCount = points.length / 2;
+  const elapsed = (performance.now() - t0).toFixed(0);
+  document.getElementById('info').textContent =
+    `${pointCount.toLocaleString()} interesting points from ${sampled.toLocaleString()} sampled (${elapsed}ms) | Scroll to zoom, drag to pan`;
+
   gl.bindBuffer(gl.ARRAY_BUFFER, pointBuffer);
   gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(points), gl.STATIC_DRAW);
 }
@@ -269,6 +301,7 @@ iterSlider.addEventListener('input', function() {
 
 maxIterInput.addEventListener('change', function() {
   iterSlider.max = this.value;
+  buildPoints();  // re-filter with new max iterations
   render();
 });
 
