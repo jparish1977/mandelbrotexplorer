@@ -88,25 +88,28 @@ const vertexSrc = `
   void main() {
     vec2 c = a_c;
     vec2 z = vec2(0.0, 0.0);
-    vec2 prevZ = vec2(0.0, 0.0);
+    vec2 z0 = vec2(0.0, 0.0);
     bool escaped = false;
+    bool firstSet = false;
 
     for (int i = 0; i < 2000; i++) {
       if (i >= u_iteration) break;
-      prevZ = z;
       float zx = z.x * z.x - z.y * z.y + c.x;
       float zy = 2.0 * z.x * z.y + c.y;
       z = vec2(zx, zy);
+      if (!firstSet) { z0 = z; firstSet = true; }
       if (z.x * z.x + z.y * z.y > 100.0) {
         escaped = true;
         break;
       }
     }
 
-    // Z axis: |z_i| - |z_{i-1}| (default MBE escapingZ)
+    // Z axis: sign(|z_i| - |z_0|) * sqrt(abs(|z_i| - |z_0|))
     float magZ = sqrt(z.x * z.x + z.y * z.y);
-    float magPrev = sqrt(prevZ.x * prevZ.x + prevZ.y * prevZ.y);
-    float escapingZ = magZ - magPrev;
+    float magZ0 = sqrt(z0.x * z0.x + z0.y * z0.y);
+    float zSquaredCalc = magZ - magZ0;
+    float sign = zSquaredCalc >= 0.0 ? 1.0 : -1.0;
+    float escapingZ = sign * sqrt(abs(zSquaredCalc));
 
     // 3D position: (Re(z), Im(z), escapingZ)
     vec4 pos3d = vec4(z.x, z.y, escapingZ, 1.0);
