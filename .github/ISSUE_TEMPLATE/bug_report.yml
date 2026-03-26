@@ -2,6 +2,20 @@ name: Bug Report
 description: Something is broken
 labels: ["bug"]
 body:
+  - type: dropdown
+    id: viewer
+    attributes:
+      label: Which viewer / mode?
+      options:
+        - Classic UI (cloud)
+        - Classic UI (hair)
+        - Alternative UI
+        - Iteration Viewer 2D
+        - Iteration Viewer 3D
+        - Julia Tunnel
+        - Other
+    validations:
+      required: true
   - type: textarea
     id: what-happened
     attributes:
@@ -24,7 +38,7 @@ body:
     id: environment
     attributes:
       label: Environment
-      description: Browser, OS, Node/Python/PHP version — whatever's relevant
+      description: Browser, OS, GPU (if known). Try iteration8.com and jparish1977.github.io — does it happen on both?
     validations:
       required: false
   - type: textarea

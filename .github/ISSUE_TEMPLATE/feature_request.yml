@@ -2,6 +2,21 @@ name: Feature Request
 description: Something should exist
 labels: ["enhancement"]
 body:
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - Classic renderer (cloud/hair)
+        - Iteration viewers (2D/3D)
+        - Julia Tunnels
+        - UI / controls
+        - Presets / settings
+        - Export / sharing
+        - New viewer or mode
+        - Other
+    validations:
+      required: true
   - type: textarea
     id: what
     attributes:
