@@ -207,6 +207,13 @@ gl.enableVertexAttribArray(aC);
 let pointBuffer = gl.createBuffer();
 let pointCount = 0;
 
+let rebuildTimeout = null;
+function scheduleBuild() {
+  // Debounce — don't rebuild on every scroll tick
+  if (rebuildTimeout) clearTimeout(rebuildTimeout);
+  rebuildTimeout = setTimeout(function() { buildPoints(); render(); }, 300);
+}
+
 function buildPoints() {
   const res = parseInt(document.getElementById('resolution').value);
   const maxIter = parseInt(document.getElementById('max-iter').value);
@@ -214,16 +221,30 @@ function buildPoints() {
 
   const t0 = performance.now();
 
-  // Grid of starting points c — prefilter on CPU at max iterations
-  // Only keep points that survive (don't escape) past half the max iterations
-  // This focuses resolution on the interesting boundary region
+  // Sample the current view region in the complex plane
+  const aspect = canvas.width / canvas.height || 1.6;
+  const viewReMin = centerX - zoom * aspect;
+  const viewReMax = centerX + zoom * aspect;
+  const viewImMin = centerY - zoom;
+  const viewImMax = centerY + zoom;
+
+  // Add some padding so points that start outside the view but
+  // iterate INTO it are still captured
+  const padRe = (viewReMax - viewReMin) * 0.25;
+  const padIm = (viewImMax - viewImMin) * 0.25;
+  const reMin = viewReMin - padRe;
+  const reMax = viewReMax + padRe;
+  const imMin = viewImMin - padIm;
+  const imMax = viewImMax + padIm;
+
+  // Prefilter: only keep points that survive past 25% of max iterations
   const survivalThreshold = Math.max(2, Math.floor(maxIter * 0.25));
 
   let sampled = 0;
   for (let i = 0; i < res; i++) {
     for (let j = 0; j < res; j++) {
-      const cRe = -2.5 + (i / res) * 4.0;
-      const cIm = -2.0 + (j / res) * 4.0;
+      const cRe = reMin + (i / res) * (reMax - reMin);
+      const cIm = imMin + (j / res) * (imMax - imMin);
       sampled++;
 
       // CPU iteration to filter
@@ -351,6 +372,7 @@ canvas.addEventListener('wheel', function(e) {
   centerY += my * zoom * (1 - factor);
   zoom *= factor;
   render();
+  scheduleBuild();  // resample for new view
 }, { passive: false });
 
 let dragging = false, dragX, dragY;
@@ -366,11 +388,12 @@ canvas.addEventListener('mousemove', function(e) {
   centerY += (dy / canvas.height) * 2 * zoom;
   render();
 });
-canvas.addEventListener('mouseup', function() { dragging = false; });
-canvas.addEventListener('mouseleave', function() { dragging = false; });
+canvas.addEventListener('mouseup', function() { if (dragging) scheduleBuild(); dragging = false; });
+canvas.addEventListener('mouseleave', function() { if (dragging) scheduleBuild(); dragging = false; });
 
 function resetView() {
   centerX = 0.0; centerY = 0.0; zoom = 3.0;
+  buildPoints();
   render();
 }
 
