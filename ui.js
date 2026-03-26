@@ -273,9 +273,6 @@ function applyConfig(config) {
 
 function generateShareURL() {
     const config = buildCaptureConfig();
-    // Remove camera/controls — those are local to the viewer
-    delete config.cameraState;
-    delete config.controlsState;
 
     // encodeURIComponent handles Unicode, btoa only handles Latin1
     const encoded = btoa(encodeURIComponent(JSON.stringify(config)));
