@@ -1,0 +1,32 @@
+name: Refactor
+description: Something works but needs to be better
+labels: ["refactor"]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What needs to change?
+      description: Which code, module, or pattern needs rework?
+    validations:
+      required: true
+  - type: textarea
+    id: why
+    attributes:
+      label: Why?
+      description: What's wrong with how it works today? Performance, maintainability, readability, duplication?
+    validations:
+      required: true
+  - type: textarea
+    id: approach
+    attributes:
+      label: Proposed approach
+      description: How should it be restructured?
+    validations:
+      required: false
+  - type: textarea
+    id: risks
+    attributes:
+      label: Risks
+      description: What could break? What depends on the current implementation?
+    validations:
+      required: false

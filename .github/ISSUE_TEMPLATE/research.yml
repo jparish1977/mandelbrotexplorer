@@ -1,0 +1,25 @@
+name: Research / Exploration
+description: Something needs investigation before it's actionable
+labels: ["research"]
+body:
+  - type: textarea
+    id: question
+    attributes:
+      label: What are we trying to figure out?
+      description: The core question or hypothesis
+    validations:
+      required: true
+  - type: textarea
+    id: context
+    attributes:
+      label: What do we know so far?
+      description: Observations, prior attempts, relevant screenshots or data
+    validations:
+      required: false
+  - type: textarea
+    id: success
+    attributes:
+      label: What does "answered" look like?
+      description: When is this investigation done? What outcome makes it actionable?
+    validations:
+      required: false

@@ -1,0 +1,50 @@
+name: Bug Report
+description: Something is broken
+labels: ["bug"]
+body:
+  - type: dropdown
+    id: viewer
+    attributes:
+      label: Which viewer / mode?
+      options:
+        - Classic UI (cloud)
+        - Classic UI (hair)
+        - Alternative UI
+        - Iteration Viewer 2D
+        - Iteration Viewer 3D
+        - Julia Tunnel
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: Clear description of the bug. What did you expect vs what actually happened?
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Steps to reproduce
+      description: Minimal steps to trigger the bug
+      value: |
+        1.
+        2.
+        3.
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: Browser, OS, GPU (if known). Try iteration8.com and jparish1977.github.io — does it happen on both?
+    validations:
+      required: false
+  - type: textarea
+    id: screenshots
+    attributes:
+      label: Screenshots / logs
+      description: Paste error messages, console output, or screenshots
+    validations:
+      required: false
