@@ -126,7 +126,9 @@ const vertexSrc = `
 
     // Start z at the sample grid position
     vec2 z = a_point.xy;
+    vec2 z0 = vec2(0.0);
     bool escaped = false;
+    bool firstSet = false;
 
     // Iterate Julia set: z = z^2 + juliaC
     for (int i = 0; i < 500; i++) {
@@ -134,14 +136,15 @@ const vertexSrc = `
       float zx = z.x * z.x - z.y * z.y + juliaC.x;
       float zy = 2.0 * z.x * z.y + juliaC.y;
       z = vec2(zx, zy);
+      if (!firstSet) { z0 = z; firstSet = true; }
       if (z.x * z.x + z.y * z.y > 4.0) { escaped = true; break; }
     }
 
-    // Z position: same escapingZ as iteration-viewer-3d
-    // sign(|z_i| - |z_0|) * sqrt(abs(|z_i| - |z_0|))
-    float magSlice = sqrt(juliaC.x * juliaC.x + juliaC.y * juliaC.y);
-    float magZ0 = sqrt(u_path[0].x * u_path[0].x + u_path[0].y * u_path[0].y);
-    float zDiff = magSlice - magZ0;
+    // Z position from THIS point's Julia iteration
+    // sign(|z_final| - |z_0|) * sqrt(abs(|z_final| - |z_0|))
+    float magZ = sqrt(z.x * z.x + z.y * z.y);
+    float magZ0 = sqrt(z0.x * z0.x + z0.y * z0.y);
+    float zDiff = magZ - magZ0;
     float zSign = zDiff >= 0.0 ? 1.0 : -1.0;
     float depth = zSign * sqrt(abs(zDiff)) * u_spread;
     vec4 pos3d = vec4(z.x, z.y, depth, 1.0);
