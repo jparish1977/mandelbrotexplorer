@@ -24,50 +24,67 @@ Object.assign(mandelbrotExplorer.cloudMethods, {
             return;
         }
 
-        let z = mandelbrotExplorer.cloudMethods.evalInitialZ(escapePath);
+        // If looping, create a proxy that wraps index access for eval compatibility
+        const pathLength = mandelbrotExplorer.getEscapePathLength(escapePath, mandelbrotExplorer.maxIterations_3d);
+        const loopedPath = (mandelbrotExplorer.loopRepeaters && escapePath.loopStart !== -1 && escapePath.period > 0)
+            ? new Proxy(escapePath, {
+                get(target, prop) {
+                    const idx = parseInt(prop);
+                    if (!isNaN(idx) && idx >= target.length) {
+                        return target[target.loopStart + ((idx - target.loopStart) % target.period)];
+                    }
+                    return target[prop];
+                }
+            })
+            : escapePath;
+
+        let z = mandelbrotExplorer.cloudMethods.evalInitialZ(loopedPath);
         let accumulatedZ = 0;
         const collectedVectors = [];
 
-        escapePath.forEach(function(pathValue, pathIndex) {
-            accumulatedZ += mandelbrotExplorer.getAbsoluteValueOfComplexNumber(escapePath[pathIndex]);
+        for (let pathIndex = 0; pathIndex < pathLength; pathIndex++) {
+            const pathValue = loopedPath[pathIndex];
+            if (!pathValue) break;
+
+            accumulatedZ += mandelbrotExplorer.getAbsoluteValueOfComplexNumber(pathValue);
             const iteration = pathIndex + 1;
 
             if (
-                !mandelbrotExplorer.cloudMethods.processCloudLengthFilter(pathIndex, iteration, escapePath) ||
-                !mandelbrotExplorer.cloudMethods.processCloudIterationFilter(pathIndex, iteration, escapePath)
+                !mandelbrotExplorer.cloudMethods.processCloudLengthFilter(pathIndex, iteration, loopedPath) ||
+                !mandelbrotExplorer.cloudMethods.processCloudIterationFilter(pathIndex, iteration, loopedPath)
             ) {
-                return true;
+                continue;
             }
 
             if (pathIndex !== 0) {
-                z = mandelbrotExplorer.cloudMethods.evalEscapingZ(pathIndex, iteration, escapePath);
+                z = mandelbrotExplorer.cloudMethods.evalEscapingZ(pathIndex, iteration, loopedPath);
             }
 
             const iterationIndex = parseInt(pathIndex);
-            const newX = escapePath[pathIndex][0];
-            const newY = escapePath[pathIndex][1];
+            const newX = pathValue[0];
+            const newY = pathValue[1];
             const particleVector = new THREE.Vector3(newX, newY, z);
             const particleFilterResult = mandelbrotExplorer.cloudMethods.processParticleFilter(newX, newY, particleVector);
 
             if (!particleFilterResult.allowed) {
-                return true;
+                continue;
             }
 
             collectedVectors.push(particleFilterResult.particleVector);
 
             if (callbacks.onParticle) {
-                callbacks.onParticle(iterationIndex, particleFilterResult, pathValue, escapePath, pathIndex);
+                callbacks.onParticle(iterationIndex, particleFilterResult, pathValue, loopedPath, pathIndex);
             }
 
             if (mandelbrotExplorer.dualZ && callbacks.onDualZParticle) {
                 const coords = mandelbrotExplorer.cloudMethods.processDualZMultiplier(
-                    pathIndex, iteration, escapePath,
+                    pathIndex, iteration, loopedPath,
                     particleFilterResult.newX, particleFilterResult.newY, z
                 );
                 const dualVector = new THREE.Vector3(coords[0], coords[1], coords[2]);
-                callbacks.onDualZParticle(iterationIndex, dualVector, escapePath, pathIndex);
+                callbacks.onDualZParticle(iterationIndex, dualVector, loopedPath, pathIndex);
             }
-        });
+        }
 
         if (callbacks.onPathComplete) {
             callbacks.onPathComplete(escapePath, collectedVectors);
