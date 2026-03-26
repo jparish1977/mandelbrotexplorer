@@ -1,0 +1,25 @@
+name: Feature Request
+description: Something should exist
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What do you want?
+      description: Describe the feature. What should it do? Why?
+    validations:
+      required: true
+  - type: textarea
+    id: context
+    attributes:
+      label: Context
+      description: What problem does this solve? What are you doing today that this would improve?
+    validations:
+      required: false
+  - type: textarea
+    id: approach
+    attributes:
+      label: Possible approach
+      description: If you have ideas on implementation, sketch them here. Not required.
+    validations:
+      required: false
