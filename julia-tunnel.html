@@ -52,8 +52,8 @@ button.active { background: #4fc3f7; color: #111; }
     <input type="range" id="point-size" min="1" max="6" value="2" style="width:60px">
   </div>
   <div class="group">
-    <label>Spread:</label>
-    <input type="range" id="z-spread" min="1" max="100" value="30" style="width:80px">
+    <label>Z scale:</label>
+    <input type="range" id="z-spread" min="1" max="100" value="50" style="width:80px">
   </div>
   <div class="group">
     <button id="play-btn" onclick="togglePlay()">Play &#9654;</button>
@@ -137,8 +137,13 @@ const vertexSrc = `
       if (z.x * z.x + z.y * z.y > 4.0) { escaped = true; break; }
     }
 
-    // Position: (Re(z), Im(z), slice depth)
-    float depth = float(slice) * u_spread;
+    // Z position: same escapingZ as iteration-viewer-3d
+    // sign(|z_i| - |z_0|) * sqrt(abs(|z_i| - |z_0|))
+    float magSlice = sqrt(juliaC.x * juliaC.x + juliaC.y * juliaC.y);
+    float magZ0 = sqrt(u_path[0].x * u_path[0].x + u_path[0].y * u_path[0].y);
+    float zDiff = magSlice - magZ0;
+    float zSign = zDiff >= 0.0 ? 1.0 : -1.0;
+    float depth = zSign * sqrt(abs(zDiff)) * u_spread;
     vec4 pos3d = vec4(z.x, z.y, depth, 1.0);
     gl_Position = u_mvp * pos3d;
     gl_PointSize = u_pointSize;
@@ -306,12 +311,21 @@ function render() {
   gl.depthFunc(gl.LEQUAL);
 
   const pointSize = parseFloat(document.getElementById('point-size').value);
-  const spread = parseFloat(document.getElementById('z-spread').value) * 0.01;
+  const spread = parseFloat(document.getElementById('z-spread').value) * 0.1;
   const sliceCount = Math.min(parseInt(document.getElementById('tunnel-depth').value), escapePath.length, 256);
 
-  // Look at the middle of the tunnel
-  const midZ = (sliceCount * spread) / 2;
-  const lookTarget = [0, 0, midZ];
+  // Compute Z range from escape path to center the camera
+  const mag0 = Math.sqrt(escapePath[0][0]**2 + escapePath[0][1]**2);
+  let minZ = 0, maxZ = 0;
+  for (let i = 0; i < Math.min(sliceCount, escapePath.length); i++) {
+    const mag = Math.sqrt(escapePath[i][0]**2 + escapePath[i][1]**2);
+    const diff = mag - mag0;
+    const sign = diff >= 0 ? 1 : -1;
+    const z = sign * Math.sqrt(Math.abs(diff)) * spread;
+    if (z < minZ) minZ = z;
+    if (z > maxZ) maxZ = z;
+  }
+  const lookTarget = [0, 0, (minZ + maxZ) / 2];
 
   gl.uniformMatrix4fv(uMVP, false, buildMVP(lookTarget));
   gl.uniform1f(uPointSize, pointSize);
