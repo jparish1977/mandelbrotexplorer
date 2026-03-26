@@ -7,6 +7,73 @@
 // Extends mandelbrotExplorer.cloudMethods (defined in cloudMethods.js)
 
 Object.assign(mandelbrotExplorer.cloudMethods, {
+
+    /**
+     * Shared escape path processing logic used by both Cloud and Hair generators.
+     * Iterates through an escape path, applies filters, computes positions,
+     * and calls callbacks for each accepted particle.
+     *
+     * @param {Array} escapePath - The escape path array
+     * @param {Object} callbacks - { onParticle, onDualZParticle, onPathComplete }
+     */
+    "processEscapePathShared"(escapePath, callbacks) {
+        if (
+            (mandelbrotExplorer.onlyShortened && !escapePath.shortened) ||
+            (mandelbrotExplorer.onlyFull && escapePath.shortened)
+        ) {
+            return;
+        }
+
+        let z = mandelbrotExplorer.cloudMethods.evalInitialZ(escapePath);
+        let accumulatedZ = 0;
+        const collectedVectors = [];
+
+        escapePath.forEach(function(pathValue, pathIndex) {
+            accumulatedZ += mandelbrotExplorer.getAbsoluteValueOfComplexNumber(escapePath[pathIndex]);
+            const iteration = pathIndex + 1;
+
+            if (
+                !mandelbrotExplorer.cloudMethods.processCloudLengthFilter(pathIndex, iteration, escapePath) ||
+                !mandelbrotExplorer.cloudMethods.processCloudIterationFilter(pathIndex, iteration, escapePath)
+            ) {
+                return true;
+            }
+
+            if (pathIndex !== 0) {
+                z = mandelbrotExplorer.cloudMethods.evalEscapingZ(pathIndex, iteration, escapePath);
+            }
+
+            const iterationIndex = parseInt(pathIndex);
+            const newX = escapePath[pathIndex][0];
+            const newY = escapePath[pathIndex][1];
+            const particleVector = new THREE.Vector3(newX, newY, z);
+            const particleFilterResult = mandelbrotExplorer.cloudMethods.processParticleFilter(newX, newY, particleVector);
+
+            if (!particleFilterResult.allowed) {
+                return true;
+            }
+
+            collectedVectors.push(particleFilterResult.particleVector);
+
+            if (callbacks.onParticle) {
+                callbacks.onParticle(iterationIndex, particleFilterResult, pathValue, escapePath, pathIndex);
+            }
+
+            if (mandelbrotExplorer.dualZ && callbacks.onDualZParticle) {
+                const coords = mandelbrotExplorer.cloudMethods.processDualZMultiplier(
+                    pathIndex, iteration, escapePath,
+                    particleFilterResult.newX, particleFilterResult.newY, z
+                );
+                const dualVector = new THREE.Vector3(coords[0], coords[1], coords[2]);
+                callbacks.onDualZParticle(iterationIndex, dualVector, escapePath, pathIndex);
+            }
+        });
+
+        if (callbacks.onPathComplete) {
+            callbacks.onPathComplete(escapePath, collectedVectors);
+        }
+    },
+
     "generateMandelbrotCloudParticles"() {
         		perfTime("drawMandelbrotCloud: Generating particles");
         
@@ -268,103 +335,35 @@ Object.assign(mandelbrotExplorer.cloudMethods, {
             }
             
             function processEscapePath(point, escapePath, shouldCache, pointIndex) {
-                		// Debug: log first few escape paths
-		if (pointIndex < 5) {
-			debugLog('escapePaths', 'Processing escape path', pointIndex, ':', {
-				point: [point.x, point.y],
-				escapePathLength: escapePath.length,
-				shortened: escapePath.shortened,
-				firstPoint: escapePath[0],
-				lastPoint: escapePath[escapePath.length - 1]
-			});
-		}
-                
-                if (
-                    (mandelbrotExplorer.onlyShortened && !escapePath.shortened) ||
-                    (mandelbrotExplorer.onlyFull && escapePath.shortened)
-                ) {
-                    return;
+                // Debug: log first few escape paths
+                if (pointIndex < 5) {
+                    debugLog('escapePaths', 'Processing escape path', pointIndex, ':', {
+                        point: [point.x, point.y],
+                        escapePathLength: escapePath.length,
+                        shortened: escapePath.shortened,
+                        firstPoint: escapePath[0],
+                        lastPoint: escapePath[escapePath.length - 1]
+                    });
                 }
 
-                let z = mandelbrotExplorer.cloudMethods.evalInitialZ(escapePath);
-                let accumulatedZ = 0;
-                let averageOfAccumulatedZ = 0;
+                // Delegate to shared processor with cloud-specific callbacks
+                mandelbrotExplorer.cloudMethods.processEscapePathShared(escapePath, {
+                    onParticle(iterationIndex, particleFilterResult, pathValue) {
+                        if (typeof mandelbrotExplorer.iterationParticles[iterationIndex] === "undefined") {
+                            mandelbrotExplorer.iterationParticles[iterationIndex] = {"particles": []};
+                        }
+                        mandelbrotExplorer.iterationParticles[iterationIndex].particles.push(particleFilterResult.particleVector);
 
-                escapePath.forEach(function(pathValue, pathIndex, source) {
-                    accumulatedZ += mandelbrotExplorer.getAbsoluteValueOfComplexNumber(escapePath[pathIndex]);
-                    averageOfAccumulatedZ = accumulatedZ / (pathIndex + 1)
-                    const iteration = pathIndex + 1;
-                    
-
-                    
-                    if (
-                        !mandelbrotExplorer.cloudMethods.processCloudLengthFilter(pathIndex, iteration, escapePath) ||
-                        !mandelbrotExplorer.cloudMethods.processCloudIterationFilter(pathIndex, iteration, escapePath)
-                    ) {
-
-                        return true;
-                    }
-
-                    if (pathIndex !== 0) {
-                        z = mandelbrotExplorer.cloudMethods.evalEscapingZ(pathIndex, iteration, escapePath);
-                    }
-                    
-                    const iterationIndex = parseInt(pathIndex);
-                    
-                    if (typeof mandelbrotExplorer.iterationParticles[iterationIndex] === "undefined") {
-                        mandelbrotExplorer.iterationParticles[iterationIndex] = {"particles": []};
-                    }
-                    // eslint-disable-next-line no-redeclare -- var re-declaration in shared scope
-                    // eslint-disable-next-line no-redeclare -- var re-declaration in shared scope
-                    // eslint-disable-next-line no-redeclare -- var re-declaration in shared scope
-                    var newX = escapePath[pathIndex][0];
-                    // eslint-disable-next-line no-redeclare -- var re-declaration in shared scope
-                    // eslint-disable-next-line no-redeclare -- var re-declaration in shared scope
-                    // eslint-disable-next-line no-redeclare -- var re-declaration in shared scope
-                    var newY = escapePath[pathIndex][1];
-                    // eslint-disable-next-line no-redeclare -- var re-declaration in shared scope
-                    // eslint-disable-next-line no-redeclare -- var re-declaration in shared scope
-                    // eslint-disable-next-line no-redeclare -- var re-declaration in shared scope
-                    var particleVector = new THREE.Vector3(newX, newY, z);
-                    const particleFilterResult = mandelbrotExplorer.cloudMethods.processParticleFilter(newX, newY, particleVector);
-                    if (!particleFilterResult['allowed']) {
-                        return true;
-                    }
-                    
-                    mandelbrotExplorer.iterationParticles[iterationIndex].particles.push(particleFilterResult.particleVector);
-                    
-                    if (typeof mandelbrotExplorer.iterationParticles[iterationIndex].fpe === "undefined") {
-                        mandelbrotExplorer.iterationParticles[iterationIndex].fpe = 0;
-                    }
-                    mandelbrotExplorer.iterationParticles[iterationIndex].fpe += pathValue.fpe;
-                    
-
-                    
-                    if (mandelbrotExplorer.dualZ) {
-                         
-                         
-                        // eslint-disable-next-line no-redeclare -- var re-declaration in shared scope
-                        // eslint-disable-next-line no-redeclare -- var re-declaration in shared scope
-                        // eslint-disable-next-line no-redeclare -- var re-declaration in shared scope
-                        var newX = particleFilterResult.newX;
-                         
-                         
-                        // eslint-disable-next-line no-redeclare -- var re-declaration in shared scope
-                        // eslint-disable-next-line no-redeclare -- var re-declaration in shared scope
-                        // eslint-disable-next-line no-redeclare -- var re-declaration in shared scope
-                        var newY = particleFilterResult.newY;
-                        const coords = mandelbrotExplorer.cloudMethods.processDualZMultiplier(pathIndex, iteration, escapePath, newX, newY, z);
-                         
-                         
-                        // eslint-disable-next-line no-redeclare -- var re-declaration in shared scope
-                        // eslint-disable-next-line no-redeclare -- var re-declaration in shared scope
-                        // eslint-disable-next-line no-redeclare -- var re-declaration in shared scope
-                        var particleVector = new THREE.Vector3(coords[0], coords[1], coords[2]);
-                        
-                        mandelbrotExplorer.iterationParticles[iterationIndex].particles.push(particleVector);
+                        if (typeof mandelbrotExplorer.iterationParticles[iterationIndex].fpe === "undefined") {
+                            mandelbrotExplorer.iterationParticles[iterationIndex].fpe = 0;
+                        }
+                        mandelbrotExplorer.iterationParticles[iterationIndex].fpe += pathValue.fpe;
+                    },
+                    onDualZParticle(iterationIndex, dualVector) {
+                        mandelbrotExplorer.iterationParticles[iterationIndex].particles.push(dualVector);
                     }
                 });
-                
+
                 // Cache the escape path data if we generated it
                 if (shouldCache && !cachedEscapePaths) {
                     if (!mandelbrotExplorer.cloudCache) {
@@ -373,11 +372,9 @@ Object.assign(mandelbrotExplorer.cloudMethods, {
                     if (!mandelbrotExplorer.cloudCache[cacheKey]) {
                         mandelbrotExplorer.cloudCache[cacheKey] = [];
                     }
-                    
-                    // Store the escape path for future use
                     mandelbrotExplorer.cloudCache[cacheKey][pointIndex] = escapePath;
                 }
-                
+
                 // Limit cache size periodically during generation
                 if (processedPoints % PROGRESS_LOG_INTERVAL === 0) {
                     mandelbrotExplorer.cloudMethods.limitCacheSize();
@@ -531,88 +528,26 @@ Object.assign(mandelbrotExplorer.cloudMethods, {
 			mandelbrotExplorer.scales_3d.forEach(function(useScales){
 				for( let x = mandelbrotExplorer.startX; x < mandelbrotExplorer.endX; x += useScales.x ) {
 					for( let y = mandelbrotExplorer.startY; y > mandelbrotExplorer.endY; y -= useScales.y ) {
-						const c = [x,y];
-						const juliaC = mandelbrotExplorer.cloudMethods.evalJuliaC();
-						if(mandelbrotExplorer.randomizeCloudStepping){
-							const getRandomArbitrary = function(min, max) {
-							  return Math.random() * (max - min) + min;
-							};
-							
-							c[0] = getRandomArbitrary(x - mandelbrotExplorer.xScale_3d, x + mandelbrotExplorer.xScale_3d);
-							c[1] = getRandomArbitrary(y - mandelbrotExplorer.xScale_3d, y + mandelbrotExplorer.xScale_3d);
-						}
-						const repeatCheck = function(zValues, z, lastZ){
-							const test = zValues.filter(function(testZ){
-								return z[0] !== testZ[0] && z[1] !== testZ[1];
-							});
-							return zValues.length !== test.length;
-						};
-						let escapePath;
-						if( mandelbrotExplorer.getAbsoluteValueOfComplexNumber( juliaC ) !== 0 ){
-							escapePath = mandelbrotExplorer.getJuliaEscapePath( juliaC, c, mandelbrotExplorer.maxIterations_3d, true, repeatCheck );				
-						}
-						else{
-							escapePath = mandelbrotExplorer.getJuliaEscapePath( c, juliaC, mandelbrotExplorer.maxIterations_3d, true, repeatCheck );				
-						}
-						if((mandelbrotExplorer.onlyShortened && !escapePath.shortened) ||
-						   (mandelbrotExplorer.onlyFull && escapePath.shortened)){continue;}
-
-						let z = mandelbrotExplorer.cloudMethods.evalInitialZ(escapePath);
-						const accumulatedZ = 0;
-						const averageOfAccumulatedZ = 0;
-						
+						const c = mandelbrotExplorer.cloudMethods.handleCloudSteppingAdjustments([x, y]);
+						const escapePath = mandelbrotExplorer.cloudMethods.getEscapePath(c);
 						const lineVectors = [];
-						escapePath.forEach(function(pathValue, pathIndex, source){
-							let iteration = pathIndex + 1;
-							
-							 
-							 
-							// eslint-disable-next-line no-eval -- user-defined expression
-							// eslint-disable-next-line no-eval -- user-defined expression
-							// eslint-disable-next-line no-eval -- user-defined expression
-							if( mandelbrotExplorer.cloudLengthFilter.length > 0 && eval( mandelbrotExplorer.cloudLengthFilter ) === false ) return true;
-							 
-							 
-							// eslint-disable-next-line no-eval -- user-defined expression
-							// eslint-disable-next-line no-eval -- user-defined expression
-							// eslint-disable-next-line no-eval -- user-defined expression
-							if( mandelbrotExplorer.cloudIterationFilter.length > 0 && eval( mandelbrotExplorer.cloudIterationFilter ) === false ) return true;
-							let direction = [1,1];
-							if(pathIndex > 0){
-								direction[0] = escapePath[pathIndex][0] > escapePath[pathIndex-1][0] ? -1 : 1;
-								direction[1] = escapePath[pathIndex][1] > escapePath[pathIndex-1][1] ? -1 : 1;
-							}
-							// this isn't right.... zDirection...
-							let zDirection = direction[0] * direction[1];
-							
-							if( pathIndex !== 0 ) {
-								// eslint-disable-next-line no-eval -- user-defined expression
-								// eslint-disable-next-line no-eval -- user-defined expression
-								// eslint-disable-next-line no-eval -- user-defined expression
-								z = mandelbrotExplorer.cloudMethods.evalEscapingZ(pathIndex, iteration, escapePath);// eval( mandelbrotExplorer.escapingZ );
-							}
-							
-							let iterationIndex = parseInt(pathIndex);
-							
-							if( typeof mandelbrotExplorer.iterationParticles[iterationIndex] === "undefined" ) {
-								mandelbrotExplorer.iterationParticles[iterationIndex] = {"particles": new THREE.Geometry()};
-							}
-							let newX = escapePath[pathIndex][0];
-							let newY = escapePath[pathIndex][1];
-							let particleVector = new THREE.Vector3(newX, newY, z);
-							if(mandelbrotExplorer.particleFilter){
-								 
-								 
-								// eslint-disable-next-line no-eval -- user-defined expression
-								// eslint-disable-next-line no-eval -- user-defined expression
-								// eslint-disable-next-line no-eval -- user-defined expression
-								let allowed = eval( mandelbrotExplorer.particleFilter );
-								if( !allowed ){
-									return true;
+
+						mandelbrotExplorer.cloudMethods.processEscapePathShared(escapePath, {
+							onParticle(iterationIndex, particleFilterResult) {
+								if (typeof mandelbrotExplorer.iterationParticles[iterationIndex] === "undefined") {
+									mandelbrotExplorer.iterationParticles[iterationIndex] = {"particles": []};
 								}
+								mandelbrotExplorer.iterationParticles[iterationIndex].particles.push(
+									particleFilterResult.particleVector
+								);
+								lineVectors.push(particleFilterResult.particleVector);
+							},
+							onDualZParticle(iterationIndex, dualVector) {
+								mandelbrotExplorer.iterationParticles[iterationIndex].particles.push(dualVector);
+								lineVectors.push(dualVector);
 							}
-							lineVectors.push(particleVector);
 						});
+
 						if(lineVectors.length > 1){
 							mandelbrotExplorer.lineVectors.push(lineVectors);
 						}
@@ -627,7 +562,7 @@ Object.assign(mandelbrotExplorer.cloudMethods, {
 
 				const geometry = new THREE.Geometry();
 				const curve = new THREE.CatmullRomCurve3(currentLine, false, 'chordal' );
-				geometry.vertices = curve.getPoints(CURVE_POINTS);
+				geometry.vertices = curve.getPoints(mandelbrotExplorer.curvePoints || CURVE_POINTS);
 				
 				//gradientline.js
 				const steps = 0.2;

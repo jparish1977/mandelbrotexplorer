@@ -164,6 +164,7 @@ function setupAltUIEventListeners() {
         case 'gpuAccelerationCheckbox': return 'useGPU';
         case 'iterationCycleTime': return 'iterationCycleTime';
         case 'iterationCycleFrame': return 'iterationCycleFrame';
+        case 'curvePoints': return 'curvePoints';
         case 'targetFrameRate': return 'targetFrameRate';
         case 'juliaC': return 'juliaC';
         case 'initialZ': return 'initialZ';
@@ -183,14 +184,12 @@ function setupAltUIEventListeners() {
       },
       'alt-colorCycleCheckbox'() {
         if (mandelbrotExplorer) {
-          mandelbrotExplorer.continueColorCycle = this.checked;
-          toggleColorCycle();
+          toggleColorCycle(this.checked);
         }
       },
       'alt-iterationCycleCheckbox'() {
         if (mandelbrotExplorer) {
-          mandelbrotExplorer.continueIterationCycle = this.checked;
-          toggleIterationCycle();
+          toggleIterationCycle(this.checked);
         }
       },
       'alt-gpuAccelerationCheckbox'() {
@@ -213,6 +212,21 @@ function setupAltUIEventListeners() {
       },
       'alt-captureBtn'() {
         getScreenCap();
+      },
+      'alt-iterationCycleTime'() {
+        if (mandelbrotExplorer) {
+          mandelbrotExplorer.iterationCycleTime = parseInt(this.value) || mandelbrotExplorer.iterationCycleTime;
+        }
+      },
+      'alt-iterationCycleFrame'() {
+        if (mandelbrotExplorer) {
+          mandelbrotExplorer.iterationCycleFrame = parseInt(this.value) || 0;
+        }
+      },
+      'alt-curvePoints'() {
+        if (mandelbrotExplorer) {
+          mandelbrotExplorer.curvePoints = parseInt(this.value) || 50;
+        }
       }
     };
     

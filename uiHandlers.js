@@ -108,9 +108,14 @@ function updateParticleFilter(){
 }
 
 // ── Toggle handlers ──────────────────────────────────────────────────────
-function toggleColorCycle()
+function toggleColorCycle(forceState)
 {
-    mandelbrotExplorer.continueColorCycle = document.getElementById("colorCycleCheckbox").checked ? true : false;
+    // Accept explicit state from caller (altUI), fall back to classic checkbox
+    if (typeof forceState === "boolean") {
+        mandelbrotExplorer.continueColorCycle = forceState;
+    } else {
+        mandelbrotExplorer.continueColorCycle = document.getElementById("colorCycleCheckbox").checked ? true : false;
+    }
     if( mandelbrotExplorer.continueColorCycle )
     {
         mandelbrotExplorer.cycle2dColors();
@@ -118,15 +123,25 @@ function toggleColorCycle()
     }
 }
 
-function toggleIterationCycle(){
+function toggleIterationCycle(forceState){
     cancelAnimationFrame(animationFrameId);
-    mandelbrotExplorer.continueIterationCycle = document.getElementById("iterationCycleCheckbox").checked ? true : false;
+    if (typeof forceState === "boolean") {
+        mandelbrotExplorer.continueIterationCycle = forceState;
+    } else {
+        mandelbrotExplorer.continueIterationCycle = document.getElementById("iterationCycleCheckbox").checked ? true : false;
+    }
     if( mandelbrotExplorer.continueIterationCycle ){
         mandelbrotExplorer.cycleCloudIterations();
     }
     else{
         clearTimeout(mandelbrotExplorer._cloudIterationCyclerId);
         mandelbrotExplorer.displayCloudParticles();
+        // Also re-display hair lines when stopping iteration cycling
+        for( const lineIndex in mandelbrotExplorer.lines ) {
+            if (mandelbrotExplorer.lines[lineIndex]) {
+                mandelbrotExplorer.threeRenderer.scene.add(mandelbrotExplorer.lines[lineIndex]);
+            }
+        }
     }
     animate();
 }

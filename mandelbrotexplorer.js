@@ -146,6 +146,7 @@ const mandelbrotExplorer = {
 	"continueColorCycle": 	false,
 	"continueIterationCycle": false,
 	"iterationCycleFrame":  10,
+	"curvePoints":          50,
 	"palette":				palettes.palette2,
 	"threeRenderer": null, // Three.js renderer reference
 	"particleFilter":		null,
@@ -220,14 +221,24 @@ const mandelbrotExplorer = {
 		canvasContext.putImageData(canvasImageData,0,0);
 	},
 	"clearMandelbrotCloud"(){
-		for( let index = this.particleSystems.length - 1; index >= 0; index-- ){
-			if(!this.particleSystems[index]){continue;}
-			this.threeRenderer.removeObject(this.particleSystems[index]);
-			this.particleSystems[index] = null;
-			delete this.particleSystems[index];
+		for( let index = mandelbrotExplorer.particleSystems.length - 1; index >= 0; index-- ){
+			if(!mandelbrotExplorer.particleSystems[index]){continue;}
+			mandelbrotExplorer.threeRenderer.removeObject(mandelbrotExplorer.particleSystems[index]);
+			mandelbrotExplorer.particleSystems[index] = null;
+			delete mandelbrotExplorer.particleSystems[index];
 		}
-		
-		this.particleSystems = [];
+
+		mandelbrotExplorer.particleSystems = [];
+	},
+	"clearMandelbrotHair"(){
+		for( let index = mandelbrotExplorer.lines.length - 1; index >= 0; index-- ){
+			if(!mandelbrotExplorer.lines[index]){continue;}
+			mandelbrotExplorer.threeRenderer.removeObject(mandelbrotExplorer.lines[index]);
+			mandelbrotExplorer.lines[index] = null;
+			delete mandelbrotExplorer.lines[index];
+		}
+		mandelbrotExplorer.lines = [];
+		mandelbrotExplorer.lineVectors = [];
 	},
 	
 	"drawMandelbrotCloud"( params ) {
@@ -397,6 +408,29 @@ const mandelbrotExplorer = {
 								, 16));
 		}
 
+        // Also cycle colors on hair lines
+        for( const lineIndex in this.lines ) {
+            if(!this.lines[lineIndex] || !this.lines[lineIndex].material){ continue; }
+            const lineMaterial = this.lines[lineIndex].material;
+            if (!lineMaterial.color) { continue; }
+            const lineColor = {
+                "R": lineMaterial.color.r * COLOR_CHANNEL_MAX,
+                "G": lineMaterial.color.g * COLOR_CHANNEL_MAX,
+                "B": lineMaterial.color.b * COLOR_CHANNEL_MAX,
+                "A": 255
+            };
+            const lineColorIndex = palettes.getColorIndex(this.palette, lineColor);
+            let nextLineColorIndex = lineColorIndex + 1;
+            while( nextLineColorIndex >= this.palette.length ) {
+                nextLineColorIndex -= this.palette.length;
+            }
+            const nextLineColor = this.palette[nextLineColorIndex];
+            lineMaterial.color.setHex(parseInt( `0x${  this.padString( nextLineColor.R.toString(HEX_BASE), 2, "0", STR_PAD_LEFT )
+                }${this.padString( nextLineColor.G.toString(HEX_BASE), 2, "0", STR_PAD_LEFT )
+                }${this.padString( nextLineColor.B.toString(HEX_BASE), 2, "0", STR_PAD_LEFT )}`
+            , 16));
+        }
+
         this.cycleTime = (new Date()) - startTime;
         if( this.continueColorCycle )
 		{
@@ -439,6 +473,56 @@ const mandelbrotExplorer = {
 			}
 		}
 		
+		// Grow hair lines to current iteration — use drawRange to truncate
+		if(this.lines.length > 0) {
+			let maxLineLength = 0;
+			for( const lineIndex in this.lineVectors ) {
+				if(this.lineVectors[lineIndex] && this.lineVectors[lineIndex].length > maxLineLength) {
+					maxLineLength = this.lineVectors[lineIndex].length;
+				}
+			}
+
+			// If no particle systems, advance nextCycleIteration for hair
+			if(particleSystemsLength === 0 && maxLineLength > 0) {
+				this.nextCycleIteration++;
+				if(this.nextCycleIteration > maxLineLength) {
+					this.nextCycleIteration = 1;
+				}
+			}
+
+			for( const lineIndex in this.lines ) {
+				if(!this.lines[lineIndex] || !this.lines[lineIndex].geometry){ continue; }
+				const geo = this.lines[lineIndex].geometry;
+				const totalVerts = geo.attributes.position ? geo.attributes.position.count : 0;
+				if(totalVerts === 0){ continue; }
+
+				// 0 = grow from root, >0 = sliding window
+				const pathLen = this.lineVectors[lineIndex] ? this.lineVectors[lineIndex].length : 1;
+				let startVert = 0;
+				let drawCount;
+
+				if(this.iterationCycleFrame <= 0) {
+					// Grow from root
+					const fraction = Math.min(this.nextCycleIteration / pathLen, 1);
+					drawCount = Math.max(2, Math.floor(fraction * totalVerts));
+				} else {
+					// Sliding window
+					const halfFrame = this.iterationCycleFrame / 2;
+					const startIter = Math.max(0, this.nextCycleIteration - halfFrame);
+					const endIter = Math.min(pathLen, this.nextCycleIteration + halfFrame);
+					startVert = Math.floor((startIter / pathLen) * totalVerts);
+					const endVert = Math.floor((endIter / pathLen) * totalVerts);
+					drawCount = Math.max(2, endVert - startVert);
+				}
+
+				geo.setDrawRange(startVert, drawCount);
+
+				if(!this.lines[lineIndex].parent){
+					this.threeRenderer.scene.add( this.lines[lineIndex] );
+				}
+			}
+		}
+
 		if( this.continueIterationCycle ){
 			this._cloudIterationCyclerId = setTimeout( function(){mandelbrotExplorer.cycleCloudIterations();}, this.iterationCycleTime )
 		}

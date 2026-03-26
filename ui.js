@@ -416,9 +416,6 @@ function showToast(message, duration = 2500) {
 
 // Generation functions
 function generateHair(){
-    if(!confirm("Hair takes some time to grow...are you sure?")){
-        return false;
-    }
     if(!mandelbrotExplorer.canvas_3d){
         mandelbrotExplorer.canvas_3d = document.getElementById("mandelbrotCanvas3d");
     }
@@ -637,4 +634,15 @@ document.addEventListener('DOMContentLoaded', function() {
             console.error('Error loading alternative UI:', error);
         }
     }, 500);
+
+    // Wire up the classic UI "Switch UI" button
+    const uiToggleBtn = document.getElementById('uiToggleBtn');
+    if (uiToggleBtn) {
+        uiToggleBtn.addEventListener('click', function() {
+            if (window.buildAlternativeUI) {
+                document.getElementById('controls').style.display = 'none';
+                document.getElementById('alternativeUI').style.display = '';
+            }
+        });
+    }
 });

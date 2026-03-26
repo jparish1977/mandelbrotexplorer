@@ -231,11 +231,10 @@ Object.assign(mandelbrotExplorer, {
     },
 		"initializeMandelbrotHair"(){
         mandelbrotExplorer.cloudMethods.initialize3DScaling();
-        
+
 			mandelbrotExplorer.iterationParticles = [];
-			mandelbrotExplorer.lines = [];
-			mandelbrotExplorer.lineVectors = [];
-			
+			mandelbrotExplorer.clearMandelbrotHair();
+
         mandelbrotExplorer.cloudMethods.functionsFromEval = {};
 		},
     "generateCacheKey"() {
