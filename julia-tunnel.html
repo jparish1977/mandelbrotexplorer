@@ -36,7 +36,7 @@ button.active { background: #4fc3f7; color: #111; }
   </div>
   <div class="group">
     <label>Depth:</label>
-    <input type="range" id="tunnel-depth" min="1" max="500" value="64">
+    <input type="range" id="tunnel-depth" min="1" max="256" value="64">
     <span class="value" id="depth-display">64</span>
   </div>
   <div class="group">
@@ -338,8 +338,8 @@ function render() {
 
   gl.bindBuffer(gl.ARRAY_BUFFER, pointBuffer);
   gl.vertexAttribPointer(aPoint, 3, gl.FLOAT, false, 0, 0);
-  // Only draw slices up to the depth slider
-  const drawSlices = Math.min(sliceCount, maxBuiltSlices);
+  // Only draw slices up to depth slider, clamped to actual path length
+  const drawSlices = Math.min(sliceCount, maxBuiltSlices, escapePath.length);
   gl.drawArrays(gl.POINTS, 0, drawSlices * pointsPerSlice);
 }
 
@@ -349,8 +349,14 @@ function updateC() {
   if (parts.length === 2 && !isNaN(parts[0]) && !isNaN(parts[1])) {
     currentC = parts;
     escapePath = computeEscapePath(currentC[0], currentC[1], 256);
+    const pathLen = escapePath.length;
     document.getElementById('pick-info').textContent =
-      'c = ' + currentC[0].toFixed(4) + ' + ' + currentC[1].toFixed(4) + 'i | path length: ' + escapePath.length;
+      'c = ' + currentC[0].toFixed(4) + ' + ' + currentC[1].toFixed(4) + 'i | path: ' + pathLen + ' iterations';
+    document.getElementById('tunnel-depth').max = pathLen;
+    if (parseInt(document.getElementById('tunnel-depth').value) > pathLen) {
+      document.getElementById('tunnel-depth').value = pathLen;
+      document.getElementById('depth-display').textContent = pathLen;
+    }
     buildPoints();
     render();
   }
@@ -417,8 +423,8 @@ function animateDepth(time) {
     lastPlayTime = time;
     const slider = document.getElementById('tunnel-depth');
     let val = parseInt(slider.value) + 1;
-    const maxSlices = Math.min(escapePath.length, 256);
-    if (val > maxSlices) val = 1;  // loop
+    const maxSlices = Math.min(escapePath.length, maxBuiltSlices);
+    if (val > maxSlices) val = 1;
     slider.value = val;
     document.getElementById('depth-display').textContent = val;
     render();  // no rebuild needed — just draw fewer/more slices
