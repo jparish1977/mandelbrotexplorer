@@ -294,8 +294,25 @@ function buildPoints() {
   gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(points), gl.STATIC_DRAW);
 }
 
+// ── FPS / perf tracking ──────────────────────────────────────────────────────
+let frameCount = 0, fpsTime = performance.now(), lastFps = 0;
+let renderMs = 0;
+
+function updateFps() {
+  frameCount++;
+  const now = performance.now();
+  if (now - fpsTime >= 1000) {
+    lastFps = frameCount;
+    frameCount = 0;
+    fpsTime = now;
+  }
+  document.getElementById('info').textContent =
+    `${pointCount.toLocaleString()} pts | ${lastFps} fps | ${renderMs.toFixed(1)}ms/frame | iter ${document.getElementById('iteration').value}`;
+}
+
 // ── Render ───────────────────────────────────────────────────────────────────
 function render() {
+  const t0 = performance.now();
   canvas.width = canvas.clientWidth;
   canvas.height = canvas.clientHeight;
   gl.viewport(0, 0, canvas.width, canvas.height);
@@ -317,6 +334,9 @@ function render() {
   gl.bindBuffer(gl.ARRAY_BUFFER, pointBuffer);
   gl.vertexAttribPointer(aC, 2, gl.FLOAT, false, 0, 0);
   gl.drawArrays(gl.POINTS, 0, pointCount);
+  gl.finish(); // wait for GPU to complete before timing
+  renderMs = performance.now() - t0;
+  updateFps();
 }
 
 // ── Controls ─────────────────────────────────────────────────────────────────
