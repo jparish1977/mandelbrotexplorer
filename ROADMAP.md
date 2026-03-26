@@ -2,7 +2,7 @@
 
 ## Background
 
-This project started in 2017 as a personal exploration of fractal mathematics. It became a COVID-era lifeline in 2020 — the project that got me back into programming when I needed it most. In March 2026, a major cleanup and modernization effort brought the codebase up to professional standards, and a proof-of-concept GPU rendering engine demonstrated that the entire rendering pipeline can run orders of magnitude faster using pure WebGL vertex shaders.
+This project started in 2014. After a health scare that landed me in the ER with a heart rate of 210 and a stutter that lasted a year, I picked up *Chaos* by James Gleick and decided to write a fractal generator to see if I could still write code. That decision pulled me back into professional software development and has been a through-line in my work ever since. The first commits on GitHub date to 2017; it went online as iteration8.com in 2020 so friends could play with it. In March 2026, a major cleanup and modernization effort brought the codebase up to professional standards, and a proof-of-concept GPU rendering engine demonstrated that the entire rendering pipeline can run orders of magnitude faster using pure WebGL vertex shaders.
 
 The iteration viewers (iteration-viewer.html, iteration-viewer-3d.html) proved that millions of points can be iterated, positioned, and rendered in a single GPU pass — no Three.js, no CPU per-point processing, no JavaScript geometry construction. This roadmap describes the path from that POC to a fully GPU-native Mandelbrot/Julia set explorer.
 
