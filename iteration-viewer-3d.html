@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Mandelbrot 3D — Pure WebGL (no Three.js)</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { background: #111; color: #ccc; font-family: system-ui, sans-serif; overflow: hidden; height: 100vh; display: flex; flex-direction: column; }
+canvas { flex: 1; display: block; cursor: grab; }
+canvas:active { cursor: grabbing; }
+#controls {
+  background: #1a1a2e; padding: 10px 20px; display: flex; align-items: center; gap: 20px;
+  border-top: 1px solid #333; flex-shrink: 0; flex-wrap: wrap;
+}
+#controls label { font-size: 13px; white-space: nowrap; }
+#controls input[type="range"] { width: 250px; }
+#controls .value { font-size: 18px; font-weight: bold; color: #4fc3f7; min-width: 40px; }
+#controls select, #controls input[type="number"] {
+  background: #222; color: #ccc; border: 1px solid #444; padding: 4px 8px; border-radius: 3px; font-size: 13px;
+}
+.group { display: flex; align-items: center; gap: 8px; }
+button { background: #333; color: #ccc; border: 1px solid #555; padding: 4px 12px; border-radius: 3px; cursor: pointer; font-size: 12px; }
+button:hover { background: #444; }
+button.active { background: #4fc3f7; color: #111; }
+#info { font-size: 11px; color: #666; margin-left: auto; }
+</style>
+</head>
+<body>
+<canvas id="canvas"></canvas>
+<div id="controls">
+  <div class="group">
+    <label>Iteration:</label>
+    <input type="range" id="iteration" min="0" max="200" value="32">
+    <span class="value" id="iter-display">32</span>
+  </div>
+  <div class="group">
+    <label>Max:</label>
+    <input type="number" id="max-iter" value="200" min="1" max="2000" style="width:60px">
+  </div>
+  <div class="group">
+    <label>Resolution:</label>
+    <select id="resolution">
+      <option value="200">200x200</option>
+      <option value="400">400x400</option>
+      <option value="800">800x800</option>
+      <option value="viewport" selected>Viewport</option>
+    </select>
+  </div>
+  <div class="group">
+    <label>Pt:</label>
+    <input type="range" id="point-size" min="1" max="6" value="2" style="width:60px">
+  </div>
+  <div class="group">
+    <button id="play-btn" onclick="togglePlay()">Play &#9654;</button>
+    <input type="range" id="speed" min="1" max="30" value="8" style="width:60px">
+  </div>
+  <div class="group">
+    <button onclick="resetCamera()">Reset Camera</button>
+    <button onclick="sideView()">Side</button>
+    <button onclick="topView()">Top</button>
+  </div>
+  <span id="info">Drag to rotate, scroll to zoom</span>
+</div>
+
+<script>
+const canvas = document.getElementById('canvas');
+const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
+if (!gl) { document.body.innerHTML = '<h1 style="color:red;padding:40px">WebGL not supported</h1>'; }
+
+// ── Camera state ─────────────────────────────────────────────────────────────
+let rotX = -0.4, rotY = 0.5, camDist = 8.0;
+let playing = false, animFrame = null;
+
+// ── Shaders ──────────────────────────────────────────────────────────────────
+const vertexSrc = `
+  attribute vec2 a_c;
+  uniform int u_iteration;
+  uniform mat4 u_mvp;
+  uniform float u_pointSize;
+  varying vec4 v_color;
+
+  vec3 hsv2rgb(float h, float s, float v) {
+    vec3 c = vec3(h * 6.0, s, v);
+    vec3 rgb = clamp(abs(mod(c.x + vec3(0.0, 4.0, 2.0), 6.0) - 3.0) - 1.0, 0.0, 1.0);
+    return v * mix(vec3(1.0), rgb, s);
+  }
+
+  void main() {
+    vec2 c = a_c;
+    vec2 z = vec2(0.0, 0.0);
+    vec2 z0 = vec2(0.0, 0.0);
+    bool escaped = false;
+    bool firstSet = false;
+
+    for (int i = 0; i < 10000; i++) {
+      if (i >= u_iteration) break;
+      float zx = z.x * z.x - z.y * z.y + c.x;
+      float zy = 2.0 * z.x * z.y + c.y;
+      z = vec2(zx, zy);
+      if (!firstSet) { z0 = z; firstSet = true; }
+      if (z.x * z.x + z.y * z.y > 100.0) {
+        escaped = true;
+        break;
+      }
+    }
+
+    // Z axis: sign(|z_i| - |z_0|) * sqrt(abs(|z_i| - |z_0|))
+    float magZ = sqrt(z.x * z.x + z.y * z.y);
+    float magZ0 = sqrt(z0.x * z0.x + z0.y * z0.y);
+    float zSquaredCalc = magZ - magZ0;
+    float sign = zSquaredCalc >= 0.0 ? 1.0 : -1.0;
+    float escapingZ = sign * sqrt(abs(zSquaredCalc));
+
+    // 3D position: (Re(z), Im(z), escapingZ)
+    vec4 pos3d = vec4(z.x, z.y, escapingZ, 1.0);
+    gl_Position = u_mvp * pos3d;
+    gl_PointSize = u_pointSize;
+
+    // Color by original c position
+    float hue = (atan(c.y, c.x) + 3.14159) / 6.28318;
+    float sat = clamp(sqrt(c.x * c.x + c.y * c.y) / 2.0, 0.3, 1.0);
+    float val = escaped ? 0.1 : 0.85;
+    float alpha = escaped ? 0.05 : 0.7;
+    v_color = vec4(hsv2rgb(hue, sat, val), alpha);
+
+    if (escaped) {
+      gl_Position = vec4(10.0, 10.0, 10.0, 1.0);
+    }
+  }
+`;
+
+const fragmentSrc = `
+  precision mediump float;
+  varying vec4 v_color;
+  void main() {
+    vec2 pc = gl_PointCoord * 2.0 - 1.0;
+    if (dot(pc, pc) > 1.0) discard;
+    gl_FragColor = v_color;
+  }
+`;
+
+// ── Matrix math (no library) ─────────────────────────────────────────────────
+// All matrices are column-major Float32Arrays (WebGL convention)
+
+function mat4Create() {
+  return new Float32Array([1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,0,1]);
+}
+
+function mat4Multiply(out, a, b) {
+  for (let i = 0; i < 4; i++) {
+    const ai0 = a[i], ai1 = a[i+4], ai2 = a[i+8], ai3 = a[i+12];
+    out[i]    = ai0*b[0]  + ai1*b[1]  + ai2*b[2]  + ai3*b[3];
+    out[i+4]  = ai0*b[4]  + ai1*b[5]  + ai2*b[6]  + ai3*b[7];
+    out[i+8]  = ai0*b[8]  + ai1*b[9]  + ai2*b[10] + ai3*b[11];
+    out[i+12] = ai0*b[12] + ai1*b[13] + ai2*b[14] + ai3*b[15];
+  }
+  return out;
+}
+
+function mat4Perspective(out, fov, aspect, near, far) {
+  const f = 1.0 / Math.tan(fov / 2);
+  const nf = 1.0 / (near - far);
+  out.fill(0);
+  out[0] = f / aspect;
+  out[5] = f;
+  out[10] = (far + near) * nf;
+  out[11] = -1;
+  out[14] = 2 * far * near * nf;
+  return out;
+}
+
+function mat4LookAt(out, eyeX, eyeY, eyeZ, targetX, targetY, targetZ, upX, upY, upZ) {
+  // Forward
+  let fx = eyeX - targetX, fy = eyeY - targetY, fz = eyeZ - targetZ;
+  let len = Math.sqrt(fx*fx + fy*fy + fz*fz);
+  if (len > 0) { fx /= len; fy /= len; fz /= len; }
+
+  // Right = up × forward
+  let rx = upY*fz - upZ*fy, ry = upZ*fx - upX*fz, rz = upX*fy - upY*fx;
+  len = Math.sqrt(rx*rx + ry*ry + rz*rz);
+  if (len > 0) { rx /= len; ry /= len; rz /= len; }
+
+  // True up = forward × right
+  const ux = fy*rz - fz*ry, uy = fz*rx - fx*rz, uz = fx*ry - fy*rx;
+
+  out[0] = rx;  out[1] = ux;  out[2]  = fx;  out[3]  = 0;
+  out[4] = ry;  out[5] = uy;  out[6]  = fy;  out[7]  = 0;
+  out[8] = rz;  out[9] = uz;  out[10] = fz;  out[11] = 0;
+  out[12] = -(rx*eyeX + ry*eyeY + rz*eyeZ);
+  out[13] = -(ux*eyeX + uy*eyeY + uz*eyeZ);
+  out[14] = -(fx*eyeX + fy*eyeY + fz*eyeZ);
+  out[15] = 1;
+  return out;
+}
+
+const _proj = new Float32Array(16);
+const _view = new Float32Array(16);
+const _mvp  = new Float32Array(16);
+
+function buildMVP() {
+  const aspect = canvas.width / canvas.height;
+  mat4Perspective(_proj, 0.9, aspect, 0.1, 200.0);
+
+  // Orbit camera: spherical coordinates around origin
+  const eyeX = camDist * Math.sin(rotY) * Math.cos(rotX);
+  const eyeY = camDist * Math.sin(rotX);
+  const eyeZ = camDist * Math.cos(rotY) * Math.cos(rotX);
+  mat4LookAt(_view, eyeX, eyeY, eyeZ, 0, 0, 0, 0, 1, 0);
+
+  return mat4Multiply(_mvp, _proj, _view);
+}
+
+// ── WebGL setup ──────────────────────────────────────────────────────────────
+function createShader(type, source) {
+  const shader = gl.createShader(type);
+  gl.shaderSource(shader, source);
+  gl.compileShader(shader);
+  if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
+    console.error(gl.getShaderInfoLog(shader));
+    return null;
+  }
+  return shader;
+}
+
+const vs = createShader(gl.VERTEX_SHADER, vertexSrc);
+const fs = createShader(gl.FRAGMENT_SHADER, fragmentSrc);
+const program = gl.createProgram();
+gl.attachShader(program, vs);
+gl.attachShader(program, fs);
+gl.linkProgram(program);
+if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
+  console.error('Link:', gl.getProgramInfoLog(program));
+  console.error('VS:', gl.getShaderInfoLog(vs));
+  console.error('FS:', gl.getShaderInfoLog(fs));
+  document.getElementById('info').textContent = 'SHADER ERROR — check console';
+}
+gl.useProgram(program);
+
+const uMVP = gl.getUniformLocation(program, 'u_mvp');
+const uIter = gl.getUniformLocation(program, 'u_iteration');
+const uPointSize = gl.getUniformLocation(program, 'u_pointSize');
+const aC = gl.getAttribLocation(program, 'a_c');
+gl.enableVertexAttribArray(aC);
+
+let pointBuffer = gl.createBuffer();
+let pointCount = 0;
+
+// ── Point sampling (same prefilter as 2D viewer) ────────────────────────────
+let rebuildTimeout = null;
+function scheduleBuild() {
+  if (rebuildTimeout) clearTimeout(rebuildTimeout);
+  rebuildTimeout = setTimeout(function() { buildPoints(); render(); }, 300);
+}
+
+function buildPoints() {
+  const resValue = document.getElementById('resolution').value;
+  const res = resValue === 'viewport'
+    ? Math.max(canvas.clientWidth, canvas.clientHeight)
+    : parseInt(resValue);
+  const maxIter = parseInt(document.getElementById('max-iter').value);
+  const points = [];
+  const t0 = performance.now();
+
+  const survivalThreshold = Math.max(2, Math.floor(maxIter * 0.25));
+  let sampled = 0;
+
+  for (let i = 0; i < res; i++) {
+    for (let j = 0; j < res; j++) {
+      const cRe = -2.5 + (i / res) * 4.0;
+      const cIm = -2.0 + (j / res) * 4.0;
+      sampled++;
+
+      let zRe = 0, zIm = 0;
+      let escapeIter = maxIter;
+      for (let k = 0; k < maxIter; k++) {
+        const zRe2 = zRe * zRe - zIm * zIm + cRe;
+        const zIm2 = 2 * zRe * zIm + cIm;
+        zRe = zRe2; zIm = zIm2;
+        if (zRe * zRe + zIm * zIm > 100) { escapeIter = k; break; }
+      }
+
+      if (escapeIter >= survivalThreshold) {
+        points.push(cRe, cIm);
+      }
+    }
+  }
+
+  pointCount = points.length / 2;
+  const elapsed = (performance.now() - t0).toFixed(0);
+  document.getElementById('info').textContent =
+    `${pointCount.toLocaleString()} points (${elapsed}ms) | Drag to rotate, scroll to zoom`;
+
+  gl.bindBuffer(gl.ARRAY_BUFFER, pointBuffer);
+  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(points), gl.STATIC_DRAW);
+}
+
+// ── Render ───────────────────────────────────────────────────────────────────
+function render() {
+  canvas.width = canvas.clientWidth;
+  canvas.height = canvas.clientHeight;
+  gl.viewport(0, 0, canvas.width, canvas.height);
+
+  gl.clearColor(0.03, 0.03, 0.05, 1.0);
+  gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+  gl.enable(gl.BLEND);
+  gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+  gl.enable(gl.DEPTH_TEST);
+  gl.depthFunc(gl.LEQUAL);
+
+  const iteration = parseInt(document.getElementById('iteration').value);
+  const pointSize = parseFloat(document.getElementById('point-size').value);
+
+  gl.uniformMatrix4fv(uMVP, false, buildMVP());
+  gl.uniform1i(uIter, iteration);
+  gl.uniform1f(uPointSize, pointSize);
+
+  gl.bindBuffer(gl.ARRAY_BUFFER, pointBuffer);
+  gl.vertexAttribPointer(aC, 2, gl.FLOAT, false, 0, 0);
+  gl.drawArrays(gl.POINTS, 0, pointCount);
+}
+
+// ── Controls ─────────────────────────────────────────────────────────────────
+const iterSlider = document.getElementById('iteration');
+const iterDisplay = document.getElementById('iter-display');
+
+iterSlider.addEventListener('input', function() {
+  iterDisplay.textContent = this.value;
+  render();
+});
+
+document.getElementById('max-iter').addEventListener('change', function() {
+  iterSlider.max = this.value;
+  buildPoints();
+  render();
+});
+
+document.getElementById('resolution').addEventListener('change', function() {
+  buildPoints(); render();
+});
+
+document.getElementById('point-size').addEventListener('input', render);
+
+// ── Camera rotation ──────────────────────────────────────────────────────────
+let dragging = false, lastX, lastY;
+canvas.addEventListener('mousedown', function(e) {
+  dragging = true; lastX = e.clientX; lastY = e.clientY;
+});
+canvas.addEventListener('mousemove', function(e) {
+  if (!dragging) return;
+  rotY += (e.clientX - lastX) * 0.005;
+  rotX += (e.clientY - lastY) * 0.005;
+  rotX = Math.max(-1.5, Math.min(1.5, rotX));
+  lastX = e.clientX; lastY = e.clientY;
+  render();
+});
+canvas.addEventListener('mouseup', function() { dragging = false; });
+canvas.addEventListener('mouseleave', function() { dragging = false; });
+
+canvas.addEventListener('wheel', function(e) {
+  e.preventDefault();
+  camDist *= e.deltaY > 0 ? 1.1 : 0.9;
+  camDist = Math.max(0.5, Math.min(50, camDist));
+  render();
+}, { passive: false });
+
+function resetCamera() { rotX = -0.4; rotY = 0.5; camDist = 8.0; render(); }
+function sideView() { rotX = 0.0; rotY = 0.0; camDist = 8.0; render(); }
+function topView() { rotX = -1.5; rotY = 0.0; camDist = 8.0; render(); }
+
+// ── Play ─────────────────────────────────────────────────────────────────────
+function togglePlay() {
+  playing = !playing;
+  document.getElementById('play-btn').textContent = playing ? 'Pause \u23F8' : 'Play \u25B6';
+  document.getElementById('play-btn').classList.toggle('active', playing);
+  if (playing) requestAnimationFrame(animate);
+}
+
+let lastTime = 0;
+function animate(time) {
+  if (!playing) return;
+  const speed = parseInt(document.getElementById('speed').value);
+  if (time - lastTime > 1000 / speed) {
+    lastTime = time;
+    let val = parseInt(iterSlider.value) + 1;
+    // Past the slider max? Keep going — extend the max
+    const maxIter = parseInt(iterSlider.max);
+    if (val > maxIter) {
+      iterSlider.max = val;
+      document.getElementById('max-iter').value = val;
+    }
+    iterSlider.value = val;
+    iterDisplay.textContent = val;
+    render();
+  }
+  animFrame = requestAnimationFrame(animate);
+}
+
+// ── Init ─────────────────────────────────────────────────────────────────────
+window.addEventListener('resize', function() {
+  render();
+  if (document.getElementById('resolution').value === 'viewport') scheduleBuild();
+});
+buildPoints();
+render();
+</script>
+</body>
+</html>
