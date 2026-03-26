@@ -53,8 +53,6 @@ button.active { background: #4fc3f7; color: #111; }
     <input type="range" id="point-size" min="1" max="6" value="2" style="width:60px">
   </div>
   <div class="group">
-    <label>Z scale:</label>
-    <input type="range" id="z-spread" min="1" max="100" value="50" style="width:80px">
   </div>
   <div class="group">
     <input type="checkbox" id="feedback-toggle" onchange="render()">
@@ -150,7 +148,6 @@ const vertexSrc = `
   attribute vec4 a_point;  // (sample re, sample im, slice index, seed index)
   uniform mat4 u_mvp;
   uniform float u_pointSize;
-  uniform float u_spread;
   uniform int u_juliaIter;
   uniform bool u_feedback;
   uniform int u_seedCount;
@@ -218,7 +215,7 @@ const vertexSrc = `
     float magZ0 = sqrt(w0.x * w0.x + w0.y * w0.y);
     float zDiff = magZ - magZ0;
     float zSign = zDiff >= 0.0 ? 1.0 : -1.0;
-    float depth = zSign * sqrt(abs(zDiff)) * u_spread;
+    float depth = zSign * sqrt(abs(zDiff));
     vec4 pos3d = vec4(w.x, w.y, depth, 1.0);
     gl_Position = u_mvp * pos3d;
     gl_PointSize = u_pointSize;
@@ -326,7 +323,6 @@ gl.useProgram(program);
 
 const uMVP = gl.getUniformLocation(program, 'u_mvp');
 const uPointSize = gl.getUniformLocation(program, 'u_pointSize');
-const uSpread = gl.getUniformLocation(program, 'u_spread');
 const uJuliaIter = gl.getUniformLocation(program, 'u_juliaIter');
 const uFeedback = gl.getUniformLocation(program, 'u_feedback');
 const uSeedCount = gl.getUniformLocation(program, 'u_seedCount');
@@ -384,7 +380,6 @@ function render() {
   gl.depthFunc(gl.LEQUAL);
 
   const pointSize = parseFloat(document.getElementById('point-size').value);
-  const spread = parseFloat(document.getElementById('z-spread').value) * 0.1;
   const sliceCount = parseInt(document.getElementById('tunnel-depth').value);
 
   // Center camera on average Z range across all seeds
@@ -397,7 +392,6 @@ function render() {
 
   gl.uniformMatrix4fv(uMVP, false, buildMVP(lookTarget));
   gl.uniform1f(uPointSize, pointSize);
-  gl.uniform1f(uSpread, spread);
   gl.uniform1i(uJuliaIter, sliceCount);
   gl.uniform1i(uFeedback, document.getElementById('feedback-toggle').checked ? 1 : 0);
   gl.uniform1i(uSeedCount, seeds.length);
@@ -480,7 +474,6 @@ document.getElementById('tunnel-depth').addEventListener('input', function() {
 
 document.getElementById('julia-res').addEventListener('change', function() { buildPoints(); render(); });
 document.getElementById('point-size').addEventListener('input', render);
-document.getElementById('z-spread').addEventListener('input', render);
 
 // ── Click to pick c from Mandelbrot ──────────────────────────────────────────
 // (In this standalone page, click picks c from the visible space)
