@@ -92,7 +92,7 @@ const vertexSrc = `
     bool escaped = false;
     bool firstSet = false;
 
-    for (int i = 0; i < 2000; i++) {
+    for (int i = 0; i < 10000; i++) {
       if (i >= u_iteration) break;
       float zx = z.x * z.x - z.y * z.y + c.x;
       float zy = 2.0 * z.x * z.y + c.y;
@@ -382,7 +382,12 @@ function animate(time) {
   if (time - lastTime > 1000 / speed) {
     lastTime = time;
     let val = parseInt(iterSlider.value) + 1;
-    if (val > parseInt(iterSlider.max)) val = 0;
+    // Past the slider max? Keep going — extend the max
+    const maxIter = parseInt(iterSlider.max);
+    if (val > maxIter) {
+      iterSlider.max = val;
+      document.getElementById('max-iter').value = val;
+    }
     iterSlider.value = val;
     iterDisplay.textContent = val;
     render();
