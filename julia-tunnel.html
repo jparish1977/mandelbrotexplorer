@@ -32,7 +32,8 @@ button.active { background: #4fc3f7; color: #111; }
     <label>c:</label>
     <input type="text" id="c-value" value="" style="width:300px" placeholder="pipe-separated: -1.37,0.02 | -0.75,0.15">
     <button onclick="updateC()">Set</button>
-    <span id="pick-info">Click 2D Mandelbrot to pick c</span>
+    <button onclick="randomSeeds()">Random 4</button>
+    <span id="pick-info">Dbl-click to add seeds</span>
   </div>
   <div class="group">
     <label>Iteration:</label>
@@ -413,6 +414,33 @@ function addSeed(re, im) {
     seeds.shift(); // remove oldest
   }
   seeds.push([re, im]);
+  rebuildAll();
+}
+
+function randomSeeds() {
+  seeds = [];
+  // Walk the boundary: pick random points that escape between 30-200 iterations
+  while (seeds.length < 4) {
+    // Random angle, random radius near the boundary (~0.3 to 1.5 from origin)
+    const angle = Math.random() * Math.PI * 2;
+    const radius = 0.3 + Math.random() * 1.2;
+    const re = radius * Math.cos(angle) - 0.5; // offset toward the set
+    const im = radius * Math.sin(angle);
+
+    // Quick escape test
+    let zRe = 0, zIm = 0, escaped = -1;
+    for (let i = 0; i < 256; i++) {
+      const zr2 = zRe * zRe - zIm * zIm + re;
+      const zi2 = 2 * zRe * zIm + im;
+      zRe = zr2; zIm = zi2;
+      if (zRe * zRe + zIm * zIm > 100) { escaped = i; break; }
+    }
+
+    // Keep points with interesting path lengths (30-200)
+    if (escaped >= 30 && escaped <= 200) {
+      seeds.push([parseFloat(re.toFixed(5)), parseFloat(im.toFixed(5))]);
+    }
+  }
   rebuildAll();
 }
 
