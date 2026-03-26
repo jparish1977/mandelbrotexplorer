@@ -30,7 +30,7 @@ button.active { background: #4fc3f7; color: #111; }
 <div id="controls">
   <div class="group">
     <label>c:</label>
-    <input type="text" id="c-value" value="-1.37, 0.02" style="width:120px">
+    <input type="text" id="c-value" value="" style="width:300px" placeholder="pipe-separated: -1.37,0.02 | -0.75,0.15">
     <button onclick="updateC()">Set</button>
     <span id="pick-info">Click 2D Mandelbrot to pick c</span>
   </div>
@@ -77,12 +77,22 @@ if (!gl) { document.body.innerHTML = '<h1 style="color:red;padding:40px">WebGL n
 // ── State ────────────────────────────────────────────────────────────────────
 let rotX = -0.3, rotY = 0.8, camDist = 10.0;
 let playing = false, animFrame = null;
-let currentC = [-0.75, 0.1];
-let escapePath = [];  // array of [re, im] for each iteration
 
-// ── Compute escape path on CPU (just one point, instant) ─────────────────────
+// Multi-seed: up to 10 c values, paths stored in a texture
+const MAX_SEEDS = 10;
+const MAX_PATH_LEN = 256;
+let seeds = [
+  [-1.37, 0.02],     // near antenna, long escape
+  [-0.75, 0.15],     // near main cardioid boundary
+  [-0.12, 0.75],     // near period-2 bulb
+  [0.28, 0.53],      // near period-3 bulb
+];
+let escapePaths = []; // array of paths, one per seed
+let maxPathLen = 0;   // longest path across all seeds
+
+// ── Compute escape paths on CPU ──────────────────────────────────────────────
 function computeEscapePath(cRe, cIm, maxIter) {
-  const path = [[0, 0]]; // z_0
+  const path = [[0, 0]];
   let zRe = 0, zIm = 0;
   for (let i = 0; i < maxIter; i++) {
     const zRe2 = zRe * zRe - zIm * zIm + cRe;
@@ -94,21 +104,57 @@ function computeEscapePath(cRe, cIm, maxIter) {
   return path;
 }
 
+function computeAllPaths() {
+  escapePaths = seeds.map(function(s) { return computeEscapePath(s[0], s[1], MAX_PATH_LEN); });
+  maxPathLen = Math.max.apply(null, escapePaths.map(function(p) { return p.length; }));
+}
+
+// ── Path texture: rows = seeds, cols = iterations, RGBA = (re, im, 0, 0) ────
+let pathTexture = null;
+const PATH_TEX_WIDTH = MAX_PATH_LEN;  // columns = iterations
+const PATH_TEX_HEIGHT = MAX_SEEDS;     // rows = seeds
+
+function createPathTexture() {
+  if (!pathTexture) {
+    pathTexture = gl.createTexture();
+  }
+  // Pack all paths into a float texture (using OES_texture_float)
+  const ext = gl.getExtension('OES_texture_float');
+  const data = new Float32Array(PATH_TEX_WIDTH * PATH_TEX_HEIGHT * 4);
+
+  for (let seed = 0; seed < escapePaths.length; seed++) {
+    const path = escapePaths[seed];
+    for (let i = 0; i < path.length; i++) {
+      const idx = (seed * PATH_TEX_WIDTH + i) * 4;
+      data[idx]     = path[i][0]; // re
+      data[idx + 1] = path[i][1]; // im
+      data[idx + 2] = 1.0;        // valid flag
+      data[idx + 3] = 0.0;
+    }
+  }
+
+  gl.bindTexture(gl.TEXTURE_2D, pathTexture);
+  gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, PATH_TEX_WIDTH, PATH_TEX_HEIGHT, 0, gl.RGBA, gl.FLOAT, data);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+}
+
 // ── Shaders ──────────────────────────────────────────────────────────────────
 // Each vertex: (sample_re, sample_im, slice_index)
 // Vertex shader: for each sample point, iterate Julia set with c = escapePath[slice],
 // then position at (Re(z_final), Im(z_final), slice * spread)
 const vertexSrc = `
-  attribute vec3 a_point;  // (sample re, sample im, slice index)
+  attribute vec4 a_point;  // (sample re, sample im, slice index, seed index)
   uniform mat4 u_mvp;
   uniform float u_pointSize;
   uniform float u_spread;
   uniform int u_juliaIter;
-  uniform bool u_feedback;  // feed Julia result back into Mandelbrot
-
-  // Escape path z values passed as uniforms (max 256 slices)
-  uniform vec2 u_path[256];
-  uniform int u_pathLen;
+  uniform bool u_feedback;
+  uniform int u_seedCount;
+  uniform int u_maxPathLen;
+  uniform sampler2D u_pathTex;  // rows=seeds, cols=iterations
 
   varying vec4 v_color;
 
@@ -120,12 +166,15 @@ const vertexSrc = `
 
   void main() {
     int slice = int(a_point.z);
+    int seed = int(a_point.w);
 
-    // Julia C for this slice = z value at this point in the escape path
-    vec2 juliaC = vec2(0.0);
-    for (int i = 0; i < 256; i++) {
-      if (i == slice) { juliaC = u_path[i]; break; }
-    }
+    // Read Julia C from path texture: row = seed, col = slice
+    vec2 texCoord = vec2(
+      (float(slice) + 0.5) / float(u_maxPathLen),
+      (float(seed) + 0.5) / float(u_seedCount)
+    );
+    vec4 pathSample = texture2D(u_pathTex, texCoord);
+    vec2 juliaC = pathSample.xy;
 
     // Pass 1: Julia iteration — z = z^2 + juliaC
     vec2 z = a_point.xy;
@@ -173,8 +222,10 @@ const vertexSrc = `
     gl_Position = u_mvp * pos3d;
     gl_PointSize = u_pointSize;
 
-    // Color: different hue range for feedback mode
-    float hue = float(slice) / float(u_pathLen);
+    // Color: each seed gets a distinct base hue, slice shifts within it
+    float seedHue = float(seed) / float(u_seedCount);
+    float sliceShift = float(slice) / float(u_maxPathLen) * 0.15;
+    float hue = seedHue + sliceShift;
     float sat = u_feedback ? 0.9 : 0.7;
     float val = escapedFeedback ? 0.05 : 0.85;
     float alpha = escapedFeedback ? 0.02 : 0.6;
@@ -277,11 +328,9 @@ const uPointSize = gl.getUniformLocation(program, 'u_pointSize');
 const uSpread = gl.getUniformLocation(program, 'u_spread');
 const uJuliaIter = gl.getUniformLocation(program, 'u_juliaIter');
 const uFeedback = gl.getUniformLocation(program, 'u_feedback');
-const uPathLen = gl.getUniformLocation(program, 'u_pathLen');
-const uPath = [];
-for (let i = 0; i < 256; i++) {
-  uPath.push(gl.getUniformLocation(program, 'u_path[' + i + ']'));
-}
+const uSeedCount = gl.getUniformLocation(program, 'u_seedCount');
+const uMaxPathLen = gl.getUniformLocation(program, 'u_maxPathLen');
+const uPathTex = gl.getUniformLocation(program, 'u_pathTex');
 const aPoint = gl.getAttribLocation(program, 'a_point');
 gl.enableVertexAttribArray(aPoint);
 
@@ -294,37 +343,30 @@ let pointsPerSlice = 0;
 
 function buildPoints() {
   const res = parseInt(document.getElementById('julia-res').value);
-  const totalSlices = Math.min(escapePath.length, 256);
   const points = [];
 
-  // Build ALL slices up front — depth slider just controls how many we draw
-  for (let s = 0; s < totalSlices; s++) {
-    for (let i = 0; i < res; i++) {
-      for (let j = 0; j < res; j++) {
-        const re = -2.0 + (i / res) * 4.0;
-        const im = -2.0 + (j / res) * 4.0;
-        points.push(re, im, s);
+  // Build vertices for ALL seeds × ALL slices
+  for (let seed = 0; seed < escapePaths.length; seed++) {
+    const pathLen = escapePaths[seed].length;
+    for (let s = 0; s < pathLen; s++) {
+      for (let i = 0; i < res; i++) {
+        for (let j = 0; j < res; j++) {
+          const re = -2.0 + (i / res) * 4.0;
+          const im = -2.0 + (j / res) * 4.0;
+          points.push(re, im, s, seed);
+        }
       }
     }
   }
 
   pointsPerSlice = res * res;
-  maxBuiltSlices = totalSlices;
-  pointCount = points.length / 3;
+  maxBuiltSlices = maxPathLen;
+  pointCount = points.length / 4;
   gl.bindBuffer(gl.ARRAY_BUFFER, pointBuffer);
   gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(points), gl.STATIC_DRAW);
 
   document.getElementById('info').textContent =
-    pointCount.toLocaleString() + ' pts (' + totalSlices + ' slices x ' + pointsPerSlice + ' samples)';
-}
-
-// ── Upload escape path to shader uniforms ────────────────────────────────────
-function uploadPath() {
-  const len = Math.min(escapePath.length, 256);
-  gl.uniform1i(uPathLen, len);
-  for (let i = 0; i < len; i++) {
-    gl.uniform2f(uPath[i], escapePath[i][0], escapePath[i][1]);
-  }
+    pointCount.toLocaleString() + ' pts (' + seeds.length + ' seeds x ' + maxPathLen + ' slices x ' + pointsPerSlice + ' samples)';
 }
 
 // ── Render ───────────────────────────────────────────────────────────────────
@@ -336,57 +378,70 @@ function render() {
   gl.clearColor(0.02, 0.02, 0.04, 1.0);
   gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
   gl.enable(gl.BLEND);
-  gl.blendFunc(gl.SRC_ALPHA, gl.ONE);  // additive blending for glow
+  gl.blendFunc(gl.SRC_ALPHA, gl.ONE);
   gl.enable(gl.DEPTH_TEST);
   gl.depthFunc(gl.LEQUAL);
 
   const pointSize = parseFloat(document.getElementById('point-size').value);
   const spread = parseFloat(document.getElementById('z-spread').value) * 0.1;
-  const sliceCount = Math.min(parseInt(document.getElementById('tunnel-depth').value), escapePath.length, 256);
+  const sliceCount = parseInt(document.getElementById('tunnel-depth').value);
 
-  // Compute Z range from escape path to center the camera
-  const mag0 = Math.sqrt(escapePath[0][0]**2 + escapePath[0][1]**2);
-  let minZ = 0, maxZ = 0;
-  for (let i = 0; i < Math.min(sliceCount, escapePath.length); i++) {
-    const mag = Math.sqrt(escapePath[i][0]**2 + escapePath[i][1]**2);
-    const diff = mag - mag0;
-    const sign = diff >= 0 ? 1 : -1;
-    const z = sign * Math.sqrt(Math.abs(diff)) * spread;
-    if (z < minZ) minZ = z;
-    if (z > maxZ) maxZ = z;
-  }
-  const lookTarget = [0, 0, (minZ + maxZ) / 2];
+  // Center camera on average Z range across all seeds
+  const lookTarget = [0, 0, 0];
+
+  // Bind path texture
+  gl.activeTexture(gl.TEXTURE0);
+  gl.bindTexture(gl.TEXTURE_2D, pathTexture);
+  gl.uniform1i(uPathTex, 0);
 
   gl.uniformMatrix4fv(uMVP, false, buildMVP(lookTarget));
   gl.uniform1f(uPointSize, pointSize);
   gl.uniform1f(uSpread, spread);
-  gl.uniform1i(uJuliaIter, sliceCount);  // Julia iterations match depth
+  gl.uniform1i(uJuliaIter, sliceCount);
   gl.uniform1i(uFeedback, document.getElementById('feedback-toggle').checked ? 1 : 0);
-  uploadPath();
+  gl.uniform1i(uSeedCount, seeds.length);
+  gl.uniform1i(uMaxPathLen, MAX_PATH_LEN);
 
   gl.bindBuffer(gl.ARRAY_BUFFER, pointBuffer);
-  gl.vertexAttribPointer(aPoint, 3, gl.FLOAT, false, 0, 0);
-  // Draw all slices — the depth slider controls Julia iterations, not slice count
-  const drawSlices = Math.min(maxBuiltSlices, escapePath.length);
-  gl.drawArrays(gl.POINTS, 0, drawSlices * pointsPerSlice);
+  gl.vertexAttribPointer(aPoint, 4, gl.FLOAT, false, 0, 0);
+  gl.drawArrays(gl.POINTS, 0, pointCount);
 }
 
 // ── Controls ─────────────────────────────────────────────────────────────────
+function addSeed(re, im) {
+  if (seeds.length >= MAX_SEEDS) {
+    seeds.shift(); // remove oldest
+  }
+  seeds.push([re, im]);
+  rebuildAll();
+}
+
+function rebuildAll() {
+  computeAllPaths();
+  createPathTexture();
+  document.getElementById('tunnel-depth').max = maxPathLen;
+  document.getElementById('pick-info').textContent =
+    seeds.length + ' seeds | longest path: ' + maxPathLen;
+  updateSeedList();
+  buildPoints();
+  render();
+}
+
+function updateSeedList() {
+  const el = document.getElementById('c-value');
+  el.value = seeds.map(function(s) { return s[0].toFixed(3) + ',' + s[1].toFixed(3); }).join(' | ');
+}
+
 function updateC() {
-  const parts = document.getElementById('c-value').value.split(',').map(Number);
-  if (parts.length === 2 && !isNaN(parts[0]) && !isNaN(parts[1])) {
-    currentC = parts;
-    escapePath = computeEscapePath(currentC[0], currentC[1], 256);
-    const pathLen = escapePath.length;
-    document.getElementById('pick-info').textContent =
-      'c = ' + currentC[0].toFixed(4) + ' + ' + currentC[1].toFixed(4) + 'i | path: ' + pathLen + ' iterations';
-    document.getElementById('tunnel-depth').max = pathLen;
-    if (parseInt(document.getElementById('tunnel-depth').value) > pathLen) {
-      document.getElementById('tunnel-depth').value = pathLen;
-      document.getElementById('depth-display').textContent = pathLen;
-    }
-    buildPoints();
-    render();
+  // Parse all seeds from the text field (pipe-separated)
+  const raw = document.getElementById('c-value').value;
+  const parsed = raw.split('|').map(function(s) {
+    const parts = s.trim().split(',').map(Number);
+    return (parts.length === 2 && !isNaN(parts[0]) && !isNaN(parts[1])) ? parts : null;
+  }).filter(Boolean);
+  if (parsed.length > 0) {
+    seeds = parsed.slice(0, MAX_SEEDS);
+    rebuildAll();
   }
 }
 
@@ -402,12 +457,10 @@ document.getElementById('z-spread').addEventListener('input', render);
 // ── Click to pick c from Mandelbrot ──────────────────────────────────────────
 // (In this standalone page, click picks c from the visible space)
 canvas.addEventListener('dblclick', function(e) {
-  // Map click to complex plane (rough — assumes centered view)
   const rect = canvas.getBoundingClientRect();
   const x = ((e.clientX - rect.left) / rect.width - 0.5) * 4;
   const y = -((e.clientY - rect.top) / rect.height - 0.5) * 4;
-  document.getElementById('c-value').value = x.toFixed(4) + ', ' + y.toFixed(4);
-  updateC();
+  addSeed(x, y);
 });
 
 // ── Camera ───────────────────────────────────────────────────────────────────
@@ -451,8 +504,7 @@ function animateDepth(time) {
     lastPlayTime = time;
     const slider = document.getElementById('tunnel-depth');
     let val = parseInt(slider.value) + 1;
-    const maxSlices = Math.min(escapePath.length, maxBuiltSlices);
-    if (val > maxSlices) val = 1;
+    if (val > maxPathLen) val = 1;
     slider.value = val;
     document.getElementById('depth-display').textContent = val;
     render();  // no rebuild needed — just draw fewer/more slices
@@ -462,7 +514,7 @@ function animateDepth(time) {
 
 // ── Init ─────────────────────────────────────────────────────────────────────
 window.addEventListener('resize', render);
-updateC();
+rebuildAll();
 </script>
 </body>
 </html>
