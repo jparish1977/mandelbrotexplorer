@@ -1,4 +1,4 @@
-/* global mandelbrotExplorer, palettes, cancelAnimationFrame, animationFrameId, animate */
+/* global mandelbrotExplorer, palettes, animationFrameId, animate */
 /* global mandelbrotExplorerPresets, showToast, THREE */
 /* eslint-disable no-unused-vars */
 

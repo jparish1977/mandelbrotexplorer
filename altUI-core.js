@@ -1,7 +1,7 @@
 // altUI-core.js
 // Core alternative UI functionality - building, populating, and managing the UI
 
-/* global MBEUI, MutationObserver, mandelbrotExplorer, palettes,  */
+/* global MBEUI, mandelbrotExplorer, palettes,  */
 /* global initAltUICodeMirror5, refreshVisibleAltUICM, setupAltUICMModal,  */
 /* global setupAltUIEventListeners */
 window.MBEUI = window.MBEUI || {};
@@ -78,6 +78,7 @@ function buildAlternativeUI() {
                 <label><input type="radio" name="alt-shortenedFilter" value="both">Both</label>
                 <label><input type="radio" name="alt-shortenedFilter" value="shortened">Shortened</label>
                 <label><input type="radio" name="alt-shortenedFilter" value="full">Full</label>
+                <label style="margin-left:1em;"><input type="checkbox" id="alt-loopRepeaters" onchange="mandelbrotExplorer.loopRepeaters = this.checked;">Loop repeaters</label>
               </div>
             </div>
           </section>

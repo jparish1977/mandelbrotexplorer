@@ -113,6 +113,7 @@ const mandelbrotExplorer = {
 	"targetFrameRate": 60, // Target frame rate for animation loop
 	"onlyShortened": true,
 	"onlyFull": false,
+	"loopRepeaters": false,
 	"startX": 				-2,
 	"endX": 				2,
 	"startY": 				2,
@@ -647,18 +648,41 @@ const mandelbrotExplorer = {
 			lastZ = z;
 		}
 
-		const fullLength = zValues.length;
-		zValues = zValues.filter(function(teztZ, testZIndex, testZValues){
-			for ( let zi = 0; zi < testZIndex; zi++ ){
-				if(teztZ[0] === testZValues[zi][0] && teztZ[1] === testZValues[zi][1]){
-					return false;
+		// Detect repeating orbit: find first duplicate z value
+		let loopStart = -1;
+		let period = 0;
+		for (let i = 1; i < zValues.length && loopStart === -1; i++) {
+			for (let j = 0; j < i; j++) {
+				if (zValues[i][0] === zValues[j][0] && zValues[i][1] === zValues[j][1]) {
+					loopStart = j;
+					period = i - j;
+					break;
 				}
 			}
-			return true;
-		});
-		zValues.shortened = (fullLength > zValues.length) ? true : false;
+		}
+
+		zValues.shortened = loopStart !== -1;
+		zValues.loopStart = loopStart;
+		zValues.period = period;
+		zValues.fullLength = zValues.length;
+
+		// If looping enabled and we found a repeat, keep only up to the first repeat
+		// The accessor getLoopedPoint handles virtual extension
+		if (loopStart !== -1) {
+			zValues.length = loopStart + period;
+		}
+
 		return zValues;
 	},
+    "getEscapePathPoint"(escapePath, index) {
+        if (index < escapePath.length) return escapePath[index];
+        if (!mandelbrotExplorer.loopRepeaters || escapePath.loopStart === -1 || escapePath.period === 0) return null;
+        return escapePath[escapePath.loopStart + ((index - escapePath.loopStart) % escapePath.period)];
+    },
+    "getEscapePathLength"(escapePath, maxIterations) {
+        if (!mandelbrotExplorer.loopRepeaters || escapePath.loopStart === -1) return escapePath.length;
+        return maxIterations;
+    },
     "getColorIndex"(index) {
         let colorIndex = index;
         while( colorIndex >= mandelbrotExplorer.palette.length  ) {
