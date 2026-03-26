@@ -42,7 +42,8 @@ button.active { background: #4fc3f7; color: #111; }
       <option value="200">200x200 (fast)</option>
       <option value="400" selected>400x400</option>
       <option value="800">800x800</option>
-      <option value="1200">1200x1200 (slow)</option>
+      <option value="1200">1200x1200</option>
+      <option value="viewport">Match viewport</option>
     </select>
   </div>
   <div class="group">
@@ -215,7 +216,10 @@ function scheduleBuild() {
 }
 
 function buildPoints() {
-  const res = parseInt(document.getElementById('resolution').value);
+  const resValue = document.getElementById('resolution').value;
+  const res = resValue === 'viewport'
+    ? Math.max(canvas.clientWidth, canvas.clientHeight)
+    : parseInt(resValue);
   const maxIter = parseInt(document.getElementById('max-iter').value);
   const points = [];
 
@@ -398,7 +402,10 @@ function resetView() {
 }
 
 // ── Init ─────────────────────────────────────────────────────────────────────
-window.addEventListener('resize', render);
+window.addEventListener('resize', function() {
+  render();
+  if (document.getElementById('resolution').value === 'viewport') scheduleBuild();
+});
 buildPoints();
 render();
 </script>
