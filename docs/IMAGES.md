@@ -39,6 +39,22 @@
 
 ---
 
+## iteration-9-16-after-the-eye.png
+**Date:** March 2026
+**Source:** Mandelbrot Explorer (current JS version), iteration8.com classic UI
+**Settings:** Resolution 1024, max iterations 16, filtered to escape paths surviving all 16 iterations, displaying only iterations 9–16 (iterations 1–8 hidden). Camera slightly rotated from default.
+**Description:** The companion to "When the Eye Opens." Where iteration-8-eye-opens.png shows the first 8 iterations forming the eye in monochrome, this shows iterations 9–16 — what happens after the eye opens. Color cycling assigns each iteration a different hue, producing the bioluminescent effect. The blue starburst at center is the bounded core at these late iterations. The rainbow tendrils are points in their final iterations before escape, spreading outward as they approach |2|. At the default (unrotated) camera angle, the flat disc of the "eye" is visible as the typical circle; this view is slightly rotated to show the 3D depth structure. Together the two images show the complete story: iterations 1–8 are the formation (monochrome, structural), iterations 9–16 are the departure (chromatic, dynamic).
+
+---
+
+## iteration-8-eye-opens.png
+**Date:** March 2026
+**Source:** Mandelbrot Explorer (current JS version), iteration8.com classic UI
+**Settings:** Iterations 1–8, showing only points that escape at exactly iteration 8. Cloud render with escape paths visible.
+**Description:** "When the Eye Opens." This image shows the complete escape paths (iterations 1 through 8) for every point that escapes at exactly iteration 8. The flowing ribbons are the trajectories — each point's journey from its starting c through 8 applications of z → z² + c before leaving |2|. The 8-fold symmetry in the center reflects the degree-256 polynomial structure (2^8). The wispy tendrils along the real axis are the escape paths of points near the antenna — the last to leave, taking the longest route out. The central void with its star-shaped boundary is the set of points that haven't escaped yet. At iteration 8, the density pattern creates the unmistakable illusion of an open eye — an effect that persists regardless of camera rotation angle in the 3D view. This is effectively a single-cohort Buddhabrot: instead of accumulating all escape times, it isolates one escape-time class and renders every step of its departure.
+
+---
+
 ## 471470444_1602455823735595_4512727761822853615_n.jpg
 **Date:** Pre-2026 (PHP/GD version era)
 **Source:** PHP-based Mandelbrot generator (phpbrot.php, earlier version)
