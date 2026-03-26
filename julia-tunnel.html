@@ -56,6 +56,8 @@ button.active { background: #4fc3f7; color: #111; }
     <input type="range" id="z-spread" min="1" max="100" value="50" style="width:80px">
   </div>
   <div class="group">
+    <input type="checkbox" id="feedback-toggle" onchange="render()">
+    <label for="feedback-toggle" style="cursor:pointer">Feedback</label>
     <button id="play-btn" onclick="togglePlay()">Play &#9654;</button>
     <input type="range" id="speed" min="1" max="30" value="8" style="width:60px">
   </div>
@@ -102,6 +104,7 @@ const vertexSrc = `
   uniform float u_pointSize;
   uniform float u_spread;
   uniform int u_juliaIter;
+  uniform bool u_feedback;  // feed Julia result back into Mandelbrot
 
   // Escape path z values passed as uniforms (max 256 slices)
   uniform vec2 u_path[256];
@@ -124,13 +127,12 @@ const vertexSrc = `
       if (i == slice) { juliaC = u_path[i]; break; }
     }
 
-    // Start z at the sample grid position
+    // Pass 1: Julia iteration — z = z^2 + juliaC
     vec2 z = a_point.xy;
     vec2 z0 = vec2(0.0);
     bool escaped = false;
     bool firstSet = false;
 
-    // Iterate Julia set: z = z^2 + juliaC
     for (int i = 0; i < 500; i++) {
       if (i >= u_juliaIter) break;
       float zx = z.x * z.x - z.y * z.y + juliaC.x;
@@ -140,25 +142,46 @@ const vertexSrc = `
       if (z.x * z.x + z.y * z.y > 4.0) { escaped = true; break; }
     }
 
-    // Z position from THIS point's Julia iteration
-    // sign(|z_final| - |z_0|) * sqrt(abs(|z_final| - |z_0|))
-    float magZ = sqrt(z.x * z.x + z.y * z.y);
-    float magZ0 = sqrt(z0.x * z0.x + z0.y * z0.y);
+    // Pass 2 (optional): feed Julia result back as Mandelbrot c
+    // w = w^2 + z_julia, where z_julia is the bounded Julia point
+    vec2 w = z;  // final position (before feedback)
+    vec2 w0 = z0;
+    bool escapedFeedback = escaped;
+
+    if (u_feedback && !escaped) {
+      vec2 fbC = z;  // use Julia endpoint as Mandelbrot c
+      w = vec2(0.0, 0.0);
+      w0 = vec2(0.0);
+      bool fbFirstSet = false;
+      for (int i = 0; i < 500; i++) {
+        if (i >= u_juliaIter) break;
+        float wx = w.x * w.x - w.y * w.y + fbC.x;
+        float wy = 2.0 * w.x * w.y + fbC.y;
+        w = vec2(wx, wy);
+        if (!fbFirstSet) { w0 = w; fbFirstSet = true; }
+        if (w.x * w.x + w.y * w.y > 4.0) { escapedFeedback = true; break; }
+      }
+    }
+
+    // Z position from final iteration result
+    float magZ = sqrt(w.x * w.x + w.y * w.y);
+    float magZ0 = sqrt(w0.x * w0.x + w0.y * w0.y);
     float zDiff = magZ - magZ0;
     float zSign = zDiff >= 0.0 ? 1.0 : -1.0;
     float depth = zSign * sqrt(abs(zDiff)) * u_spread;
-    vec4 pos3d = vec4(z.x, z.y, depth, 1.0);
+    vec4 pos3d = vec4(w.x, w.y, depth, 1.0);
     gl_Position = u_mvp * pos3d;
     gl_PointSize = u_pointSize;
 
-    // Color by slice depth (hue shifts along tunnel)
+    // Color: different hue range for feedback mode
     float hue = float(slice) / float(u_pathLen);
-    float val = escaped ? 0.05 : 0.85;
-    float alpha = escaped ? 0.02 : 0.6;
-    v_color = vec4(hsv2rgb(hue, 0.7, val), alpha);
+    float sat = u_feedback ? 0.9 : 0.7;
+    float val = escapedFeedback ? 0.05 : 0.85;
+    float alpha = escapedFeedback ? 0.02 : 0.6;
+    v_color = vec4(hsv2rgb(hue, sat, val), alpha);
 
     // Hide escaped points
-    if (escaped) {
+    if (escapedFeedback) {
       gl_Position = vec4(10.0, 10.0, 10.0, 1.0);
     }
   }
@@ -253,6 +276,7 @@ const uMVP = gl.getUniformLocation(program, 'u_mvp');
 const uPointSize = gl.getUniformLocation(program, 'u_pointSize');
 const uSpread = gl.getUniformLocation(program, 'u_spread');
 const uJuliaIter = gl.getUniformLocation(program, 'u_juliaIter');
+const uFeedback = gl.getUniformLocation(program, 'u_feedback');
 const uPathLen = gl.getUniformLocation(program, 'u_pathLen');
 const uPath = [];
 for (let i = 0; i < 256; i++) {
@@ -337,6 +361,7 @@ function render() {
   gl.uniform1f(uPointSize, pointSize);
   gl.uniform1f(uSpread, spread);
   gl.uniform1i(uJuliaIter, sliceCount);  // Julia iterations match depth
+  gl.uniform1i(uFeedback, document.getElementById('feedback-toggle').checked ? 1 : 0);
   uploadPath();
 
   gl.bindBuffer(gl.ARRAY_BUFFER, pointBuffer);
