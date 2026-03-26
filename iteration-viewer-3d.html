@@ -47,10 +47,6 @@ button.active { background: #4fc3f7; color: #111; }
     </select>
   </div>
   <div class="group">
-    <label>Z scale:</label>
-    <input type="range" id="z-scale" min="1" max="50" value="10" style="width:100px">
-  </div>
-  <div class="group">
     <label>Pt:</label>
     <input type="range" id="point-size" min="1" max="6" value="2" style="width:60px">
   </div>
@@ -81,7 +77,6 @@ const vertexSrc = `
   uniform int u_iteration;
   uniform mat4 u_mvp;
   uniform float u_pointSize;
-  uniform float u_zScale;
   varying vec4 v_color;
 
   vec3 hsv2rgb(float h, float s, float v) {
@@ -111,7 +106,7 @@ const vertexSrc = `
     // Z axis: |z_i| - |z_{i-1}| (default MBE escapingZ)
     float magZ = sqrt(z.x * z.x + z.y * z.y);
     float magPrev = sqrt(prevZ.x * prevZ.x + prevZ.y * prevZ.y);
-    float escapingZ = (magZ - magPrev) * u_zScale;
+    float escapingZ = magZ - magPrev;
 
     // 3D position: (Re(z), Im(z), escapingZ)
     vec4 pos3d = vec4(z.x, z.y, escapingZ, 1.0);
@@ -241,7 +236,6 @@ gl.useProgram(program);
 const uMVP = gl.getUniformLocation(program, 'u_mvp');
 const uIter = gl.getUniformLocation(program, 'u_iteration');
 const uPointSize = gl.getUniformLocation(program, 'u_pointSize');
-const uZScale = gl.getUniformLocation(program, 'u_zScale');
 const aC = gl.getAttribLocation(program, 'a_c');
 gl.enableVertexAttribArray(aC);
 
@@ -312,12 +306,10 @@ function render() {
 
   const iteration = parseInt(document.getElementById('iteration').value);
   const pointSize = parseFloat(document.getElementById('point-size').value);
-  const zScale = parseFloat(document.getElementById('z-scale').value) * 0.1;
 
   gl.uniformMatrix4fv(uMVP, false, buildMVP());
   gl.uniform1i(uIter, iteration);
   gl.uniform1f(uPointSize, pointSize);
-  gl.uniform1f(uZScale, zScale);
 
   gl.bindBuffer(gl.ARRAY_BUFFER, pointBuffer);
   gl.vertexAttribPointer(aC, 2, gl.FLOAT, false, 0, 0);
@@ -343,7 +335,6 @@ document.getElementById('resolution').addEventListener('change', function() {
   buildPoints(); render();
 });
 
-document.getElementById('z-scale').addEventListener('input', render);
 document.getElementById('point-size').addEventListener('input', render);
 
 // ── Camera rotation ──────────────────────────────────────────────────────────
