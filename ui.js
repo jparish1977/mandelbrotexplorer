@@ -254,6 +254,10 @@ function importConfigFile() {
     input.click();
 }
 
+// Pending camera state to apply after renderer is ready
+let _pendingCameraState = null;
+let _pendingControlsState = null;
+
 function applyConfig(config) {
     for (const key in config) {
         if (key === 'cameraState' || key === 'controlsState' || key === 'exportedAt') continue;
@@ -262,13 +266,32 @@ function applyConfig(config) {
         }
     }
     if (config.cameraState) {
-        SettingsManager.restoreCameraState(mandelbrotExplorer, config.cameraState);
+        if (mandelbrotExplorer.threeRenderer && mandelbrotExplorer.threeRenderer.camera) {
+            SettingsManager.restoreCameraState(mandelbrotExplorer, config.cameraState);
+        } else {
+            _pendingCameraState = config.cameraState;
+        }
     }
     if (config.controlsState) {
-        SettingsManager.restoreControlsState(mandelbrotExplorer, config.controlsState);
+        if (mandelbrotExplorer.threeRenderer && mandelbrotExplorer.threeRenderer.controls) {
+            SettingsManager.restoreControlsState(mandelbrotExplorer, config.controlsState);
+        } else {
+            _pendingControlsState = config.controlsState;
+        }
     }
     if (typeof syncAltUIFromOriginal === 'function') syncAltUIFromOriginal();
     if (typeof populateFields === 'function') populateFields();
+}
+
+function applyPendingCameraState() {
+    if (_pendingCameraState && mandelbrotExplorer.threeRenderer && mandelbrotExplorer.threeRenderer.camera) {
+        SettingsManager.restoreCameraState(mandelbrotExplorer, _pendingCameraState);
+        _pendingCameraState = null;
+    }
+    if (_pendingControlsState && mandelbrotExplorer.threeRenderer && mandelbrotExplorer.threeRenderer.controls) {
+        SettingsManager.restoreControlsState(mandelbrotExplorer, _pendingControlsState);
+        _pendingControlsState = null;
+    }
 }
 
 function generateShareURL() {
@@ -895,6 +918,9 @@ function init()
 
     // Load saved settings after renderer/camera/controls are initialized
     loadSettingsFromStorage();
+
+    // Apply deferred camera state from URL hash (renderer now ready)
+    applyPendingCameraState();
 
     // Load parameter values after settings are loaded
     loadParameterValues();
