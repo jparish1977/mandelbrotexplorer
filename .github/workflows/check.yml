@@ -17,7 +17,7 @@ jobs:
           python-version: '3.12'
       - uses: actions/setup-node@v4
         with:
-          node-version: '22'
+          node-version: '24'
       - name: Clone JP_TOOLS
         run: git clone https://github.com/jparish1977/JP_TOOLS.git /tmp/jp_tools
       - name: Install JS tools
