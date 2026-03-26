@@ -35,9 +35,9 @@ button.active { background: #4fc3f7; color: #111; }
     <span id="pick-info">Click 2D Mandelbrot to pick c</span>
   </div>
   <div class="group">
-    <label>Depth:</label>
-    <input type="range" id="tunnel-depth" min="1" max="256" value="64">
-    <span class="value" id="depth-display">64</span>
+    <label>Iteration:</label>
+    <input type="range" id="tunnel-depth" min="1" max="256" value="1">
+    <span class="value" id="depth-display">1</span>
   </div>
   <div class="group">
     <label>Julia res:</label>
@@ -336,13 +336,13 @@ function render() {
   gl.uniformMatrix4fv(uMVP, false, buildMVP(lookTarget));
   gl.uniform1f(uPointSize, pointSize);
   gl.uniform1f(uSpread, spread);
-  gl.uniform1i(uJuliaIter, 32);  // Julia iterations per slice
+  gl.uniform1i(uJuliaIter, sliceCount);  // Julia iterations match depth
   uploadPath();
 
   gl.bindBuffer(gl.ARRAY_BUFFER, pointBuffer);
   gl.vertexAttribPointer(aPoint, 3, gl.FLOAT, false, 0, 0);
-  // Only draw slices up to depth slider, clamped to actual path length
-  const drawSlices = Math.min(sliceCount, maxBuiltSlices, escapePath.length);
+  // Draw all slices — the depth slider controls Julia iterations, not slice count
+  const drawSlices = Math.min(maxBuiltSlices, escapePath.length);
   gl.drawArrays(gl.POINTS, 0, drawSlices * pointsPerSlice);
 }
 
