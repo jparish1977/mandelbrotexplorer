@@ -8,6 +8,8 @@ Interactive Mandelbrot and Julia set explorer with 2D canvas rendering, 3D parti
 
 **[Live Demo — iteration8.com](https://iteration8.com)** | [GitHub Pages mirror](https://jparish1977.github.io/mandelbrotexplorer/)
 
+ ## Try the Mandelbrot DEMO **[Try it now](https://mandelbrotexplorer.netlify.app)**
+
 ## Features
 
 - **2D + 3D visualization** — classic top-down Mandelbrot rendering and interactive 3D escape-path particles via Three.js
