@@ -1,0 +1,503 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Julia Tunnel — Triplane Displacement</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { background: #0a0a0f; color: #ccc; font-family: system-ui, sans-serif; overflow: hidden; height: 100vh; display: flex; flex-direction: column; }
+canvas { flex: 1; display: block; cursor: crosshair; }
+#controls {
+  background: #1a1a2e; padding: 8px 16px; display: flex; align-items: center; gap: 16px;
+  border-top: 1px solid #333; flex-shrink: 0; flex-wrap: wrap;
+}
+#controls label { font-size: 12px; white-space: nowrap; }
+#controls input[type="range"] { width: 120px; }
+#controls .value { font-size: 14px; font-weight: bold; color: #4fc3f7; min-width: 30px; }
+.group { display: flex; align-items: center; gap: 6px; }
+button { background: #333; color: #ccc; border: 1px solid #555; padding: 3px 10px; border-radius: 3px; cursor: pointer; font-size: 12px; }
+button:hover { background: #444; }
+button.active { background: #4fc3f7; color: #111; }
+#info { font-size: 11px; color: #666; }
+.plane-toggle { cursor: pointer; font-weight: bold; }
+.plane-mag { color: #ff6666; }
+.plane-frac { color: #66ff66; }
+.plane-ang { color: #6666ff; }
+</style>
+</head>
+<body>
+<canvas id="canvas"></canvas>
+<div id="controls">
+  <div class="group">
+    <label>Primes:</label>
+    <input type="range" id="prime-res" min="100" max="2500" value="800" step="50">
+    <span class="value" id="prime-res-display">800</span>
+  </div>
+  <div class="group">
+    <label>Iterations:</label>
+    <input type="range" id="iterations" min="1" max="500" value="50">
+    <span class="value" id="iter-display">50</span>
+  </div>
+  <div class="group">
+    <label>Pt:</label>
+    <input type="range" id="point-size" min="1" max="6" value="2" style="width:60px">
+  </div>
+  <div class="group">
+    <input type="checkbox" id="show-mag" checked onchange="render()">
+    <label for="show-mag" class="plane-toggle plane-mag">Magnitude</label>
+    <input type="checkbox" id="show-frac" onchange="render()">
+    <label for="show-frac" class="plane-toggle plane-frac">Determinant</label>
+    <input type="checkbox" id="show-ang" onchange="render()">
+    <label for="show-ang" class="plane-toggle plane-ang">Angular</label>
+    <input type="checkbox" id="show-sine" onchange="render()">
+    <label for="show-sine" class="plane-toggle" style="color:#ffcc33">Sine</label>
+    <input type="checkbox" id="cull-settled" onchange="render()">
+    <label for="cull-settled" style="cursor:pointer">Cull settled</label>
+  </div>
+  <div class="group">
+    <label>Cycle frame:</label>
+    <input type="range" id="cycle-frame" min="1" max="100" value="10" style="width:60px">
+    <span class="value" id="cycle-frame-display">10</span>
+  </div>
+  <div class="group">
+    <label>Min iter:</label>
+    <input type="range" id="min-iter" min="0" max="100" value="8" style="width:60px">
+    <span class="value" id="min-iter-display">8</span>
+  </div>
+  <div class="group">
+    <button id="play-btn" onclick="togglePlay()">Play &#9654;</button>
+    <input type="range" id="speed" min="1" max="30" value="5" style="width:60px">
+  </div>
+  <div class="group">
+    <button onclick="resetCamera()">Reset</button>
+    <button onclick="frontView()">Front</button>
+    <button onclick="sideView()">Side</button>
+    <button onclick="topView()">Top</button>
+    <button onclick="toggleBg()">BG</button>
+  </div>
+  <span id="info"></span>
+</div>
+<div id="debug" style="font-family:monospace;font-size:11px;color:#ff0;padding:4px 16px;background:#111;position:fixed;top:0;left:0;z-index:999;"></div>
+
+<script>
+var canvas = document.getElementById('canvas');
+var gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
+if (!gl) { document.body.innerHTML = '<h1 style="color:red;padding:40px">WebGL not supported</h1>'; }
+
+var rotX = -0.3, rotY = 0.6, camDist = 10.0;
+var playing = false, lastPlayTime = 0;
+var cycling = false, cycleCenter = 0, cycleDirection = 1, cycleTimer = null;
+var bgColors = [[0.02,0.02,0.04],[1,1,1],[0.5,0.5,0.5],[0.0,0.0,0.15]];
+var bgIndex = 0;
+
+// ── Shaders ──────────────────────────────────────────────────────────────────
+// Each vertex: (cRe, cIm) — shader computes all three displacements
+var vertexSrc = `
+  attribute vec2 a_c;
+  uniform mat4 u_mvp;
+  uniform float u_pointSize;
+  uniform int u_iteration;     // iterate to this depth
+  uniform int u_minIter;
+  uniform int u_plane;         // 0=magnitude, 1=determinant, 2=angular, 3=sine
+  uniform bool u_cullSettled;
+
+  varying vec4 v_color;
+
+  float signSqrt(float v) {
+    float s = v >= 0.0 ? 1.0 : -1.0;
+    return s * sqrt(abs(v));
+  }
+
+  vec3 hsv2rgb(float h, float s, float v) {
+    vec3 c = vec3(h * 6.0, s, v);
+    vec3 rgb = clamp(abs(mod(c.x + vec3(0.0, 4.0, 2.0), 6.0) - 3.0) - 1.0, 0.0, 1.0);
+    return v * mix(vec3(1.0), rgb, s);
+  }
+
+  void main() {
+    float cRe = a_c.x;
+    float cIm = a_c.y;
+
+    // Iterate z = z^2 + c
+    float zRe = 0.0, zIm = 0.0;
+    float prevZRe = 0.0, prevZIm = 0.0;
+    bool escaped = false;
+    bool settled = false;
+    int escapeIter = 0;
+    // Store a reference z for early period detection
+    float refRe2 = 0.0, refIm2 = 0.0;
+    int checkInterval = 16;
+
+    for (int i = 0; i < LOOP_MAX; i++) {
+      if (i >= u_iteration) break;
+      prevZRe = zRe; prevZIm = zIm;
+      float zRe2 = zRe * zRe - zIm * zIm + cRe;
+      float zIm2 = 2.0 * zRe * zIm + cIm;
+      zRe = zRe2; zIm = zIm2;
+      if (zRe * zRe + zIm * zIm > 4.0) { escaped = true; escapeIter = i; break; }
+
+      // Early bail for settled points: periodically check if z has returned
+      if (u_cullSettled && i > 20) {
+        // Update reference every checkInterval steps (cycle detection)
+        if (i == checkInterval) { refRe2 = zRe; refIm2 = zIm; checkInterval *= 2; }
+        float dR = zRe - refRe2;
+        float dI = zIm - refIm2;
+        if (dR * dR + dI * dI < 0.00001) { settled = true; break; }
+      }
+    }
+
+    // Hide settled or escaped points
+    if (settled) {
+      gl_Position = vec4(10.0, 10.0, 10.0, 1.0);
+      v_color = vec4(0.0);
+      return;
+    }
+    if (escaped) {
+      gl_Position = vec4(10.0, 10.0, 10.0, 1.0);
+      v_color = vec4(0.0);
+      return;
+    }
+
+    // Period detection: only after enough iterations for orbits to settle
+    float refRe = zRe, refIm = zIm;
+    int period = 0;
+    float pzRe = zRe, pzIm = zIm;
+    for (int i = 0; i < 256; i++) {
+      if (u_iteration < 20) break;
+      float pzRe2 = pzRe * pzRe - pzIm * pzIm + cRe;
+      float pzIm2 = 2.0 * pzRe * pzIm + cIm;
+      pzRe = pzRe2; pzIm = pzIm2;
+      // Check if z returned close to reference
+      float dRe = pzRe - refRe;
+      float dIm = pzIm - refIm;
+      if (dRe * dRe + dIm * dIm < 0.0001) {
+        period = i + 1;
+        break;
+      }
+      if (pzRe * pzRe + pzIm * pzIm > 4.0) break; // escaped during detection
+    }
+
+
+    // Compute all three displacements
+    float zMag = sqrt(zRe * zRe + zIm * zIm);
+    float cMag = sqrt(cRe * cRe + cIm * cIm);
+
+    // Compute all three displacements
+    float magDisp = signSqrt(zMag - cMag);
+
+    float det = zRe * cIm - cRe * zIm;
+    float fracDisp = signSqrt(det);
+
+    float angleZ = atan(zIm, zRe);
+    float angleC = atan(cIm, cRe);
+    float angDiff = angleZ - angleC;
+    if (angDiff > 3.14159) angDiff -= 6.28318;
+    if (angDiff < -3.14159) angDiff += 6.28318;
+    float angDisp = signSqrt(angDiff);
+
+    // Mode 4: Sine — det / (|z| * |c|), bounded [-1,1], no real-axis blowup
+    float magProduct = zMag * cMag;
+    float sineDisp = magProduct < 0.0001 ? signSqrt(det) : signSqrt(det / magProduct);
+
+    vec3 pos;
+    vec3 planeColor;
+
+    float disp = 0.0;
+    if (u_plane == 0) {
+      disp = magDisp;
+      planeColor = vec3(1.0, 0.4, 0.4);
+    } else if (u_plane == 1) {
+      disp = fracDisp;
+      planeColor = vec3(0.4, 1.0, 0.4);
+    } else if (u_plane == 2) {
+      disp = angDisp;
+      planeColor = vec3(0.4, 0.4, 1.0);
+    } else {
+      disp = sineDisp;
+      planeColor = vec3(1.0, 0.8, 0.2);
+    }
+    pos = vec3(zRe, zIm, disp);
+
+    gl_Position = u_mvp * vec4(pos, 1.0);
+    gl_PointSize = u_pointSize;
+
+    // Color: period-based for interior, plane color for boundary
+    if (period > 0) {
+      // Interior point with detected period — color by period
+      float periodHue = mod(float(period), 12.0) / 12.0;
+      float periodVal = 0.5 + 0.5 / float(period); // brighter for low periods
+      v_color = vec4(hsv2rgb(periodHue, 0.9, periodVal), 0.7);
+    } else {
+      // Boundary or unresolved — use plane color
+      v_color = vec4(planeColor * 0.8, 0.6);
+    }
+
+    if (escaped) {
+      // Dim but keep visible
+    }
+  }
+`;
+
+var fragmentSrc = `
+  precision mediump float;
+  varying vec4 v_color;
+  void main() {
+    vec2 pc = gl_PointCoord * 2.0 - 1.0;
+    if (dot(pc, pc) > 1.0) discard;
+    gl_FragColor = v_color;
+  }
+`;
+
+// ── Matrix math ──────────────────────────────────────────────────────────────
+function mat4Multiply(out, a, b) {
+  for (var i = 0; i < 4; i++) {
+    var ai0=a[i],ai1=a[i+4],ai2=a[i+8],ai3=a[i+12];
+    out[i]=ai0*b[0]+ai1*b[1]+ai2*b[2]+ai3*b[3];
+    out[i+4]=ai0*b[4]+ai1*b[5]+ai2*b[6]+ai3*b[7];
+    out[i+8]=ai0*b[8]+ai1*b[9]+ai2*b[10]+ai3*b[11];
+    out[i+12]=ai0*b[12]+ai1*b[13]+ai2*b[14]+ai3*b[15];
+  }
+  return out;
+}
+function mat4Perspective(out,fov,aspect,near,far){
+  var f=1/Math.tan(fov/2),nf=1/(near-far);
+  out.fill(0);out[0]=f/aspect;out[5]=f;out[10]=(far+near)*nf;out[11]=-1;out[14]=2*far*near*nf;
+  return out;
+}
+function mat4LookAt(out,ex,ey,ez,tx,ty,tz,ux,uy,uz){
+  var fx=ex-tx,fy=ey-ty,fz=ez-tz,len=Math.sqrt(fx*fx+fy*fy+fz*fz);
+  if(len>0){fx/=len;fy/=len;fz/=len;}
+  var rx=uy*fz-uz*fy,ry=uz*fx-ux*fz,rz=ux*fy-uy*fx;
+  len=Math.sqrt(rx*rx+ry*ry+rz*rz);
+  if(len>0){rx/=len;ry/=len;rz/=len;}
+  var uux=fy*rz-fz*ry,uuy=fz*rx-fx*rz,uuz=fx*ry-fy*rx;
+  out[0]=rx;out[1]=uux;out[2]=fx;out[3]=0;
+  out[4]=ry;out[5]=uuy;out[6]=fy;out[7]=0;
+  out[8]=rz;out[9]=uuz;out[10]=fz;out[11]=0;
+  out[12]=-(rx*ex+ry*ey+rz*ez);out[13]=-(uux*ex+uuy*ey+uuz*ez);
+  out[14]=-(fx*ex+fy*ey+fz*ez);out[15]=1;
+  return out;
+}
+
+var _p=new Float32Array(16),_v=new Float32Array(16),_m=new Float32Array(16);
+function buildMVP(){
+  var a=canvas.width/canvas.height;
+  mat4Perspective(_p,0.9,a,0.1,500);
+  var ex=camDist*Math.sin(rotY)*Math.cos(rotX);
+  var ey=camDist*Math.sin(rotX);
+  var ez=camDist*Math.cos(rotY)*Math.cos(rotX);
+  mat4LookAt(_v,ex,ey,ez,0,0,0,0,1,0);
+  return mat4Multiply(_m,_p,_v);
+}
+
+// ── Shader setup ─────────────────────────────────────────────────────────────
+function createShader(type,src){
+  var s=gl.createShader(type);gl.shaderSource(s,src);gl.compileShader(s);
+  if(!gl.getShaderParameter(s,gl.COMPILE_STATUS)){console.error(gl.getShaderInfoLog(s));return null;}
+  return s;
+}
+
+var program=null, uMVP,uPointSize,uIteration,uMinIter,uPlane,uCullSettled,aC;
+var currentLoopMax=0;
+
+function buildProgram(loopMax){
+  if(loopMax===currentLoopMax&&program)return;
+  currentLoopMax=loopMax;
+  var src=vertexSrc.replace(/LOOP_MAX/g,String(loopMax));
+  var vs=createShader(gl.VERTEX_SHADER,src);
+  var fs=createShader(gl.FRAGMENT_SHADER,fragmentSrc);
+  if(program)gl.deleteProgram(program);
+  program=gl.createProgram();
+  gl.attachShader(program,vs);gl.attachShader(program,fs);gl.linkProgram(program);
+  if(!gl.getProgramParameter(program,gl.LINK_STATUS)){console.error('Link:',gl.getProgramInfoLog(program));return;}
+  gl.useProgram(program);
+  uMVP=gl.getUniformLocation(program,'u_mvp');
+  uPointSize=gl.getUniformLocation(program,'u_pointSize');
+  uIteration=gl.getUniformLocation(program,'u_iteration');
+  uMinIter=gl.getUniformLocation(program,'u_minIter');
+  uPlane=gl.getUniformLocation(program,'u_plane');
+  uCullSettled=gl.getUniformLocation(program,'u_cullSettled');
+  aC=gl.getAttribLocation(program,'a_c');
+  gl.enableVertexAttribArray(aC);
+}
+buildProgram(1000);
+
+var pointBuffer=gl.createBuffer();
+var pointCount=0;
+
+// ── Prime grid ───────────────────────────────────────────────────────────────
+function generatePrimePositions(target){
+  var primes=[],sum=0;
+  for(var n=2;sum<target;n++){
+    var ok=true;for(var d=2;d*d<=n;d++){if(n%d===0){ok=false;break;}}
+    if(ok){primes.push(n);sum+=n;}
+  }
+  var ps={};
+  for(var i=0;i<primes.length;i++){var p=primes[i];for(var k=0;k<p;k++){ps[(k/p).toFixed(10)]=k/p;}}
+  var out=[];for(var key in ps)out.push(ps[key]);
+  out.sort(function(a,b){return a-b;});
+  return out;
+}
+
+function buildPoints(){
+  var target=parseInt(document.getElementById('prime-res').value);
+  var primePos=generatePrimePositions(target);
+  var xMin=-2,xMax=0.7,yMin=-1.3,yMax=1.3;
+  var xR=xMax-xMin,yR=yMax-yMin;
+
+  pointCount=primePos.length*primePos.length;
+  var data=new Float32Array(pointCount*2);
+  var idx=0;
+  for(var x=0;x<primePos.length;x++){
+    for(var y=0;y<primePos.length;y++){
+      data[idx++]=xMin+primePos[x]*xR;
+      data[idx++]=yMin+primePos[y]*yR;
+    }
+  }
+  gl.bindBuffer(gl.ARRAY_BUFFER,pointBuffer);
+  gl.bufferData(gl.ARRAY_BUFFER,data,gl.STATIC_DRAW);
+  document.getElementById('info').textContent=
+    pointCount.toLocaleString()+' pts x 4 planes = '+(pointCount*4).toLocaleString()+' total';
+}
+
+// ── Render ───────────────────────────────────────────────────────────────────
+function render(){
+  canvas.width=canvas.clientWidth;canvas.height=canvas.clientHeight;
+  gl.viewport(0,0,canvas.width,canvas.height);
+  var bg=bgColors[bgIndex];
+  gl.clearColor(bg[0],bg[1],bg[2],1);
+  gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);
+  gl.enable(gl.BLEND);
+  if(bgIndex===0||bgIndex===3){gl.blendFunc(gl.SRC_ALPHA,gl.ONE);}
+  else{gl.blendFunc(gl.SRC_ALPHA,gl.ONE_MINUS_SRC_ALPHA);}
+  gl.enable(gl.DEPTH_TEST);gl.depthFunc(gl.LEQUAL);
+
+  var iteration=parseInt(document.getElementById('iterations').value);
+  var pointSize=parseFloat(document.getElementById('point-size').value);
+  var minIter=parseInt(document.getElementById('min-iter').value);
+
+  if(iteration>=currentLoopMax)buildProgram(currentLoopMax*2);
+
+  gl.uniformMatrix4fv(uMVP,false,buildMVP());
+  gl.uniform1f(uPointSize,pointSize);
+  gl.uniform1i(uMinIter,minIter);
+
+  gl.bindBuffer(gl.ARRAY_BUFFER,pointBuffer);
+  gl.vertexAttribPointer(aC,2,gl.FLOAT,false,0,0);
+
+  var planes=[
+    {id:'show-mag',idx:0},
+    {id:'show-frac',idx:1},
+    {id:'show-ang',idx:2},
+    {id:'show-sine',idx:3}
+  ];
+
+  // One draw call per iteration in the frame window, per enabled plane
+  var frameSize = parseInt(document.getElementById('cycle-frame').value);
+  var center = playing ? cycleCenter : iteration;
+  var startIter = Math.max(1, center - frameSize + 1);
+
+  for (var iter = startIter; iter <= center; iter++) {
+    if (iter >= currentLoopMax) buildProgram(currentLoopMax * 2);
+    gl.uniform1i(uIteration, iter);
+    gl.uniform1f(uPointSize, pointSize);
+    gl.uniform1i(uCullSettled, document.getElementById('cull-settled').checked ? 1 : 0);
+    gl.uniformMatrix4fv(uMVP, false, buildMVP());
+
+    for (var p = 0; p < planes.length; p++) {
+      if (!document.getElementById(planes[p].id).checked) continue;
+      gl.uniform1i(uPlane, planes[p].idx);
+      gl.drawArrays(gl.POINTS, 0, pointCount);
+    }
+  }
+
+  // Debug info
+  var cf = parseInt(document.getElementById('cycle-frame').value);
+  var ctr = playing ? cycleCenter : iteration;
+  document.getElementById('debug').textContent =
+    'drawing iterations ' + Math.max(1, ctr - cf + 1) + '-' + ctr +
+    ' (' + cf + ' passes x ' + pointCount + ' pts)';
+}
+
+// ── Controls ─────────────────────────────────────────────────────────────────
+document.getElementById('iterations').addEventListener('input',function(){
+  document.getElementById('iter-display').textContent=this.value;render();
+});
+document.getElementById('prime-res').addEventListener('input',function(){
+  document.getElementById('prime-res-display').textContent=this.value;
+});
+document.getElementById('prime-res').addEventListener('change',function(){buildPoints();render();});
+document.getElementById('point-size').addEventListener('input',render);
+document.getElementById('min-iter').addEventListener('input',function(){
+  document.getElementById('min-iter-display').textContent=this.value;render();
+});
+
+// ── Camera ───────────────────────────────────────────────────────────────────
+var dragging=false,lastX,lastY;
+canvas.addEventListener('mousedown',function(e){dragging=true;lastX=e.clientX;lastY=e.clientY;});
+canvas.addEventListener('mousemove',function(e){
+  if(!dragging)return;
+  rotY+=(e.clientX-lastX)*0.005;rotX+=(e.clientY-lastY)*0.005;
+  rotX=Math.max(-1.5,Math.min(1.5,rotX));lastX=e.clientX;lastY=e.clientY;render();
+});
+canvas.addEventListener('mouseup',function(){dragging=false;});
+canvas.addEventListener('mouseleave',function(){dragging=false;});
+canvas.addEventListener('wheel',function(e){
+  e.preventDefault();camDist*=e.deltaY>0?1.1:0.9;
+  camDist=Math.max(1,Math.min(100,camDist));render();
+},{passive:false});
+
+document.getElementById('cycle-frame').addEventListener('input', function() {
+  document.getElementById('cycle-frame-display').textContent = this.value;
+  render();
+});
+
+function resetCamera(){rotX=-0.3;rotY=0.6;camDist=10;render();}
+function frontView(){rotX=0;rotY=0;camDist=10;render();}
+function sideView(){rotX=0;rotY=Math.PI/2;camDist=10;render();}
+function topView(){rotX=-Math.PI/2;rotY=0;camDist=10;render();}
+function toggleBg(){bgIndex=(bgIndex+1)%bgColors.length;render();}
+
+// ── Play ─────────────────────────────────────────────────────────────────────
+function togglePlay(){
+  playing=!playing;
+  document.getElementById('play-btn').textContent=playing?'Pause \u23F8':'Play \u25B6';
+  document.getElementById('play-btn').classList.toggle('active',playing);
+  if(playing){cycleCenter=0;requestAnimationFrame(animate);}
+}
+function animate(time){
+  if(!playing)return;
+  var speed=parseInt(document.getElementById('speed').value);
+  if(time-lastPlayTime>1000/speed){
+    lastPlayTime=time;
+    var slider=document.getElementById('iterations');
+    var maxIter=parseInt(slider.value);
+    var frameSize=parseInt(document.getElementById('cycle-frame').value);
+
+    // Advance the cycle window
+    cycleCenter++;
+
+    // When window reaches max iterations, extend max
+    if(cycleCenter+frameSize>=maxIter){
+      maxIter=cycleCenter+frameSize+1;
+      slider.value=maxIter;
+      if(maxIter>parseInt(slider.max))slider.max=maxIter;
+      document.getElementById('iter-display').textContent=maxIter;
+    }
+
+    document.getElementById('info').textContent =
+      'cycle: ' + cycleCenter + ' frame: ' + frameSize + ' window: ' + (cycleCenter-frameSize) + '-' + cycleCenter + ' maxIter: ' + maxIter;
+    render();
+  }
+  var interval=1000/speed;
+  var timeToNext=Math.max(16,interval-(performance.now()-lastPlayTime));
+  setTimeout(function(){requestAnimationFrame(animate);},timeToNext);
+}
+
+// ── Init ─────────────────────────────────────────────────────────────────────
+window.addEventListener('resize',render);
+buildPoints();
+render();
+</script>
+</body>
+</html>

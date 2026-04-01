@@ -1,0 +1,598 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Julia Tunnel — Volume (The Block)</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { background: #0a0a0f; color: #ccc; font-family: system-ui, sans-serif; overflow: hidden; height: 100vh; display: flex; flex-direction: column; }
+canvas { flex: 1; display: block; cursor: crosshair; }
+#controls {
+  background: #1a1a2e; padding: 8px 16px; display: flex; align-items: center; gap: 16px;
+  border-top: 1px solid #333; flex-shrink: 0; flex-wrap: wrap;
+}
+#controls label { font-size: 12px; white-space: nowrap; }
+#controls input[type="range"] { width: 180px; }
+#controls .value { font-size: 16px; font-weight: bold; color: #4fc3f7; min-width: 30px; }
+#controls select, #controls input[type="number"], #controls input[type="text"] {
+  background: #222; color: #ccc; border: 1px solid #444; padding: 3px 6px; border-radius: 3px; font-size: 12px;
+}
+.group { display: flex; align-items: center; gap: 6px; }
+button { background: #333; color: #ccc; border: 1px solid #555; padding: 3px 10px; border-radius: 3px; cursor: pointer; font-size: 12px; }
+button:hover { background: #444; }
+button.active { background: #4fc3f7; color: #111; }
+#info { font-size: 11px; color: #666; }
+</style>
+</head>
+<body>
+<canvas id="canvas"></canvas>
+<div id="controls">
+  <div class="group">
+    <label>Mandelbrot grid:</label>
+    <select id="m-res">
+      <option value="50">50x50</option>
+      <option value="80" selected>80x80</option>
+      <option value="120">120x120</option>
+      <option value="160">160x160</option>
+      <option value="300">300x300</option>
+      <option value="500">500x500</option>
+      <option value="800">800x800</option>
+      <option value="primes">Primes (~800)</option>
+    </select>
+  </div>
+  <div class="group">
+    <label>Julia steps:</label>
+    <select id="j-steps">
+      <option value="50">50</option>
+      <option value="100" selected>100</option>
+      <option value="200">200</option>
+      <option value="400">400</option>
+    </select>
+  </div>
+  <div class="group">
+    <label>Tunnel depth:</label>
+    <input type="range" id="tunnel-depth" min="1" max="200" value="20">
+    <span class="value" id="depth-display">20</span>
+  </div>
+  <div class="group">
+    <label>Pt:</label>
+    <input type="range" id="point-size" min="1" max="6" value="1" style="width:60px">
+  </div>
+  <div class="group">
+    <label>Filter:</label>
+    <select id="filter-mode">
+      <option value="all" selected>All</option>
+      <option value="meat">theMeat</option>
+      <option value="maxiter">Max Iterations</option>
+    </select>
+    <label>Min iter:</label>
+    <input type="range" id="min-iter" min="0" max="100" value="8" style="width:80px">
+    <span class="value" id="min-iter-display">8</span>
+    <input type="range" id="meat-low" min="0" max="100" value="10" style="width:60px">
+    <span class="value" id="meat-low-display">10%</span>
+    <input type="range" id="meat-high" min="0" max="100" value="90" style="width:60px">
+    <span class="value" id="meat-high-display">90%</span>
+  </div>
+  <div class="group">
+    <input type="checkbox" id="skip-mandelbrot">
+    <label for="skip-mandelbrot" style="cursor:pointer">Julia Only</label>
+    <input type="checkbox" id="feedback-toggle" onchange="rebuild()">
+    <label for="feedback-toggle" style="cursor:pointer">Feedback</label>
+    <button id="play-btn" onclick="togglePlay()">Play &#9654;</button>
+    <input type="range" id="speed" min="1" max="30" value="5" style="width:60px">
+  </div>
+  <div class="group">
+    <button onclick="resetCamera()">Reset</button>
+    <button onclick="sideView()">Side</button>
+    <button onclick="frontView()">Front</button>
+    <button onclick="topView()">Top</button>
+  </div>
+  <span id="info"></span>
+</div>
+
+<script>
+const canvas = document.getElementById('canvas');
+const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
+if (!gl) { document.body.innerHTML = '<h1 style="color:red;padding:40px">WebGL not supported</h1>'; }
+
+// ── State ────────────────────────────────────────────────────────────────────
+let rotX = -0.4, rotY = 0.6, camDist = 8.0;
+let playing = false, lastPlayTime = 0;
+
+// ── Shaders ──────────────────────────────────────────────────────────────────
+// Each vertex: (c_re, c_im, julia_step_index)
+// 1. Iterate Mandelbrot z=z²+c for tunnelDepth steps to get the escape path point
+// 2. Use that escape path point as Julia C
+// 3. Iterate Julia for julia_step_index steps
+// 4. Position at the Julia z value — this is one point in "the block"
+const vertexSrc = `
+  attribute vec3 a_vertex;  // (c_re, c_im, julia_step_index)
+  uniform mat4 u_mvp;
+  uniform float u_pointSize;
+  uniform int u_tunnelDepth;    // which Mandelbrot escape step to use as Julia C
+  uniform int u_maxJuliaSteps;
+  uniform bool u_feedback;
+  uniform float u_meatLow;      // 0.0-1.0: discard below this fraction
+  uniform float u_meatHigh;     // 0.0-1.0: discard above this fraction
+  uniform int u_filterMode;     // 0=all, 1=theMeat, 2=maxIterations
+  uniform bool u_juliaOnly;     // hide mandelbrot particles, show only julia
+  uniform int u_minIter;        // minimum julia iterations before escape to be visible
+
+  varying vec4 v_color;
+
+  vec3 hsv2rgb(float h, float s, float v) {
+    vec3 c = vec3(h * 6.0, s, v);
+    vec3 rgb = clamp(abs(mod(c.x + vec3(0.0, 4.0, 2.0), 6.0) - 3.0) - 1.0, 0.0, 1.0);
+    return v * mix(vec3(1.0), rgb, s);
+  }
+
+  void main() {
+    float cRe = a_vertex.x;
+    float cIm = a_vertex.y;
+    int juliaStep = int(a_vertex.z);
+
+    // Step 1: Iterate Mandelbrot to get escape path point at tunnelDepth
+    float zRe = 0.0, zIm = 0.0;
+    bool mEscaped = false;
+    int mEscapeIter = 0;
+    for (int i = 0; i < LOOP_MAX; i++) {
+      if (i >= u_tunnelDepth) break;
+      float zRe2 = zRe * zRe - zIm * zIm + cRe;
+      float zIm2 = 2.0 * zRe * zIm + cIm;
+      zRe = zRe2; zIm = zIm2;
+      if (zRe * zRe + zIm * zIm > 100.0) { mEscaped = true; mEscapeIter = i; break; }
+    }
+
+    // Skip points that escaped before reaching tunnel depth
+    if (mEscaped) {
+      gl_Position = vec4(10.0, 10.0, 10.0, 1.0);
+      gl_PointSize = 0.0;
+      v_color = vec4(0.0);
+      return;
+    }
+
+    // The Mandelbrot z at tunnelDepth IS the Julia C
+    float jcRe = zRe;
+    float jcIm = zIm;
+
+    // Step 2: Iterate Julia from origin for ALL steps, track total before escape
+    float jzRe = 0.0, jzIm = 0.0;
+    float prevRe = 0.0, prevIm = 0.0;
+    bool jEscaped = false;
+    int jEscapeIter = 0;
+    int totalJuliaSteps = u_maxJuliaSteps;
+
+    // First pass: find total julia iterations before escape (for maxiter filter)
+    float tzRe = 0.0, tzIm = 0.0;
+    int jTotalIter = totalJuliaSteps;
+    for (int i = 0; i < LOOP_MAX; i++) {
+      if (i >= totalJuliaSteps) break;
+      float t2 = tzRe * tzRe - tzIm * tzIm + jcRe;
+      float ti2 = 2.0 * tzRe * tzIm + jcIm;
+      tzRe = t2; tzIm = ti2;
+      if (tzRe * tzRe + tzIm * tzIm > 100.0) { jTotalIter = i; break; }
+    }
+
+    // Filter: maxIterations mode — only show points that reached max iterations
+    if (u_filterMode == 2 && jTotalIter < totalJuliaSteps) {
+      gl_Position = vec4(10.0, 10.0, 10.0, 1.0);
+      gl_PointSize = 0.0;
+      v_color = vec4(0.0);
+      return;
+    }
+
+    // Second pass: iterate to juliaStep
+    for (int i = 0; i < LOOP_MAX; i++) {
+      if (i >= juliaStep) break;
+      prevRe = jzRe; prevIm = jzIm;
+      float jzRe2 = jzRe * jzRe - jzIm * jzIm + jcRe;
+      float jzIm2 = 2.0 * jzRe * jzIm + jcIm;
+      jzRe = jzRe2; jzIm = jzIm2;
+      if (jzRe * jzRe + jzIm * jzIm > 100.0) { jEscaped = true; jEscapeIter = i; break; }
+    }
+
+    // theMeat filter
+    float stepFrac = float(juliaStep) / float(totalJuliaSteps);
+    if (u_filterMode == 1) {
+      if (stepFrac < u_meatLow || stepFrac > u_meatHigh) {
+        gl_Position = vec4(10.0, 10.0, 10.0, 1.0);
+        gl_PointSize = 0.0;
+        v_color = vec4(0.0);
+        return;
+      }
+    }
+
+    // Hide points that escaped too early (below min iterations threshold)
+    if (jEscaped && jEscapeIter < u_minIter) {
+      gl_Position = vec4(10.0, 10.0, 10.0, 1.0);
+      gl_PointSize = 0.0;
+      v_color = vec4(0.0);
+      return;
+    }
+
+    // Julia Only mode: skip points at julia step 1 that are just the mandelbrot z
+    // (juliaStep 1 from origin = jcRe,jcIm — that's the mandelbrot escape path point itself)
+    if (u_juliaOnly && juliaStep <= 1) {
+      gl_Position = vec4(10.0, 10.0, 10.0, 1.0);
+      gl_PointSize = 0.0;
+      v_color = vec4(0.0);
+      return;
+    }
+
+    // Optional feedback: take Julia endpoint, iterate as Mandelbrot c
+    vec2 finalPos = vec2(jzRe, jzIm);
+    bool fbEscaped = false;
+
+    if (u_feedback) {
+      float wRe = 0.0, wIm = 0.0;
+      for (int i = 0; i < LOOP_MAX; i++) {
+        if (i >= u_tunnelDepth) break;
+        float wRe2 = wRe * wRe - wIm * wIm + jzRe;
+        float wIm2 = 2.0 * wRe * wIm + jzIm;
+        wRe = wRe2; wIm = wIm2;
+        if (wRe * wRe + wIm * wIm > 100.0) { fbEscaped = true; break; }
+      }
+      if (!fbEscaped) { finalPos = vec2(wRe, wIm); }
+    }
+
+    // Z depth: magnitude difference (the escaping-z approach from v1)
+    float magFinal = sqrt(finalPos.x * finalPos.x + finalPos.y * finalPos.y);
+    float magPrev = sqrt(prevRe * prevRe + prevIm * prevIm);
+    float zDiff = magFinal - magPrev;
+    float zSign = zDiff >= 0.0 ? 1.0 : -1.0;
+    float depth = zSign * sqrt(abs(zDiff));
+
+    gl_Position = u_mvp * vec4(finalPos.x, finalPos.y, depth, 1.0);
+    gl_PointSize = u_pointSize;
+
+    // Color: hue from original c position, brightness from julia step depth
+    float angle = atan(cIm, cRe);
+    float hue = angle / 6.28318 + 0.5;
+    float sat = u_feedback ? 0.9 : 0.7;
+    float val = jEscaped ? 0.2 + 0.3 * stepFrac : 0.4 + 0.6 * stepFrac;
+    float alpha = fbEscaped ? 0.03 : jEscaped ? 0.15 : 0.5;
+    v_color = vec4(hsv2rgb(hue, sat, val), alpha);
+
+    if (fbEscaped) {
+      gl_Position = vec4(10.0, 10.0, 10.0, 1.0);
+    }
+  }
+`;
+
+const fragmentSrc = `
+  precision mediump float;
+  varying vec4 v_color;
+  void main() {
+    vec2 pc = gl_PointCoord * 2.0 - 1.0;
+    if (dot(pc, pc) > 1.0) discard;
+    gl_FragColor = v_color;
+  }
+`;
+
+// ── Matrix math ──────────────────────────────────────────────────────────────
+function mat4Multiply(out, a, b) {
+  for (var i = 0; i < 4; i++) {
+    var ai0 = a[i], ai1 = a[i+4], ai2 = a[i+8], ai3 = a[i+12];
+    out[i]    = ai0*b[0]  + ai1*b[1]  + ai2*b[2]  + ai3*b[3];
+    out[i+4]  = ai0*b[4]  + ai1*b[5]  + ai2*b[6]  + ai3*b[7];
+    out[i+8]  = ai0*b[8]  + ai1*b[9]  + ai2*b[10] + ai3*b[11];
+    out[i+12] = ai0*b[12] + ai1*b[13] + ai2*b[14] + ai3*b[15];
+  }
+  return out;
+}
+
+function mat4Perspective(out, fov, aspect, near, far) {
+  var f = 1.0 / Math.tan(fov / 2);
+  var nf = 1.0 / (near - far);
+  out.fill(0);
+  out[0] = f / aspect; out[5] = f;
+  out[10] = (far + near) * nf; out[11] = -1;
+  out[14] = 2 * far * near * nf;
+  return out;
+}
+
+function mat4LookAt(out, eyeX, eyeY, eyeZ, tx, ty, tz, upX, upY, upZ) {
+  var fx = eyeX-tx, fy = eyeY-ty, fz = eyeZ-tz;
+  var len = Math.sqrt(fx*fx + fy*fy + fz*fz);
+  if (len > 0) { fx /= len; fy /= len; fz /= len; }
+  var rx = upY*fz-upZ*fy, ry = upZ*fx-upX*fz, rz = upX*fy-upY*fx;
+  len = Math.sqrt(rx*rx + ry*ry + rz*rz);
+  if (len > 0) { rx /= len; ry /= len; rz /= len; }
+  var ux = fy*rz-fz*ry, uy = fz*rx-fx*rz, uz = fx*ry-fy*rx;
+  out[0]=rx; out[1]=ux; out[2]=fx; out[3]=0;
+  out[4]=ry; out[5]=uy; out[6]=fy; out[7]=0;
+  out[8]=rz; out[9]=uz; out[10]=fz; out[11]=0;
+  out[12]=-(rx*eyeX+ry*eyeY+rz*eyeZ);
+  out[13]=-(ux*eyeX+uy*eyeY+uz*eyeZ);
+  out[14]=-(fx*eyeX+fy*eyeY+fz*eyeZ);
+  out[15]=1;
+  return out;
+}
+
+var _proj = new Float32Array(16), _view = new Float32Array(16), _mvp = new Float32Array(16);
+
+function buildMVP() {
+  var aspect = canvas.width / canvas.height;
+  mat4Perspective(_proj, 0.9, aspect, 0.1, 500.0);
+  var eyeX = camDist * Math.sin(rotY) * Math.cos(rotX);
+  var eyeY = camDist * Math.sin(rotX);
+  var eyeZ = camDist * Math.cos(rotY) * Math.cos(rotX);
+  mat4LookAt(_view, eyeX, eyeY, eyeZ, 0, 0, 0, 0, 1, 0);
+  return mat4Multiply(_mvp, _proj, _view);
+}
+
+// ── WebGL setup ──────────────────────────────────────────────────────────────
+function createShader(type, source) {
+  var shader = gl.createShader(type);
+  gl.shaderSource(shader, source);
+  gl.compileShader(shader);
+  if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
+    console.error(gl.getShaderInfoLog(shader));
+    return null;
+  }
+  return shader;
+}
+
+var program = null;
+var uMVP, uPointSize, uTunnelDepth, uMaxJuliaSteps, uFeedback;
+var uMeatLow, uMeatHigh, uFilterMode, uJuliaOnly, uMinIter, aVertex;
+var currentLoopMax = 0;
+
+function buildProgram(loopMax) {
+  if (loopMax === currentLoopMax && program) return;
+  currentLoopMax = loopMax;
+
+  var source = vertexSrc.replace(/LOOP_MAX/g, String(loopMax));
+  var vs = createShader(gl.VERTEX_SHADER, source);
+  var fs = createShader(gl.FRAGMENT_SHADER, fragmentSrc);
+
+  if (program) gl.deleteProgram(program);
+  program = gl.createProgram();
+  gl.attachShader(program, vs);
+  gl.attachShader(program, fs);
+  gl.linkProgram(program);
+  if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
+    console.error('Link:', gl.getProgramInfoLog(program));
+    document.getElementById('info').textContent = 'SHADER ERROR — check console';
+    return;
+  }
+  gl.useProgram(program);
+
+  uMVP = gl.getUniformLocation(program, 'u_mvp');
+  uPointSize = gl.getUniformLocation(program, 'u_pointSize');
+  uTunnelDepth = gl.getUniformLocation(program, 'u_tunnelDepth');
+  uMaxJuliaSteps = gl.getUniformLocation(program, 'u_maxJuliaSteps');
+  uFeedback = gl.getUniformLocation(program, 'u_feedback');
+  uMeatLow = gl.getUniformLocation(program, 'u_meatLow');
+  uMeatHigh = gl.getUniformLocation(program, 'u_meatHigh');
+  uFilterMode = gl.getUniformLocation(program, 'u_filterMode');
+  uJuliaOnly = gl.getUniformLocation(program, 'u_juliaOnly');
+  uMinIter = gl.getUniformLocation(program, 'u_minIter');
+  aVertex = gl.getAttribLocation(program, 'a_vertex');
+  gl.enableVertexAttribArray(aVertex);
+}
+
+// Initial compile
+buildProgram(1000);
+
+var pointBuffer = gl.createBuffer();
+var totalPoints = 0;
+
+// ── Prime-resolution sampling ────────────────────────────────────────────────
+// Generate unique sample positions by subdividing the range by consecutive primes
+// until the sum of primes reaches ~500
+function generatePrimePositions() {
+  var primes = [];
+  var sum = 0;
+  for (var n = 2; sum < 800; n++) {
+    var isPrime = true;
+    for (var d = 2; d * d <= n; d++) {
+      if (n % d === 0) { isPrime = false; break; }
+    }
+    if (isPrime) { primes.push(n); sum += n; }
+  }
+
+  // Each prime P generates positions at k/P for k=0..P-1
+  // Collect unique positions (as fractions to avoid float comparison issues)
+  var posSet = {};
+  for (var pi = 0; pi < primes.length; pi++) {
+    var p = primes[pi];
+    for (var k = 0; k < p; k++) {
+      // Use string key with enough precision
+      var frac = k / p;
+      var key = frac.toFixed(10);
+      posSet[key] = frac;
+    }
+  }
+
+  var positions = [];
+  for (var key in posSet) { positions.push(posSet[key]); }
+  positions.sort(function(a, b) { return a - b; });
+  return positions;
+}
+
+// ── Build vertex data ────────────────────────────────────────────────────────
+// Each vertex: (c_re, c_im, julia_step)
+// Grid of Mandelbrot C values × julia step indices
+function buildPoints() {
+  var mResVal = document.getElementById('m-res').value;
+  var jSteps = parseInt(document.getElementById('j-steps').value);
+
+  // Mandelbrot sample region: [-2, 0.7] x [-1.3, 1.3] (covers the set)
+  var xMin = -2.0, xMax = 0.7, yMin = -1.3, yMax = 1.3;
+  var xRange = xMax - xMin, yRange = yMax - yMin;
+
+  var gridX, gridY, gridLabel;
+
+  if (mResVal === 'primes') {
+    var primePos = generatePrimePositions();
+    gridX = primePos.map(function(f) { return xMin + f * xRange; });
+    gridY = primePos.map(function(f) { return yMin + f * yRange; });
+    gridLabel = primePos.length + 'x' + primePos.length + ' prime';
+  } else {
+    var mRes = parseInt(mResVal);
+    gridX = []; gridY = [];
+    for (var i = 0; i < mRes; i++) {
+      gridX.push(xMin + (i / (mRes - 1)) * xRange);
+      gridY.push(yMin + (i / (mRes - 1)) * yRange);
+    }
+    gridLabel = mRes + 'x' + mRes + ' grid';
+  }
+
+  totalPoints = gridX.length * gridY.length * jSteps;
+  var data = new Float32Array(totalPoints * 3);
+  var idx = 0;
+
+  for (var mx = 0; mx < gridX.length; mx++) {
+    for (var my = 0; my < gridY.length; my++) {
+      var cRe = gridX[mx];
+      var cIm = gridY[my];
+      for (var js = 1; js <= jSteps; js++) {
+        data[idx++] = cRe;
+        data[idx++] = cIm;
+        data[idx++] = js;
+      }
+    }
+  }
+
+  gl.bindBuffer(gl.ARRAY_BUFFER, pointBuffer);
+  gl.bufferData(gl.ARRAY_BUFFER, data, gl.STATIC_DRAW);
+
+  document.getElementById('info').textContent =
+    totalPoints.toLocaleString() + ' vertices (' + gridLabel + ' x ' + jSteps + ' julia steps)';
+}
+
+// ── Render ───────────────────────────────────────────────────────────────────
+function render() {
+  canvas.width = canvas.clientWidth;
+  canvas.height = canvas.clientHeight;
+  gl.viewport(0, 0, canvas.width, canvas.height);
+
+  gl.clearColor(0.02, 0.02, 0.04, 1.0);
+  gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+  gl.enable(gl.BLEND);
+  gl.blendFunc(gl.SRC_ALPHA, gl.ONE);
+  gl.enable(gl.DEPTH_TEST);
+  gl.depthFunc(gl.LEQUAL);
+
+  var pointSize = parseFloat(document.getElementById('point-size').value);
+  var tunnelDepth = parseInt(document.getElementById('tunnel-depth').value);
+  var jSteps = parseInt(document.getElementById('j-steps').value);
+  var meatLow = parseInt(document.getElementById('meat-low').value) / 100.0;
+  var meatHigh = parseInt(document.getElementById('meat-high').value) / 100.0;
+
+  // Recompile shader if iteration exceeds current loop ceiling
+  var maxNeeded = Math.max(tunnelDepth, jSteps);
+  if (maxNeeded >= currentLoopMax) {
+    buildProgram(currentLoopMax * 2);
+  }
+
+  gl.uniformMatrix4fv(uMVP, false, buildMVP());
+  gl.uniform1f(uPointSize, pointSize);
+  gl.uniform1i(uTunnelDepth, tunnelDepth);
+  gl.uniform1i(uMaxJuliaSteps, jSteps);
+  gl.uniform1i(uFeedback, document.getElementById('feedback-toggle').checked ? 1 : 0);
+  gl.uniform1f(uMeatLow, meatLow);
+  gl.uniform1f(uMeatHigh, meatHigh);
+  var filterSelect = document.getElementById('filter-mode').value;
+  var filterMode = filterSelect === 'meat' ? 1 : filterSelect === 'maxiter' ? 2 : 0;
+  gl.uniform1i(uFilterMode, filterMode);
+  gl.uniform1i(uJuliaOnly, document.getElementById('skip-mandelbrot').checked ? 1 : 0);
+  gl.uniform1i(uMinIter, parseInt(document.getElementById('min-iter').value));
+
+  gl.bindBuffer(gl.ARRAY_BUFFER, pointBuffer);
+  gl.vertexAttribPointer(aVertex, 3, gl.FLOAT, false, 0, 0);
+  gl.drawArrays(gl.POINTS, 0, totalPoints);
+}
+
+function rebuild() {
+  var jSteps = parseInt(document.getElementById('j-steps').value);
+  var slider = document.getElementById('tunnel-depth');
+  slider.max = jSteps;
+  if (parseInt(slider.value) > jSteps) slider.value = jSteps;
+  document.getElementById('depth-display').textContent = slider.value;
+  buildPoints();
+  render();
+}
+
+// ── Controls ─────────────────────────────────────────────────────────────────
+document.getElementById('tunnel-depth').addEventListener('input', function() {
+  document.getElementById('depth-display').textContent = this.value;
+  render();
+});
+document.getElementById('m-res').addEventListener('change', rebuild);
+document.getElementById('j-steps').addEventListener('change', rebuild);
+document.getElementById('filter-mode').addEventListener('change', render);
+document.getElementById('skip-mandelbrot').addEventListener('change', render);
+document.getElementById('min-iter').addEventListener('input', function() {
+  document.getElementById('min-iter-display').textContent = this.value;
+  render();
+});
+document.getElementById('point-size').addEventListener('input', render);
+document.getElementById('meat-low').addEventListener('input', function() {
+  document.getElementById('meat-low-display').textContent = this.value + '%';
+  render();
+});
+document.getElementById('meat-high').addEventListener('input', function() {
+  document.getElementById('meat-high-display').textContent = this.value + '%';
+  render();
+});
+
+// ── Camera ───────────────────────────────────────────────────────────────────
+var dragging = false, lastX, lastY;
+canvas.addEventListener('mousedown', function(e) { dragging = true; lastX = e.clientX; lastY = e.clientY; });
+canvas.addEventListener('mousemove', function(e) {
+  if (!dragging) return;
+  rotY += (e.clientX - lastX) * 0.005;
+  rotX += (e.clientY - lastY) * 0.005;
+  rotX = Math.max(-1.5, Math.min(1.5, rotX));
+  lastX = e.clientX; lastY = e.clientY;
+  render();
+});
+canvas.addEventListener('mouseup', function() { dragging = false; });
+canvas.addEventListener('mouseleave', function() { dragging = false; });
+
+canvas.addEventListener('wheel', function(e) {
+  e.preventDefault();
+  camDist *= e.deltaY > 0 ? 1.1 : 0.9;
+  camDist = Math.max(1, Math.min(100, camDist));
+  render();
+}, { passive: false });
+
+function resetCamera() { rotX = -0.4; rotY = 0.6; camDist = 8.0; render(); }
+function sideView() { rotX = 0; rotY = Math.PI/2; camDist = 8.0; render(); }
+function frontView() { rotX = 0; rotY = 0; camDist = 8.0; render(); }
+function topView() { rotX = -Math.PI/2; rotY = 0; camDist = 8.0; render(); }
+
+// ── Play (walk tunnel depth) ─────────────────────────────────────────────────
+function togglePlay() {
+  playing = !playing;
+  document.getElementById('play-btn').textContent = playing ? 'Pause \u23F8' : 'Play \u25B6';
+  document.getElementById('play-btn').classList.toggle('active', playing);
+  if (playing) requestAnimationFrame(animateDepth);
+}
+
+function animateDepth(time) {
+  if (!playing) return;
+  var speed = parseInt(document.getElementById('speed').value);
+  if (time - lastPlayTime > 1000 / speed) {
+    lastPlayTime = time;
+    var slider = document.getElementById('tunnel-depth');
+    var val = parseInt(slider.value) + 1;
+    // Infinite iterations: extend slider instead of resetting
+    if (val > parseInt(slider.max)) {
+      slider.max = val;
+    }
+    slider.value = val;
+    document.getElementById('depth-display').textContent = val;
+    render();
+  }
+  requestAnimationFrame(animateDepth);
+}
+
+// ── Init ─────────────────────────────────────────────────────────────────────
+window.addEventListener('resize', render);
+rebuild();
+</script>
+</body>
+</html>

@@ -1,0 +1,899 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Julia Tunnel Sampler — Adaptive Compute POC</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { background: #0a0a0f; color: #ccc; font-family: system-ui, sans-serif; overflow: hidden; height: 100vh; display: flex; flex-direction: column; }
+canvas { flex: 1; display: block; cursor: crosshair; }
+#controls {
+  background: #1a1a2e; padding: 8px 16px; display: flex; align-items: center; gap: 16px;
+  border-top: 1px solid #333; flex-shrink: 0; flex-wrap: wrap;
+}
+#controls label { font-size: 12px; white-space: nowrap; }
+#controls input[type="range"] { width: 120px; }
+#controls .value { font-size: 14px; font-weight: bold; color: #4fc3f7; min-width: 30px; }
+.group { display: flex; align-items: center; gap: 6px; }
+button { background: #333; color: #ccc; border: 1px solid #555; padding: 3px 10px; border-radius: 3px; cursor: pointer; font-size: 12px; }
+button:hover { background: #444; }
+button.active { background: #4fc3f7; color: #111; }
+#stats {
+  background: #111; padding: 8px 16px; border-top: 1px solid #222; font-size: 12px;
+  display: flex; gap: 24px; flex-shrink: 0; font-family: monospace;
+}
+#stats .stat-label { color: #666; }
+#stats .stat-value { color: #4fc3f7; font-weight: bold; }
+#stats .stat-escaped { color: #ff6666; }
+#stats .stat-bounded { color: #66aaff; }
+#stats .stat-frontier { color: #ffcc00; }
+#stats .stat-saved { color: #66ff66; }
+</style>
+</head>
+<body>
+<canvas id="canvas"></canvas>
+<div id="controls">
+  <div class="group">
+    <label>Primes:</label>
+    <input type="range" id="prime-res" min="100" max="2500" value="1250" step="50">
+    <span class="value" id="prime-res-display">1250</span>
+  </div>
+  <div class="group">
+    <label>Julia probe depth:</label>
+    <input type="range" id="probe-depth" min="2" max="50" value="12">
+    <span class="value" id="probe-depth-display">12</span>
+  </div>
+  <div class="group">
+    <label>Uncertainty threshold:</label>
+    <input type="range" id="threshold" min="1" max="100" value="40" style="width:80px">
+    <span class="value" id="threshold-display">0.40</span>
+  </div>
+  <div class="group">
+    <label>Pt:</label>
+    <input type="range" id="point-size" min="1" max="8" value="3" style="width:60px">
+  </div>
+  <div class="group">
+    <button id="step-btn" onclick="stepOnce()">Step</button>
+    <button id="step10-btn" onclick="stepN(10)">+10</button>
+    <button id="step100-btn" onclick="stepN(100)">+100</button>
+    <button onclick="densify()" style="background:#2a4a2a;color:#6f6">Densify</button>
+    <button onclick="populateViewport()" style="background:#2a2a4a;color:#66f">Resample</button>
+    <button id="play-btn" onclick="togglePlay()">Play &#9654;</button>
+    <input type="range" id="speed" min="1" max="60" value="5" style="width:60px">
+  </div>
+  <div class="group">
+    <button onclick="resetSim()">Reset</button>
+    <button onclick="resetCamera()">Cam</button>
+    <button onclick="frontView()">Front</button>
+    <button onclick="topView()">Top</button>
+    <button onclick="bottomView()">Bottom</button>
+    <button onclick="sideView()">Side</button>
+  </div>
+  <div class="group">
+    <input type="checkbox" id="show-resolved" checked onchange="renderGL()">
+    <label for="show-resolved" style="cursor:pointer">Show resolved</label>
+    <input type="checkbox" id="show-3d" checked onchange="renderGL()">
+    <label for="show-3d" style="cursor:pointer">3D</label>
+    <select id="depth-mode" onchange="renderGL()">
+      <option value="magnitude">Magnitude</option>
+      <option value="fraction">Fraction</option>
+      <option value="angular">Angular</option>
+    </select>
+    <input type="checkbox" id="brute-force">
+    <label for="brute-force" style="cursor:pointer;color:#ff6666">Brute Force</label>
+    <button onclick="toggleBg()">BG</button>
+  </div>
+</div>
+<div id="stats">
+  <div><span class="stat-label">Iteration: </span><span class="stat-value" id="stat-iter">0</span></div>
+  <div><span class="stat-label">Total: </span><span class="stat-value" id="stat-total">0</span></div>
+  <div><span class="stat-label">Escaped: </span><span class="stat-escaped" id="stat-escaped">0</span></div>
+  <div><span class="stat-label">Bounded: </span><span class="stat-bounded" id="stat-bounded">0</span></div>
+  <div><span class="stat-label">Frontier: </span><span class="stat-frontier" id="stat-frontier">0</span></div>
+  <div><span class="stat-label">Skipped this step: </span><span class="stat-saved" id="stat-skipped">0</span></div>
+  <div><span class="stat-label">Total compute saved: </span><span class="stat-saved" id="stat-savings">0%</span></div>
+  <div><span class="stat-label" id="info"></span></div>
+</div>
+
+<script>
+const canvas = document.getElementById('canvas');
+const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
+
+// ── State ────────────────────────────────────────────────────────────────────
+let rotX = -0.4, rotY = 0.6, camDist = 6.0;
+let playing = false, lastPlayTime = 0;
+
+// Point states
+const UNDECIDED = 0, ESCAPED = 1, BOUNDED = 2, FRONTIER = 3;
+
+// Simulation data — all on CPU
+// Point data — single flat array, rebuilt on densify
+// Each point: [cRe, cIm, zRe, zIm, state, escapeIter, uncertainty, curMag, escapingZ]
+let points = null;
+let currentIter = 0;
+let totalComputed = 0;
+let totalPossible = 0;
+let densifyCount = 0;
+let frontierHistory = []; // track frontier counts for auto-densify
+const STABLE_WINDOW = 5;  // consecutive stable steps before auto-densify
+const STABLE_THRESHOLD = 0.01; // 1% change threshold
+const STRIDE = 9;
+const BAILOUT = 4.0;
+
+// ── Prime grid generation ────────────────────────────────────────────────────
+function generatePrimePositions(target) {
+  var primes = [], sum = 0;
+  for (var n = 2; sum < target; n++) {
+    var isPrime = true;
+    for (var d = 2; d * d <= n; d++) {
+      if (n % d === 0) { isPrime = false; break; }
+    }
+    if (isPrime) { primes.push(n); sum += n; }
+  }
+  var posSet = {};
+  for (var pi = 0; pi < primes.length; pi++) {
+    var p = primes[pi];
+    for (var k = 0; k < p; k++) {
+      posSet[(k / p).toFixed(10)] = k / p;
+    }
+  }
+  var positions = [];
+  for (var key in posSet) positions.push(posSet[key]);
+  positions.sort(function(a, b) { return a - b; });
+  return positions;
+}
+
+// ── Initialize simulation ────────────────────────────────────────────────────
+function initSim() {
+  var primeTarget = parseInt(document.getElementById('prime-res').value);
+  var primePos = generatePrimePositions(primeTarget);
+  var xMin = -2.0, xMax = 0.7, yMin = -1.3, yMax = 1.3;
+  var xRange = xMax - xMin, yRange = yMax - yMin;
+
+  var gridX = primePos.map(function(f) { return xMin + f * xRange; });
+  var gridY = primePos.map(function(f) { return yMin + f * yRange; });
+
+  var numPoints = gridX.length * gridY.length;
+  points = new Float64Array(numPoints * STRIDE);
+  var idx = 0;
+  for (var mx = 0; mx < gridX.length; mx++) {
+    for (var my = 0; my < gridY.length; my++) {
+      points[idx + 0] = gridX[mx];
+      points[idx + 1] = gridY[my];
+      points[idx + 4] = UNDECIDED;
+      points[idx + 5] = -1;
+      points[idx + 6] = 1.0;
+      idx += STRIDE;
+    }
+  }
+
+  currentIter = 0;
+  totalComputed = 0;
+  totalPossible = 0;
+  densifyCount = 0;
+  frontierHistory = [];
+}
+
+// ── EscapingZ: three displacement modes ──────────────────────────────────────
+function signSqrt(v) {
+  return (v >= 0 ? 1 : -1) * Math.sqrt(Math.abs(v));
+}
+
+function computeEscapingZ_magnitude(zRe, zIm, cRe, cIm) {
+  var zMag = Math.sqrt(zRe * zRe + zIm * zIm);
+  var cMag = Math.sqrt(cRe * cRe + cIm * cIm);
+  return signSqrt(zMag - cMag);
+}
+
+function computeEscapingZ_fraction(zRe, zIm, cRe, cIm) {
+  // Pure determinant (cross product): zRe*cIm - cRe*zIm
+  // No denominator — division creates stacking artifacts
+  return signSqrt(zRe * cIm - cRe * zIm);
+}
+
+function computeEscapingZ_angular(zRe, zIm, cRe, cIm) {
+  var angleZ = Math.atan2(zIm, zRe);
+  var angleC = Math.atan2(cIm, cRe);
+  var diff = angleZ - angleC;
+  // Normalize to [-PI, PI]
+  if (diff > Math.PI) diff -= 2 * Math.PI;
+  if (diff < -Math.PI) diff += 2 * Math.PI;
+  return signSqrt(diff);
+}
+
+var depthModeFn = computeEscapingZ_magnitude;
+
+function computeEscapingZ(zRe, zIm, cRe, cIm) {
+  return depthModeFn(zRe, zIm, cRe, cIm);
+}
+
+// ── Julia probe: estimate uncertainty using the LHS ──────────────────────────
+// Run a short Julia iteration using current z as C
+// Track the escapingZ (LHS) of the Julia path — the rate of change tells us
+// how dynamic this region is. High |escapingZ| variance = uncertain frontier.
+function juliaProbe(zRe, zIm, probeDepth) {
+  var jzRe = 0, jzIm = 0;
+  var prevJMag = 0;
+  var escaped = false;
+  var escapeStep = probeDepth;
+  var maxEscZ = 0, minEscZ = 0;
+
+  var jcRe = zRe, jcIm = zIm;
+  var jcMag = Math.sqrt(jcRe * jcRe + jcIm * jcIm);
+
+  for (var i = 0; i < probeDepth; i++) {
+    var jzRe2 = jzRe * jzRe - jzIm * jzIm + jcRe;
+    var jzIm2 = 2 * jzRe * jzIm + jcIm;
+    jzRe = jzRe2; jzIm = jzIm2;
+    var jMag = Math.sqrt(jzRe * jzRe + jzIm * jzIm);
+
+    // Compute Julia escapingZ
+    var jEscZ = computeEscapingZ(jzRe, jzIm, jcRe, jcIm);
+    if (jEscZ > maxEscZ) maxEscZ = jEscZ;
+    if (jEscZ < minEscZ) minEscZ = jEscZ;
+
+    if (jMag * jMag > BAILOUT) {
+      escapeStep = i;
+      escaped = true;
+      break;
+    }
+  }
+
+  // Uncertainty from the LHS spread: wide range = dynamic region = uncertain
+  var escZRange = maxEscZ - minEscZ;
+
+  if (escaped) {
+    // Escaped — uncertainty from how long it took relative to probe depth
+    // AND how wild the escapingZ was before it left
+    return Math.min(1.0, (escapeStep / probeDepth) * 0.5 + escZRange * 0.3);
+  } else {
+    // Bounded — uncertainty from magnitude and escapingZ dynamics
+    var jMagFinal = Math.sqrt(jzRe * jzRe + jzIm * jzIm);
+    if (jMagFinal < 0.1 && escZRange < 0.1) return 0.05;  // deep interior, settled
+    return Math.min(1.0, escZRange * 0.5 + jMagFinal * 0.3);
+  }
+}
+
+// ── Step simulation ──────────────────────────────────────────────────────────
+function stepOnce() {
+  var numPoints = points.length / STRIDE;
+  var probeDepth = parseInt(document.getElementById('probe-depth').value);
+  var threshold = parseInt(document.getElementById('threshold').value) / 100;
+
+  var bruteForce = document.getElementById('brute-force').checked;
+  var escaped = 0, bounded = 0, frontier = 0, skipped = 0, computed = 0;
+
+  currentIter++;
+  totalPossible += numPoints;
+
+  for (var i = 0; i < points.length; i += STRIDE) {
+    var state = points[i + 4];
+
+    // Bounded — fully resolved, skip
+    if (state === BOUNDED) {
+      bounded++;
+      skipped++;
+      continue;
+    }
+
+    // Escaped — keep iterating for a few more steps so they fly off visually
+    if (state === ESCAPED) {
+      escaped++;
+      var escIter = points[i + 5];
+      if (currentIter - escIter > 8) {
+        // Far enough past escape — stop updating
+        skipped++;
+        continue;
+      }
+      // Still in the departure window — keep computing z so the LHS explodes
+      var eZRe = points[i + 2], eZIm = points[i + 3];
+      var eCRe = points[i + 0], eCIm = points[i + 1];
+      var eZRe2 = eZRe * eZRe - eZIm * eZIm + eCRe;
+      var eZIm2 = 2 * eZRe * eZIm + eCIm;
+      points[i + 2] = eZRe2;
+      points[i + 3] = eZIm2;
+      var eMag = Math.sqrt(eZRe2 * eZRe2 + eZIm2 * eZIm2);
+      points[i + 8] = computeEscapingZ(eZRe2, eZIm2, eCRe, eCIm);
+      points[i + 7] = eMag;
+      computed++;
+      continue;
+    }
+
+    var cRe = points[i + 0], cIm = points[i + 1];
+    var zRe = points[i + 2], zIm = points[i + 3];
+
+    var uncertainty = 1.0;
+    if (!bruteForce) {
+      // Julia probe to estimate uncertainty
+      uncertainty = juliaProbe(zRe, zIm, probeDepth);
+      points[i + 6] = uncertainty;
+
+      // If uncertainty is below threshold AND we've done enough iterations to trust it,
+      // predict the outcome instead of computing
+      if (currentIter > 8 && uncertainty < threshold * 0.3) {
+        // Very low uncertainty — predict bounded, mark as such
+        points[i + 4] = BOUNDED;
+        bounded++;
+        skipped++;
+        continue;
+      }
+    }
+
+    // Actually compute this point
+    computed++;
+    var zRe2 = zRe * zRe - zIm * zIm + cRe;
+    var zIm2 = 2 * zRe * zIm + cIm;
+    points[i + 2] = zRe2;
+    points[i + 3] = zIm2;
+
+    // Compute escapingZ in current depth mode
+    var curMag = Math.sqrt(zRe2 * zRe2 + zIm2 * zIm2);
+    points[i + 8] = computeEscapingZ(zRe2, zIm2, cRe, cIm);
+    points[i + 7] = curMag;
+
+    if (zRe2 * zRe2 + zIm2 * zIm2 > BAILOUT) {
+      points[i + 4] = ESCAPED;
+      points[i + 5] = currentIter;
+      escaped++;
+    } else if (uncertainty > threshold) {
+      points[i + 4] = FRONTIER;
+      frontier++;
+    } else {
+      points[i + 4] = UNDECIDED;
+    }
+  }
+
+  totalComputed += computed;
+  var savings = totalPossible > 0 ? ((1 - totalComputed / totalPossible) * 100).toFixed(1) : '0';
+
+  document.getElementById('stat-iter').textContent = currentIter;
+  document.getElementById('stat-total').textContent = (points.length / STRIDE).toLocaleString();
+  document.getElementById('stat-escaped').textContent = escaped.toLocaleString();
+  document.getElementById('stat-bounded').textContent = bounded.toLocaleString();
+  document.getElementById('stat-frontier').textContent = frontier.toLocaleString();
+  document.getElementById('stat-skipped').textContent = skipped.toLocaleString();
+  document.getElementById('stat-savings').textContent = savings + '%';
+
+  // Auto-densify: check if frontier has stabilized
+  frontierHistory.push(frontier);
+  if (frontierHistory.length > STABLE_WINDOW) {
+    frontierHistory.shift();
+    if (frontierHistory.length === STABLE_WINDOW && frontier > 0) {
+      var maxF = Math.max.apply(null, frontierHistory);
+      var minF = Math.min.apply(null, frontierHistory);
+      var range = maxF - minF;
+      var avg = frontierHistory.reduce(function(a, b) { return a + b; }, 0) / STABLE_WINDOW;
+      if (avg > 0 && range / avg < STABLE_THRESHOLD) {
+        document.getElementById('info').textContent = 'Auto-densifying at iter ' + currentIter + ' (frontier stable at ' + frontier + ')';
+        frontierHistory = [];
+        densify();
+        return; // densify already calls uploadPoints + renderGL
+      }
+    }
+  }
+
+  uploadPoints();
+  renderGL();
+}
+
+function stepN(n) { for (var i = 0; i < n; i++) stepOnce(); }
+
+// ── Densify: drop a fine prime grid around frontier points ───────────────────
+function densify() {
+  densifyCount++;
+  var numPoints = points.length / STRIDE;
+
+  // Collect frontier and undecided point positions
+  var frontierPoints = [];
+  for (var i = 0; i < points.length; i += STRIDE) {
+    var state = points[i + 4];
+    if (state === FRONTIER || state === UNDECIDED) {
+      frontierPoints.push([points[i], points[i + 1]]);
+    }
+  }
+
+  if (frontierPoints.length === 0) return;
+
+  // Find the typical spacing between frontier points to set the densify radius
+  // Use a fraction of the original grid spacing — gets tighter each densify pass
+  var primeTarget = parseInt(document.getElementById('prime-res').value);
+  var baseSpacing = 2.7 / Math.sqrt(primeTarget); // rough grid spacing
+  var radius = baseSpacing / Math.pow(2, densifyCount); // halves each pass
+
+  // Generate a small prime grid to use as offsets
+  var microPrimes = generatePrimePositions(Math.min(200, 50 * densifyCount));
+  var offsets = microPrimes.map(function(f) { return (f - 0.5) * 2 * radius; });
+
+  // Track existing c values to avoid duplicates
+  var existing = {};
+  for (var i = 0; i < points.length; i += STRIDE) {
+    existing[points[i].toFixed(8) + ',' + points[i + 1].toFixed(8)] = true;
+  }
+
+  // Generate new points around each frontier point
+  var newPoints = [];
+  for (var fi = 0; fi < frontierPoints.length; fi++) {
+    var fc = frontierPoints[fi];
+    for (var ox = 0; ox < offsets.length; ox++) {
+      for (var oy = 0; oy < offsets.length; oy++) {
+        var cRe = fc[0] + offsets[ox];
+        var cIm = fc[1] + offsets[oy];
+        var key = cRe.toFixed(8) + ',' + cIm.toFixed(8);
+        if (existing[key]) continue;
+        existing[key] = true;
+
+        // Fast-forward this new point to current iteration
+        var zRe = 0, zIm = 0, esc = false, escIter = -1;
+        var curMag = 0, cMag = Math.sqrt(cRe * cRe + cIm * cIm);
+        var escapingZ = 0;
+        for (var n = 0; n < currentIter; n++) {
+          var zRe2 = zRe * zRe - zIm * zIm + cRe;
+          var zIm2 = 2 * zRe * zIm + cIm;
+          zRe = zRe2; zIm = zIm2;
+          curMag = Math.sqrt(zRe * zRe + zIm * zIm);
+          escapingZ = computeEscapingZ(zRe, zIm, cRe, cIm);
+          if (zRe * zRe + zIm * zIm > BAILOUT) {
+            esc = true; escIter = n + 1; break;
+          }
+        }
+
+        newPoints.push(cRe, cIm, zRe, zIm,
+          esc ? ESCAPED : UNDECIDED, escIter, 1.0, curMag, escapingZ);
+      }
+    }
+  }
+
+  if (newPoints.length === 0) return;
+
+  // Grow the points array
+  var grown = new Float64Array(points.length + newPoints.length);
+  grown.set(points);
+  for (var j = 0; j < newPoints.length; j++) {
+    grown[points.length + j] = newPoints[j];
+  }
+  points = grown;
+
+  var added = newPoints.length / STRIDE;
+  document.getElementById('stat-total').textContent = (points.length / STRIDE).toLocaleString();
+  document.getElementById('info').textContent =
+    'Densify #' + densifyCount + ': +' + added.toLocaleString() + ' points around ' +
+    frontierPoints.length + ' frontier pts (radius ' + radius.toFixed(6) + ')';
+
+  uploadPoints();
+  renderGL();
+}
+
+function resetSim() {
+  initSim();
+  uploadPoints();
+  renderGL();
+  document.getElementById('stat-iter').textContent = '0';
+  document.getElementById('stat-escaped').textContent = '0';
+  document.getElementById('stat-bounded').textContent = '0';
+  document.getElementById('stat-frontier').textContent = '0';
+  document.getElementById('stat-skipped').textContent = '0';
+  document.getElementById('stat-savings').textContent = '0%';
+}
+
+// ── WebGL rendering ──────────────────────────────────────────────────────────
+const vertexSrc = `
+  attribute vec2 a_c;          // original c position
+  attribute vec2 a_z;          // current z position
+  attribute float a_state;     // 0=undecided, 1=escaped, 2=bounded, 3=frontier
+  attribute float a_escIter;   // iteration when escaped (-1 if not)
+  attribute float a_uncertainty;
+  attribute float a_prevMag;
+  attribute float a_escapingZ;
+
+  uniform mat4 u_mvp;
+  uniform float u_pointSize;
+  uniform float u_maxIter;
+  uniform bool u_showResolved;
+  uniform bool u_show3d;
+
+  varying vec4 v_color;
+
+  vec3 hsv2rgb(float h, float s, float v) {
+    vec3 c = vec3(h * 6.0, s, v);
+    vec3 rgb = clamp(abs(mod(c.x + vec3(0.0, 4.0, 2.0), 6.0) - 3.0) - 1.0, 0.0, 1.0);
+    return v * mix(vec3(1.0), rgb, s);
+  }
+
+  void main() {
+    int state = int(a_state);
+
+    // Hide resolved if toggled off
+    if (!u_showResolved && (state == 1 || state == 2)) {
+      gl_Position = vec4(10.0, 10.0, 10.0, 1.0);
+      gl_PointSize = 0.0;
+      v_color = vec4(0.0);
+      return;
+    }
+
+    // Position: use current z for x/y, escapingZ (LHS) for depth
+    // This matches MBE: particles positioned where the iteration IS, not where it started
+    float depth = u_show3d ? a_escapingZ : 0.0;
+    vec2 pos = u_show3d ? a_z : a_c;  // z-space in 3D, c-space in 2D
+    gl_Position = u_mvp * vec4(pos.x, pos.y, depth, 1.0);
+    gl_PointSize = u_pointSize;
+
+    // Color by state
+    if (state == 1) {
+      // Escaped — red, dimmer for early escapes
+      float escapeFrac = a_escIter / u_maxIter;
+      float hue = 0.0 + escapeFrac * 0.1; // red to orange
+      v_color = vec4(hsv2rgb(hue, 0.8, 0.15 + 0.25 * escapeFrac), 0.3);
+    } else if (state == 2) {
+      // Bounded (predicted) — blue, dim
+      v_color = vec4(hsv2rgb(0.6, 0.5, 0.15), 0.2);
+    } else if (state == 3) {
+      // Frontier — bright yellow/white based on uncertainty
+      float hue = 0.15 - a_uncertainty * 0.1; // yellow to green-yellow
+      float val = 0.5 + a_uncertainty * 0.5;
+      v_color = vec4(hsv2rgb(hue, 0.9, val), 0.8);
+    } else {
+      // Undecided — cyan, moderate
+      v_color = vec4(hsv2rgb(0.5, 0.6, 0.3), 0.4);
+    }
+  }
+`;
+
+const fragmentSrc = `
+  precision mediump float;
+  varying vec4 v_color;
+  void main() {
+    vec2 pc = gl_PointCoord * 2.0 - 1.0;
+    if (dot(pc, pc) > 1.0) discard;
+    gl_FragColor = v_color;
+  }
+`;
+
+// ── Matrix math ──────────────────────────────────────────────────────────────
+function mat4Multiply(out, a, b) {
+  for (var i = 0; i < 4; i++) {
+    var ai0 = a[i], ai1 = a[i+4], ai2 = a[i+8], ai3 = a[i+12];
+    out[i]    = ai0*b[0]  + ai1*b[1]  + ai2*b[2]  + ai3*b[3];
+    out[i+4]  = ai0*b[4]  + ai1*b[5]  + ai2*b[6]  + ai3*b[7];
+    out[i+8]  = ai0*b[8]  + ai1*b[9]  + ai2*b[10] + ai3*b[11];
+    out[i+12] = ai0*b[12] + ai1*b[13] + ai2*b[14] + ai3*b[15];
+  }
+  return out;
+}
+
+function mat4Perspective(out, fov, aspect, near, far) {
+  var f = 1.0 / Math.tan(fov / 2);
+  var nf = 1.0 / (near - far);
+  out.fill(0);
+  out[0] = f / aspect; out[5] = f;
+  out[10] = (far + near) * nf; out[11] = -1;
+  out[14] = 2 * far * near * nf;
+  return out;
+}
+
+function mat4LookAt(out, eyeX, eyeY, eyeZ, tx, ty, tz, upX, upY, upZ) {
+  var fx = eyeX-tx, fy = eyeY-ty, fz = eyeZ-tz;
+  var len = Math.sqrt(fx*fx + fy*fy + fz*fz);
+  if (len > 0) { fx /= len; fy /= len; fz /= len; }
+  var rx = upY*fz-upZ*fy, ry = upZ*fx-upX*fz, rz = upX*fy-upY*fx;
+  len = Math.sqrt(rx*rx + ry*ry + rz*rz);
+  if (len > 0) { rx /= len; ry /= len; rz /= len; }
+  var ux = fy*rz-fz*ry, uy = fz*rx-fx*rz, uz = fx*ry-fy*rx;
+  out[0]=rx; out[1]=ux; out[2]=fx; out[3]=0;
+  out[4]=ry; out[5]=uy; out[6]=fy; out[7]=0;
+  out[8]=rz; out[9]=uz; out[10]=fz; out[11]=0;
+  out[12]=-(rx*eyeX+ry*eyeY+rz*eyeZ);
+  out[13]=-(ux*eyeX+uy*eyeY+uz*eyeZ);
+  out[14]=-(fx*eyeX+fy*eyeY+fz*eyeZ);
+  out[15]=1;
+  return out;
+}
+
+var _proj = new Float32Array(16), _view = new Float32Array(16), _mvp = new Float32Array(16);
+
+function buildMVP() {
+  var aspect = canvas.width / canvas.height;
+  mat4Perspective(_proj, 0.9, aspect, 0.1, 500.0);
+  var eyeX = camDist * Math.sin(rotY) * Math.cos(rotX);
+  var eyeY = camDist * Math.sin(rotX);
+  var eyeZ = camDist * Math.cos(rotY) * Math.cos(rotX);
+  mat4LookAt(_view, eyeX + viewport.cRe, eyeY + viewport.cIm, eyeZ, viewport.cRe, viewport.cIm, 0, 0, 1, 0);
+  return mat4Multiply(_mvp, _proj, _view);
+}
+
+// ── Shader setup ─────────────────────────────────────────────────────────────
+function createShader(type, source) {
+  var shader = gl.createShader(type);
+  gl.shaderSource(shader, source);
+  gl.compileShader(shader);
+  if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
+    console.error(gl.getShaderInfoLog(shader));
+    return null;
+  }
+  return shader;
+}
+
+var vs = createShader(gl.VERTEX_SHADER, vertexSrc);
+var fs = createShader(gl.FRAGMENT_SHADER, fragmentSrc);
+var program = gl.createProgram();
+gl.attachShader(program, vs);
+gl.attachShader(program, fs);
+gl.linkProgram(program);
+if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
+  console.error('Link:', gl.getProgramInfoLog(program));
+}
+gl.useProgram(program);
+
+var uMVP = gl.getUniformLocation(program, 'u_mvp');
+var uPointSize = gl.getUniformLocation(program, 'u_pointSize');
+var uMaxIter = gl.getUniformLocation(program, 'u_maxIter');
+var uShowResolved = gl.getUniformLocation(program, 'u_showResolved');
+var uShow3d = gl.getUniformLocation(program, 'u_show3d');
+
+var aC = gl.getAttribLocation(program, 'a_c');
+var aZ = gl.getAttribLocation(program, 'a_z');
+var aState = gl.getAttribLocation(program, 'a_state');
+var aEscIter = gl.getAttribLocation(program, 'a_escIter');
+var aUncertainty = gl.getAttribLocation(program, 'a_uncertainty');
+var aPrevMag = gl.getAttribLocation(program, 'a_prevMag');
+var aEscapingZ = gl.getAttribLocation(program, 'a_escapingZ');
+
+gl.enableVertexAttribArray(aC);
+gl.enableVertexAttribArray(aZ);
+gl.enableVertexAttribArray(aState);
+gl.enableVertexAttribArray(aEscIter);
+gl.enableVertexAttribArray(aUncertainty);
+gl.enableVertexAttribArray(aPrevMag);
+gl.enableVertexAttribArray(aEscapingZ);
+
+// Interleaved buffer: [cRe, cIm, zRe, zIm, state, escIter, uncertainty] per point
+var glBuffer = gl.createBuffer();
+var numGLPoints = 0;
+
+function uploadPoints() {
+  // Convert Float64 sim data to Float32 for GPU
+  var numPoints = points.length / STRIDE;
+  var gpuData = new Float32Array(numPoints * STRIDE);
+  for (var i = 0; i < points.length; i++) {
+    gpuData[i] = points[i];
+  }
+  numGLPoints = numPoints;
+  gl.bindBuffer(gl.ARRAY_BUFFER, glBuffer);
+  gl.bufferData(gl.ARRAY_BUFFER, gpuData, gl.DYNAMIC_DRAW);
+}
+
+function renderGL() {
+  canvas.width = canvas.clientWidth;
+  canvas.height = canvas.clientHeight;
+  gl.viewport(0, 0, canvas.width, canvas.height);
+
+  var bg = bgColors[bgIndex];
+  gl.clearColor(bg[0], bg[1], bg[2], 1.0);
+  gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+  gl.enable(gl.BLEND);
+  if (bgIndex === 0 || bgIndex === 3) {
+    gl.blendFunc(gl.SRC_ALPHA, gl.ONE);  // additive for dark backgrounds
+  } else {
+    gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);  // standard alpha for light backgrounds
+  }
+  gl.enable(gl.DEPTH_TEST);
+  gl.depthFunc(gl.LEQUAL);
+
+  var pointSize = parseFloat(document.getElementById('point-size').value);
+
+  gl.uniformMatrix4fv(uMVP, false, buildMVP());
+  gl.uniform1f(uPointSize, pointSize);
+  gl.uniform1f(uMaxIter, Math.max(currentIter, 1));
+  gl.uniform1i(uShowResolved, document.getElementById('show-resolved').checked ? 1 : 0);
+  gl.uniform1i(uShow3d, document.getElementById('show-3d').checked ? 1 : 0);
+
+  var stride = STRIDE * 4; // bytes: 9 floats x 4 bytes
+  gl.bindBuffer(gl.ARRAY_BUFFER, glBuffer);
+  gl.vertexAttribPointer(aC, 2, gl.FLOAT, false, stride, 0);           // cRe, cIm
+  gl.vertexAttribPointer(aZ, 2, gl.FLOAT, false, stride, 8);           // zRe, zIm
+  gl.vertexAttribPointer(aState, 1, gl.FLOAT, false, stride, 16);      // state
+  gl.vertexAttribPointer(aEscIter, 1, gl.FLOAT, false, stride, 20);    // escapeIter
+  gl.vertexAttribPointer(aUncertainty, 1, gl.FLOAT, false, stride, 24);// uncertainty
+  gl.vertexAttribPointer(aPrevMag, 1, gl.FLOAT, false, stride, 28);    // prevMag
+  gl.vertexAttribPointer(aEscapingZ, 1, gl.FLOAT, false, stride, 32);  // escapingZ
+
+  gl.drawArrays(gl.POINTS, 0, numGLPoints);
+}
+
+// ── Viewport in complex plane ────────────────────────────────────────────────
+var viewport = { cRe: -0.65, cIm: 0, scale: 1.35 }; // center and half-width
+var zoomLevel = 0;
+
+function viewportBounds() {
+  var aspect = canvas.width / canvas.height;
+  return {
+    xMin: viewport.cRe - viewport.scale * aspect,
+    xMax: viewport.cRe + viewport.scale * aspect,
+    yMin: viewport.cIm - viewport.scale,
+    yMax: viewport.cIm + viewport.scale
+  };
+}
+
+// Populate the current viewport region with prime-sampled points
+function populateViewport() {
+  var bounds = viewportBounds();
+  var primeTarget = parseInt(document.getElementById('prime-res').value);
+  // Scale prime density with zoom — more primes at deeper zoom
+  var scaledTarget = Math.min(2500, primeTarget + zoomLevel * 100);
+  var primePos = generatePrimePositions(scaledTarget);
+
+  var xRange = bounds.xMax - bounds.xMin;
+  var yRange = bounds.yMax - bounds.yMin;
+
+  // Track existing c values
+  var existing = {};
+  for (var i = 0; i < points.length; i += STRIDE) {
+    existing[points[i].toFixed(10) + ',' + points[i + 1].toFixed(10)] = true;
+  }
+
+  var newPoints = [];
+  var cMagCache = {};
+
+  for (var px = 0; px < primePos.length; px++) {
+    var cRe = bounds.xMin + primePos[px] * xRange;
+    for (var py = 0; py < primePos.length; py++) {
+      var cIm = bounds.yMin + primePos[py] * yRange;
+      var key = cRe.toFixed(10) + ',' + cIm.toFixed(10);
+      if (existing[key]) continue;
+      existing[key] = true;
+
+      // Fast-forward to current iteration
+      var zRe = 0, zIm = 0, esc = false, escIter = -1;
+      var cMag = Math.sqrt(cRe * cRe + cIm * cIm);
+      var curMag = 0, escapingZ = 0;
+      for (var n = 0; n < currentIter; n++) {
+        var zRe2 = zRe * zRe - zIm * zIm + cRe;
+        var zIm2 = 2 * zRe * zIm + cIm;
+        zRe = zRe2; zIm = zIm2;
+        curMag = Math.sqrt(zRe * zRe + zIm * zIm);
+        escapingZ = computeEscapingZ(zRe, zIm, cRe, cIm);
+        if (zRe * zRe + zIm * zIm > BAILOUT) {
+          esc = true; escIter = n + 1; break;
+        }
+      }
+
+      newPoints.push(cRe, cIm, zRe, zIm,
+        esc ? ESCAPED : UNDECIDED, escIter, 1.0, curMag, escapingZ);
+    }
+  }
+
+  if (newPoints.length > 0) {
+    var grown = new Float64Array(points.length + newPoints.length);
+    grown.set(points);
+    for (var j = 0; j < newPoints.length; j++) {
+      grown[points.length + j] = newPoints[j];
+    }
+    points = grown;
+
+    var added = newPoints.length / STRIDE;
+    document.getElementById('info').textContent =
+      'Zoom ' + zoomLevel + ': +' + added.toLocaleString() + ' points in viewport';
+  }
+
+  uploadPoints();
+  renderGL();
+}
+
+// ── Camera ───────────────────────────────────────────────────────────────────
+var dragging = false, lastX, lastY;
+canvas.addEventListener('mousedown', function(e) { dragging = true; lastX = e.clientX; lastY = e.clientY; });
+canvas.addEventListener('mousemove', function(e) {
+  if (!dragging) return;
+  rotY += (e.clientX - lastX) * 0.005;
+  rotX += (e.clientY - lastY) * 0.005;
+  rotX = Math.max(-1.5, Math.min(1.5, rotX));
+  lastX = e.clientX; lastY = e.clientY;
+  renderGL();
+});
+canvas.addEventListener('mouseup', function() { dragging = false; });
+canvas.addEventListener('mouseleave', function() { dragging = false; });
+
+// Scroll: zoom camera, track viewport but don't auto-resample
+canvas.addEventListener('wheel', function(e) {
+  e.preventDefault();
+  var zoomIn = e.deltaY < 0;
+  camDist *= zoomIn ? 0.85 : 1.18;
+  camDist = Math.max(0.01, Math.min(50, camDist));
+
+  // Track the viewport in the complex plane
+  var zoomFactor = zoomIn ? 0.7 : 1.4;
+  viewport.scale *= zoomFactor;
+
+  if (zoomIn) {
+    zoomLevel++;
+    var rect = canvas.getBoundingClientRect();
+    var bounds = viewportBounds();
+    var mouseRe = bounds.xMin + ((e.clientX - rect.left) / rect.width) * (bounds.xMax - bounds.xMin);
+    var mouseIm = bounds.yMax - ((e.clientY - rect.top) / rect.height) * (bounds.yMax - bounds.yMin);
+    viewport.cRe = viewport.cRe * 0.6 + mouseRe * 0.4;
+    viewport.cIm = viewport.cIm * 0.6 + mouseIm * 0.4;
+  } else {
+    zoomLevel = Math.max(0, zoomLevel - 1);
+  }
+
+  renderGL();
+}, { passive: false });
+
+// Double-click: recenter viewport on clicked point
+canvas.addEventListener('dblclick', function(e) {
+  var rect = canvas.getBoundingClientRect();
+  var bounds = viewportBounds();
+  viewport.cRe = bounds.xMin + ((e.clientX - rect.left) / rect.width) * (bounds.xMax - bounds.xMin);
+  viewport.cIm = bounds.yMax - ((e.clientY - rect.top) / rect.height) * (bounds.yMax - bounds.yMin);
+  populateViewport();
+});
+
+var bgColors = [[0.02,0.02,0.04],[1,1,1],[0.5,0.5,0.5],[0.0,0.0,0.15]];
+var bgIndex = 0;
+function toggleBg() { bgIndex = (bgIndex + 1) % bgColors.length; renderGL(); }
+
+function resetCamera() { rotX = -0.4; rotY = 0.6; camDist = 6.0; renderGL(); }
+function frontView() { rotX = 0; rotY = 0; camDist = 6.0; renderGL(); }
+function topView() { rotX = -Math.PI/2; rotY = 0; camDist = 6.0; renderGL(); }
+function bottomView() { rotX = Math.PI/2; rotY = 0; camDist = 6.0; renderGL(); }
+function sideView() { rotX = 0; rotY = Math.PI/2; camDist = 6.0; renderGL(); }
+
+// ── Controls ─────────────────────────────────────────────────────────────────
+document.getElementById('prime-res').addEventListener('input', function() {
+  document.getElementById('prime-res-display').textContent = this.value;
+});
+document.getElementById('prime-res').addEventListener('change', resetSim);
+document.getElementById('probe-depth').addEventListener('input', function() {
+  document.getElementById('probe-depth-display').textContent = this.value;
+});
+document.getElementById('threshold').addEventListener('input', function() {
+  document.getElementById('threshold-display').textContent = (this.value / 100).toFixed(2);
+});
+document.getElementById('point-size').addEventListener('input', renderGL);
+document.getElementById('depth-mode').addEventListener('change', function() {
+  var mode = this.value;
+  if (mode === 'fraction') depthModeFn = computeEscapingZ_fraction;
+  else if (mode === 'angular') depthModeFn = computeEscapingZ_angular;
+  else depthModeFn = computeEscapingZ_magnitude;
+
+  // Recalculate all escapingZ values with new mode
+  for (var i = 0; i < points.length; i += STRIDE) {
+    var zRe = points[i + 2], zIm = points[i + 3];
+    var cRe = points[i + 0], cIm = points[i + 1];
+    points[i + 8] = computeEscapingZ(zRe, zIm, cRe, cIm);
+  }
+  uploadPoints();
+  renderGL();
+});
+
+// ── Play ─────────────────────────────────────────────────────────────────────
+function togglePlay() {
+  playing = !playing;
+  document.getElementById('play-btn').textContent = playing ? 'Pause \u23F8' : 'Play \u25B6';
+  document.getElementById('play-btn').classList.toggle('active', playing);
+  if (playing) requestAnimationFrame(animate);
+}
+
+function animate(time) {
+  if (!playing) return;
+  var speed = parseInt(document.getElementById('speed').value);
+  var interval = 1000 / speed;
+  if (time - lastPlayTime > interval) {
+    lastPlayTime = time;
+    stepOnce();
+  }
+  // Use setTimeout instead of rAF to avoid spinning at 60fps between steps
+  // This lets the GPU and CPU idle between frames
+  var timeToNext = Math.max(16, interval - (performance.now() - lastPlayTime));
+  setTimeout(function() { requestAnimationFrame(animate); }, timeToNext);
+}
+
+// ── Init ─────────────────────────────────────────────────────────────────────
+window.addEventListener('resize', renderGL);
+initSim();
+var numPoints = points.length / STRIDE;
+document.getElementById('stat-total').textContent = numPoints.toLocaleString();
+uploadPoints();
+renderGL();
+</script>
+</body>
+</html>

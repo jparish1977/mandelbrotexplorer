@@ -46,6 +46,8 @@ button.active { background: #4fc3f7; color: #111; }
       <option value="100">100x100</option>
       <option value="200" selected>200x200</option>
       <option value="400">400x400</option>
+      <option value="600">600x600</option>
+      <option value="800">800x800</option>
     </select>
   </div>
   <div class="group">
@@ -79,7 +81,7 @@ let playing = false, animFrame = null;
 
 // Multi-seed: up to 10 c values, paths stored in a texture
 const MAX_SEEDS = 10;
-const MAX_PATH_LEN = 256;
+const MAX_PATH_LEN = 1024;
 let seeds = [
   [-1.37, 0.02],     // near antenna, long escape
   [-0.75, 0.15],     // near main cardioid boundary
@@ -145,13 +147,15 @@ function createPathTexture() {
 // Vertex shader: for each sample point, iterate Julia set with c = escapePath[slice],
 // then position at (Re(z_final), Im(z_final), slice * spread)
 const vertexSrc = `
-  attribute vec4 a_point;  // (sample re, sample im, slice index, seed index)
+  attribute vec2 a_sample;  // (sample re, sample im) — just the grid point
   uniform mat4 u_mvp;
   uniform float u_pointSize;
   uniform int u_juliaIter;
   uniform bool u_feedback;
   uniform int u_seedCount;
   uniform int u_maxPathLen;
+  uniform int u_slice;      // current slice being drawn
+  uniform int u_seed;       // current seed being drawn
   uniform sampler2D u_pathTex;  // rows=seeds, cols=iterations
 
   varying vec4 v_color;
@@ -163,8 +167,8 @@ const vertexSrc = `
   }
 
   void main() {
-    int slice = int(a_point.z);
-    int seed = int(a_point.w);
+    int slice = u_slice;
+    int seed = u_seed;
 
     // Read Julia C from path texture: row = seed, col = slice
     vec2 texCoord = vec2(
@@ -175,12 +179,12 @@ const vertexSrc = `
     vec2 juliaC = pathSample.xy;
 
     // Pass 1: Julia iteration — z = z^2 + juliaC
-    vec2 z = a_point.xy;
+    vec2 z = a_sample;
     vec2 z0 = vec2(0.0);
     bool escaped = false;
     bool firstSet = false;
 
-    for (int i = 0; i < 500; i++) {
+    for (int i = 0; i < 1024; i++) {
       if (i >= u_juliaIter) break;
       float zx = z.x * z.x - z.y * z.y + juliaC.x;
       float zy = 2.0 * z.x * z.y + juliaC.y;
@@ -200,7 +204,7 @@ const vertexSrc = `
       w = vec2(0.0, 0.0);
       w0 = vec2(0.0);
       bool fbFirstSet = false;
-      for (int i = 0; i < 500; i++) {
+      for (int i = 0; i < 1024; i++) {
         if (i >= u_juliaIter) break;
         float wx = w.x * w.x - w.y * w.y + fbC.x;
         float wy = 2.0 * w.x * w.y + fbC.y;
@@ -327,9 +331,11 @@ const uJuliaIter = gl.getUniformLocation(program, 'u_juliaIter');
 const uFeedback = gl.getUniformLocation(program, 'u_feedback');
 const uSeedCount = gl.getUniformLocation(program, 'u_seedCount');
 const uMaxPathLen = gl.getUniformLocation(program, 'u_maxPathLen');
+const uSlice = gl.getUniformLocation(program, 'u_slice');
+const uSeed = gl.getUniformLocation(program, 'u_seed');
 const uPathTex = gl.getUniformLocation(program, 'u_pathTex');
-const aPoint = gl.getAttribLocation(program, 'a_point');
-gl.enableVertexAttribArray(aPoint);
+const aSample = gl.getAttribLocation(program, 'a_sample');
+gl.enableVertexAttribArray(aSample);
 
 let pointBuffer = gl.createBuffer();
 let pointCount = 0;
@@ -340,30 +346,24 @@ let pointsPerSlice = 0;
 
 function buildPoints() {
   const res = parseInt(document.getElementById('julia-res').value);
-  const points = [];
+  const grid = new Float32Array(res * res * 2);
 
-  // Build vertices for ALL seeds × ALL slices
-  for (let seed = 0; seed < escapePaths.length; seed++) {
-    const pathLen = escapePaths[seed].length;
-    for (let s = 0; s < pathLen; s++) {
-      for (let i = 0; i < res; i++) {
-        for (let j = 0; j < res; j++) {
-          const re = -2.0 + (i / res) * 4.0;
-          const im = -2.0 + (j / res) * 4.0;
-          points.push(re, im, s, seed);
-        }
-      }
+  // Build ONE sample grid — reused for every seed × slice via uniforms
+  let idx = 0;
+  for (let i = 0; i < res; i++) {
+    for (let j = 0; j < res; j++) {
+      grid[idx++] = -2.0 + (i / res) * 4.0;
+      grid[idx++] = -2.0 + (j / res) * 4.0;
     }
   }
 
   pointsPerSlice = res * res;
-  maxBuiltSlices = maxPathLen;
-  pointCount = points.length / 4;
+  pointCount = pointsPerSlice;
   gl.bindBuffer(gl.ARRAY_BUFFER, pointBuffer);
-  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(points), gl.STATIC_DRAW);
+  gl.bufferData(gl.ARRAY_BUFFER, grid, gl.STATIC_DRAW);
 
   document.getElementById('info').textContent =
-    pointCount.toLocaleString() + ' pts (' + seeds.length + ' seeds x ' + maxPathLen + ' slices x ' + pointsPerSlice + ' samples)';
+    pointsPerSlice.toLocaleString() + ' pts/slice (' + seeds.length + ' seeds x ' + maxPathLen + ' max slices)';
 }
 
 // ── Render ───────────────────────────────────────────────────────────────────
@@ -398,8 +398,17 @@ function render() {
   gl.uniform1i(uMaxPathLen, MAX_PATH_LEN);
 
   gl.bindBuffer(gl.ARRAY_BUFFER, pointBuffer);
-  gl.vertexAttribPointer(aPoint, 4, gl.FLOAT, false, 0, 0);
-  gl.drawArrays(gl.POINTS, 0, pointCount);
+  gl.vertexAttribPointer(aSample, 2, gl.FLOAT, false, 0, 0);
+
+  // Draw one pass per seed × slice — grid is reused via uniforms
+  for (let seed = 0; seed < escapePaths.length; seed++) {
+    const pathLen = Math.min(escapePaths[seed].length, sliceCount);
+    gl.uniform1i(uSeed, seed);
+    for (let s = 0; s < pathLen; s++) {
+      gl.uniform1i(uSlice, s);
+      gl.drawArrays(gl.POINTS, 0, pointCount);
+    }
+  }
 }
 
 // ── Controls ─────────────────────────────────────────────────────────────────
