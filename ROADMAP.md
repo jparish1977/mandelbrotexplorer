@@ -53,6 +53,13 @@ Detect periodic orbits in the vertex shader. Color points by their period (perio
 
 This would be the first real-time visualization of Mandelbrot set periodicity at this scale. The iteration viewer already makes it visible — this makes it explicit and interactive.
 
+### Julia Tunnel Integration
+Bring the Julia tunnel concept into the v2 GPU engine. See [docs/JULIA_TUNNEL_LINEAGE.md](docs/JULIA_TUNNEL_LINEAGE.md) for full lineage (5 versions, from 2018 fountain through 2026 triplane). Current POCs:
+- `julia-tunnel.html` — multi-seed escape path walking, Julia set rendering per step, feedback loop
+- `julia-tunnel-volume.html` — "the block," dense volumetric rendering, prime-resolution sampling, infinite iterations
+- `julia-tunnel-sampler.html` — adaptive compute engine, Julia probe uncertainty, auto-densify, zoom-to-populate
+- `julia-tunnel-triplane.html` — four displacement modes (magnitude, determinant, angular, sine), iteration frame window with per-iteration draw calls, period detection, settled-point culling
+
 ### Legacy Feature Parity
 Ensure the v2 engine supports everything the Three.js version does:
 - Color cycling ([#1](https://github.com/jparish1977/mandelbrotexplorer/issues/1)) — becomes a uniform change in the fragment shader, essentially free
