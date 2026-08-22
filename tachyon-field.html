@@ -150,10 +150,23 @@ uniform float u_null;       // 0/1
 float sp(vec2 p)  { return p.x * abs(p.x) - p.y * abs(p.y); }   // sign-preserving
 float std(vec2 p) { return p.x * p.x - p.y * p.y; }             // ordinary
 
+// The difference IN CLOSED FORM. Written as sp(p) - std(p) it is a
+// catastrophic cancellation: on QI the two are algebraically identical, so the
+// result should be exactly zero -- but the compiler may reassociate the terms
+// and you get float noise around 1e-7 instead. Every downstream test then
+// divides noise by noise. Per component the cancellation is exact and trivial:
+//     x|x| - x^2  =  0 for x >= 0,  -2x^2 for x < 0
+//     y^2 - y|y|  =  0 for y >= 0,  +2y^2 for y < 0
+float diff(vec2 p) {
+  float dx = (p.x < 0.0) ? -2.0 * p.x * p.x : 0.0;
+  float dy = (p.y < 0.0) ?  2.0 * p.y * p.y : 0.0;
+  return dx + dy;
+}
+
 float field(vec2 p) {
   if (u_mode == 0) return sp(p);
   if (u_mode == 1) return std(p);
-  return sp(p) - std(p);
+  return diff(p);
 }
 
 // Deliberately linear. A log or asinh ramp flattens the quadratic growth and
@@ -172,6 +185,18 @@ void main() {
 
   vec3 col = diverging(v / max(u_range, 1e-6));
 
+  // Is the field FLAT here? On the difference view QI is identically zero, and
+  // both the contour test and the null test divide by the field's own gradient
+  // -- 0/0. Clamping the divisor instead of skipping painted that whole
+  // quadrant with random per-pixel yellow, which reads as structure and is
+  // numerical hash. Reported from a screenshot 2026-08-22.
+  #ifdef GL_OES_standard_derivatives
+    float gmag = length(vec2(dFdx(v), dFdy(v)));
+  #else
+    float gmag = 1.0;
+  #endif
+  bool flat = gmag < 1e-7;
+
   // --- signature of the Hessian, diag(2*sign x, -2*sign y) -----------------
   // det < 0 -> Lorentzian (QI, QIII).  det > 0 -> Euclidean (QII, QIV).
   if (u_signature > 0.5) {
@@ -184,7 +209,7 @@ void main() {
   }
 
   // --- level sets: the whole reason a flat colormap is not enough ----------
-  if (u_spacing > 0.0) {
+  if (u_spacing > 0.0 && !flat) {
     float g = v / u_spacing;
     #ifdef GL_OES_standard_derivatives
       float w = max(fwidth(g), 1e-5);
@@ -196,10 +221,11 @@ void main() {
   }
 
   // --- the null set, f = 0 -------------------------------------------------
-  if (u_null > 0.5) {
+  // A flat-zero region is not a null CONTOUR -- it is a region where the whole
+  // field vanished. Marking all of it yellow is technically true and useless.
+  if (u_null > 0.5 && !flat) {
     #ifdef GL_OES_standard_derivatives
-      float gm = max(length(vec2(dFdx(v), dFdy(v))), 1e-9);
-      float dn = abs(v) / gm;
+      float dn = abs(v) / gmag;
     #else
       float dn = abs(v) / max(u_scale * 4.0, 1e-9);
     #endif
@@ -276,10 +302,11 @@ function render() {
 }
 
 function fieldAt(x, y) {
-  const sp = x * Math.abs(x) - y * Math.abs(y);
-  const st = x * x - y * y;
   const m = parseInt($('mode').value, 10);
-  return m === 0 ? sp : (m === 1 ? st : sp - st);
+  if (m === 0) return x * Math.abs(x) - y * Math.abs(y);
+  if (m === 1) return x * x - y * y;
+  // closed form, same as the shader -- see diff() there
+  return (x < 0 ? -2 * x * x : 0) + (y < 0 ? 2 * y * y : 0);
 }
 
 function updateLegend() {
@@ -291,7 +318,11 @@ function updateLegend() {
     : m === 2
     ? `<b>difference</b> — zero wherever the two agree. It vanishes on QI, where
        sign-preserving squaring reduces to ordinary squaring, and grows elsewhere.
-       This is the cleanest picture of exactly what the sign preservation changes.`
+       Per quadrant it collapses to something simple: <b>QI = 0</b>,
+       QII = &minus;2x&sup2; (vertical bands, x only), QIV = +2y&sup2;
+       (horizontal bands, y only), QIII = 2(y&sup2;&minus;x&sup2;) (hyperbolic).
+       QI is drawn flat black, not yellow: the field vanished there, which is
+       not the same as a null contour passing through it.`
     : `<b>x|x| &minus; y|y|</b><br>
        <span class="sw" style="background:#3a2050"></span>QI, QIII — hyperbolic,
        <b>Lorentzian</b> (det&nbsp;H&nbsp;&lt;&nbsp;0)<br>
