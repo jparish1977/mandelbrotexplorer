@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tachyon Stairs — the 0/0 artifact, preserved on purpose</title>
+<style>
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; }
+  body {
+    background: #0d0d15; color: #d8d8e0;
+    font: 13px/1.4 -apple-system, "Segoe UI", Roboto, sans-serif;
+    display: flex; flex-direction: column;
+  }
+  canvas { flex: 1; display: block; width: 100%; cursor: crosshair; }
+  #controls {
+    background: #1a1a2e; border-top: 1px solid #2a2a44;
+    padding: 8px 12px; display: flex; flex-wrap: wrap; gap: 16px; align-items: center;
+  }
+  .group { display: flex; align-items: center; gap: 6px; }
+  .group > label { color: #9a9ab0; white-space: nowrap; }
+  .value { color: #4fc3f7; font-family: ui-monospace, Menlo, Consolas, monospace; min-width: 3.5em; }
+  select, input[type=range] { background: #12121f; color: #d8d8e0; border: 1px solid #33334d; }
+  select { padding: 2px 4px; border-radius: 3px; }
+  input[type=range] { width: 110px; }
+  button {
+    background: #23233c; color: #d8d8e0; border: 1px solid #3a3a5a;
+    padding: 4px 10px; border-radius: 3px; cursor: pointer;
+  }
+  button:hover { background: #2e2e4d; }
+  label.chk { display: flex; align-items: center; gap: 4px; cursor: pointer; color: #9a9ab0; }
+  #readout {
+    font-family: ui-monospace, Menlo, Consolas, monospace;
+    color: #4fc3f7; margin-left: auto; white-space: nowrap;
+  }
+  #legend {
+    position: absolute; top: 10px; left: 12px; padding: 8px 10px;
+    background: rgba(13,13,21,.82); border: 1px solid #2a2a44; border-radius: 4px;
+    font-size: 12px; line-height: 1.5; max-width: 340px; pointer-events: none;
+  }
+  #legend b { color: #4fc3f7; font-weight: 600; }
+  #legend .sw { display: inline-block; width: 10px; height: 10px; border-radius: 2px;
+                margin-right: 5px; vertical-align: -1px; }
+</style>
+</head>
+<body>
+<canvas id="canvas"></canvas>
+<div id="legend"></div>
+<div id="controls">
+  <div class="group">
+    <label for="mode">field</label>
+    <select id="mode">
+      <option value="0" selected>sign-preserving  x|x| &minus; y|y|</option>
+      <option value="1">standard  x&sup2; &minus; y&sup2;</option>
+      <option value="2">difference of the two</option>
+    </select>
+  </div>
+  <div class="group">
+    <label for="range">range</label>
+    <input type="range" id="range" min="-2" max="3" step="0.05" value="0.6">
+    <span class="value" id="range-v"></span>
+  </div>
+  <div class="group">
+    <label for="spacing">contours</label>
+    <input type="range" id="spacing" min="-2" max="1" step="0.05" value="-0.7">
+    <span class="value" id="spacing-v"></span>
+  </div>
+  <label class="chk"><input type="checkbox" id="contours" checked> level sets</label>
+  <label class="chk"><input type="checkbox" id="signature" checked> signature</label>
+  <label class="chk"><input type="checkbox" id="nullset" checked> null cone</label>
+  <button id="reset">reset view</button>
+  <div id="readout">&nbsp;</div>
+</div>
+
+<script>
+/* ===========================================================================
+   THIS FILE IS DELIBERATELY BROKEN. DO NOT "FIX" IT.
+
+   It is tachyon-field.html as it stood at commit ab53fb8, kept because the bug
+   was better looking than the correct render. On the "difference of the two"
+   view it fills QI with a solid yellow field carrying a stair-stepped, moire
+   diagonal boundary. The corrected page draws that quadrant flat black, which
+   is right and much duller.
+
+   WHAT PRODUCES IT, so nobody mistakes it for structure in the mathematics:
+
+   1. The difference is computed as sp(p) - std(p). On QI those are
+      algebraically identical, so it should be exactly zero -- but the shader
+      compiler may reassociate the terms, and then it is float noise near 1e-7.
+   2. The contour test and the null-set test both divide by the field's own
+      gradient, which on a flat region is zero. The divisor is CLAMPED rather
+      than skipped, so the result is noise divided by noise: a different random
+      value per pixel.
+   3. dFdx/dFdy are evaluated per 2x2 pixel quad, so any derivative-driven
+      boundary is quantised into 2-pixel blocks and steps rather than curving.
+      That is the most likely source of the staircase, though it was never
+      demonstrated -- see the commit message on the fix.
+
+   IT MAY NOT REPRODUCE. Whether step 1 yields exact zeros or noise is up to
+   the GPU's shader compiler, so this can look different, or correct, on other
+   hardware and after driver updates. Observed on a MacBook, 2026-08-22. If it
+   renders flat black for you, the compiler kept the cancellation exact and the
+   artifact is simply not available on that machine.
+
+   The real page is tachyon-field.html. This one is a keepsake.
+   ---------------------------------------------------------------------------
+
+   Original header follows.
+
+   Tachyon field — the sign-preserving spacetime interval.
+
+   WHAT THIS IS. Standard squaring folds the plane two-to-one: z and -z land on
+   the same point and the sign is destroyed. Sign-preserving squaring, u |-> u|u|,
+   is odd, so it never folds. Applying that componentwise to the interval gives
+
+       f(x, y) = x|x| - y|y|
+
+   WHY IT IS INTERESTING, and it is more than the level sets. Per quadrant f
+   reduces to a different quadratic form:
+
+       QI   (+,+)   x^2 - y^2     hyperbolic level sets   Lorentzian
+       QIII (-,-)   y^2 - x^2     hyperbolic              Lorentzian
+       QII  (-,+)  -x^2 - y^2     circular                Euclidean
+       QIV  (+,-)   x^2 + y^2     circular                Euclidean
+
+   The Hessian is diag(2*sign(x), -2*sign(y)), so det = -4*sign(x)*sign(y). That
+   is an actual metric whose SIGNATURE changes by quadrant, not merely a scalar
+   whose contours change shape.
+
+   WHY A PLAIN COLORMAP SHOWS NOTHING. f is C1 but not C2 — the gradient is
+   continuous across the axes (2|x|, -2|y| both -> 0), and only the second
+   derivative jumps. Colour the value alone and you get a smooth, boring saddle.
+   The structure lives in curvature, which is why the level sets and the
+   signature overlay are on by default. Turn them off and watch the interesting
+   part vanish; that is the point being demonstrated.
+
+   NOT A SMOOTH SIGNATURE CHANGE. det jumps -4 -> +4 without passing through
+   zero, so the metric is discontinuous at the seam rather than degenerating.
+   Genuine signature-change models degenerate. This is a different, arguably
+   stranger object, and calling it "a toy version of Euclidean quantum gravity"
+   oversells it.
+
+   THE NULL CONE ONLY EXISTS IN HALF THE PLANE. f = 0 has solutions along y = x
+   in QI and QIII only. In QII and QIV the form is definite, so there is no light
+   cone there at all — just nested circles. Switch to the standard field to see
+   the difference: x^2 - y^2 = 0 gives both diagonals, everywhere.
+
+   Self-contained, inline GLSL, no build step — same as iteration-viewer.html.
+   Unlike those, this draws a fullscreen quad rather than gl.POINTS, because it
+   is a scalar field rather than an escape-time particle cloud.
+--------------------------------------------------------------------------- */
+
+const canvas = document.getElementById('canvas');
+const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
+if (!gl) {
+  document.body.innerHTML =
+    '<p style="color:#e66;padding:24px">WebGL not supported in this browser.</p>';
+  throw new Error('no webgl');
+}
+// fwidth() lives behind an extension in WebGL 1. Without it the contour lines
+// cannot be scaled to pixel width, so they alias badly at some zooms; the page
+// still works, it just looks worse.
+const derivs = gl.getExtension('OES_standard_derivatives');
+
+const vertexSrc = `
+attribute vec2 a_pos;
+void main() { gl_Position = vec4(a_pos, 0.0, 1.0); }
+`;
+
+const fragmentSrc = `
+${derivs ? '#extension GL_OES_standard_derivatives : enable' : ''}
+precision highp float;
+
+uniform vec2  u_res;
+uniform vec2  u_center;
+uniform float u_scale;      // world units per pixel
+uniform int   u_mode;
+uniform float u_range;      // value mapped to full colour saturation
+uniform float u_spacing;    // contour interval; <= 0 disables
+uniform float u_signature;  // 0/1
+uniform float u_null;       // 0/1
+
+float sp(vec2 p)  { return p.x * abs(p.x) - p.y * abs(p.y); }   // sign-preserving
+float std(vec2 p) { return p.x * p.x - p.y * p.y; }             // ordinary
+
+float field(vec2 p) {
+  if (u_mode == 0) return sp(p);
+  if (u_mode == 1) return std(p);
+  return sp(p) - std(p);
+}
+
+// Deliberately linear. A log or asinh ramp flattens the quadratic growth and
+// makes every field look alike; the range slider is the honest control.
+vec3 diverging(float t) {
+  t = clamp(t, -1.0, 1.0);
+  vec3 neg = vec3(0.18, 0.42, 0.92);   // blue
+  vec3 pos = vec3(0.96, 0.34, 0.22);   // red
+  vec3 mid = vec3(0.06, 0.06, 0.10);   // near-black, so contours read on top
+  return t < 0.0 ? mix(mid, neg, -t) : mix(mid, pos, t);
+}
+
+void main() {
+  vec2 p = u_center + (gl_FragCoord.xy - 0.5 * u_res) * u_scale;
+  float v = field(p);
+
+  vec3 col = diverging(v / max(u_range, 1e-6));
+
+  // --- signature of the Hessian, diag(2*sign x, -2*sign y) -----------------
+  // det < 0 -> Lorentzian (QI, QIII).  det > 0 -> Euclidean (QII, QIV).
+  if (u_signature > 0.5) {
+    float s = sign(p.x) * sign(p.y);
+    col += (s > 0.0) ? vec3(0.030, 0.000, 0.045)    // Lorentzian: violet lift
+                     : vec3(0.000, 0.045, 0.030);   // Euclidean: green lift
+    // The seam itself is the pair of axes, where the metric jumps.
+    float ax = min(abs(p.x), abs(p.y)) / u_scale;   // distance in pixels
+    col = mix(col, vec3(0.55, 0.55, 0.70), (1.0 - smoothstep(0.0, 1.2, ax)) * 0.9);
+  }
+
+  // --- level sets: the whole reason a flat colormap is not enough ----------
+  if (u_spacing > 0.0) {
+    float g = v / u_spacing;
+    #ifdef GL_OES_standard_derivatives
+      float w = max(fwidth(g), 1e-5);
+    #else
+      float w = 1.0;
+    #endif
+    float d = abs(fract(g - 0.5) - 0.5) / w;
+    col = mix(col, vec3(0.85, 0.87, 0.95), (1.0 - smoothstep(0.0, 1.3, d)) * 0.55);
+  }
+
+  // --- the null set, f = 0 -------------------------------------------------
+  if (u_null > 0.5) {
+    #ifdef GL_OES_standard_derivatives
+      float gm = max(length(vec2(dFdx(v), dFdy(v))), 1e-9);
+      float dn = abs(v) / gm;
+    #else
+      float dn = abs(v) / max(u_scale * 4.0, 1e-9);
+    #endif
+    col = mix(col, vec3(1.0, 0.86, 0.32), (1.0 - smoothstep(0.0, 1.8, dn)) * 0.95);
+  }
+
+  gl_FragColor = vec4(col, 1.0);
+}
+`;
+
+function compile(type, src) {
+  const s = gl.createShader(type);
+  gl.shaderSource(s, src);
+  gl.compileShader(s);
+  if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) {
+    throw new Error(gl.getShaderInfoLog(s) + '\n' + src);
+  }
+  return s;
+}
+
+const prog = gl.createProgram();
+gl.attachShader(prog, compile(gl.VERTEX_SHADER, vertexSrc));
+gl.attachShader(prog, compile(gl.FRAGMENT_SHADER, fragmentSrc));
+gl.linkProgram(prog);
+if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) {
+  throw new Error(gl.getProgramInfoLog(prog));
+}
+gl.useProgram(prog);
+
+const buf = gl.createBuffer();
+gl.bindBuffer(gl.ARRAY_BUFFER, buf);
+gl.bufferData(gl.ARRAY_BUFFER,
+  new Float32Array([-1, -1, 1, -1, -1, 1, 1, 1]), gl.STATIC_DRAW);
+const aPos = gl.getAttribLocation(prog, 'a_pos');
+gl.enableVertexAttribArray(aPos);
+gl.vertexAttribPointer(aPos, 2, gl.FLOAT, false, 0, 0);
+
+const U = {};
+['u_res', 'u_center', 'u_scale', 'u_mode', 'u_range',
+ 'u_spacing', 'u_signature', 'u_null'].forEach(n => {
+  U[n] = gl.getUniformLocation(prog, n);
+});
+
+const DEFAULT_SPAN = 4.0;            // world units across the shorter screen axis
+let center = [0, 0];
+let span = DEFAULT_SPAN;
+
+const $ = id => document.getElementById(id);
+const pow = id => Math.pow(10, parseFloat($(id).value));
+
+function render() {
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  const w = Math.max(1, Math.floor(canvas.clientWidth * dpr));
+  const h = Math.max(1, Math.floor(canvas.clientHeight * dpr));
+  if (canvas.width !== w || canvas.height !== h) {
+    canvas.width = w; canvas.height = h;
+  }
+  gl.viewport(0, 0, w, h);
+
+  const scale = span / Math.min(w, h);
+  gl.uniform2f(U.u_res, w, h);
+  gl.uniform2f(U.u_center, center[0], center[1]);
+  gl.uniform1f(U.u_scale, scale);
+  gl.uniform1i(U.u_mode, parseInt($('mode').value, 10));
+  gl.uniform1f(U.u_range, pow('range'));
+  gl.uniform1f(U.u_spacing, $('contours').checked ? pow('spacing') : 0.0);
+  gl.uniform1f(U.u_signature, $('signature').checked ? 1.0 : 0.0);
+  gl.uniform1f(U.u_null, $('nullset').checked ? 1.0 : 0.0);
+  gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+
+  $('range-v').textContent = pow('range').toFixed(2);
+  $('spacing-v').textContent = pow('spacing').toFixed(3);
+  updateLegend();
+}
+
+function fieldAt(x, y) {
+  const sp = x * Math.abs(x) - y * Math.abs(y);
+  const st = x * x - y * y;
+  const m = parseInt($('mode').value, 10);
+  return m === 0 ? sp : (m === 1 ? st : sp - st);
+}
+
+function updateLegend() {
+  const m = parseInt($('mode').value, 10);
+  const body = m === 1
+    ? `<b>x&sup2; &minus; y&sup2;</b> — the ordinary interval. One quadratic form
+       everywhere, hyperbolic level sets in all four quadrants, and the null set is
+       both diagonals. Nothing changes at the axes.`
+    : m === 2
+    ? `<b>difference</b> — zero wherever the two agree. It vanishes on QI, where
+       sign-preserving squaring reduces to ordinary squaring, and grows elsewhere.
+       This is the cleanest picture of exactly what the sign preservation changes.`
+    : `<b>x|x| &minus; y|y|</b><br>
+       <span class="sw" style="background:#3a2050"></span>QI, QIII — hyperbolic,
+       <b>Lorentzian</b> (det&nbsp;H&nbsp;&lt;&nbsp;0)<br>
+       <span class="sw" style="background:#10402e"></span>QII, QIV — circular,
+       <b>Euclidean</b> (det&nbsp;H&nbsp;&gt;&nbsp;0)<br>
+       <span class="sw" style="background:#ffdb52"></span>null set, f&nbsp;=&nbsp;0 —
+       <b>only exists in QI and QIII</b><br>
+       The axes are the seam: f is C&sup1; there, so the <em>value</em> is smooth
+       and only the curvature jumps. Untick "level sets" and "signature" and the
+       structure disappears — that is why a plain colormap of this field looks
+       like nothing.`;
+  $('legend').innerHTML = body;
+}
+
+// --- interaction ------------------------------------------------------------
+let dragging = false, last = null;
+
+canvas.addEventListener('mousedown', e => { dragging = true; last = [e.clientX, e.clientY]; });
+window.addEventListener('mouseup', () => { dragging = false; });
+window.addEventListener('mousemove', e => {
+  const r = canvas.getBoundingClientRect();
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  const scale = span / Math.min(canvas.clientWidth * dpr, canvas.clientHeight * dpr) * dpr;
+  if (dragging && last) {
+    center[0] -= (e.clientX - last[0]) * scale;
+    center[1] += (e.clientY - last[1]) * scale;
+    last = [e.clientX, e.clientY];
+    render();
+  }
+  const x = center[0] + (e.clientX - r.left - canvas.clientWidth / 2) * scale;
+  const y = center[1] - (e.clientY - r.top - canvas.clientHeight / 2) * scale;
+  const q = (x >= 0 ? (y >= 0 ? 'I' : 'IV') : (y >= 0 ? 'II' : 'III'));
+  const lorentz = (Math.sign(x) * Math.sign(y)) > 0;
+  $('readout').textContent =
+    `(${x.toFixed(4)}, ${y.toFixed(4)})  f = ${fieldAt(x, y).toFixed(5)}` +
+    `   Q${q} ${lorentz ? 'Lorentzian' : 'Euclidean'}`;
+});
+
+canvas.addEventListener('wheel', e => {
+  e.preventDefault();
+  const r = canvas.getBoundingClientRect();
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  const scale = span / Math.min(canvas.clientWidth * dpr, canvas.clientHeight * dpr) * dpr;
+  const mx = center[0] + (e.clientX - r.left - canvas.clientWidth / 2) * scale;
+  const my = center[1] - (e.clientY - r.top - canvas.clientHeight / 2) * scale;
+  const k = e.deltaY > 0 ? 1.15 : 1 / 1.15;
+  // Zoom about the cursor rather than the origin — with a seam on the axes you
+  // are usually inspecting a specific corner.
+  center[0] = mx + (center[0] - mx) * k;
+  center[1] = my + (center[1] - my) * k;
+  span *= k;
+  render();
+}, { passive: false });
+
+['mode', 'range', 'spacing', 'contours', 'signature', 'nullset'].forEach(id => {
+  $(id).addEventListener('input', render);
+  $(id).addEventListener('change', render);
+});
+$('reset').addEventListener('click', () => {
+  center = [0, 0]; span = DEFAULT_SPAN; render();
+});
+window.addEventListener('resize', render);
+
+render();
+</script>
+</body>
+</html>
