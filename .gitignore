@@ -6,3 +6,11 @@ node_modules/
 .DS_Store
 Thumbs.db
 issues/
+
+# The Python research lives in its own private repo now: mbe-experimental
+# (Forgejo joe/mbe-experimental, GitHub jparish1977/mbe-experimental).
+# It sat here untracked and NOT ignored for years, showing as a single
+# "?? experimental/" line in every git status -- one quiet line for 97 scripts,
+# easy to scroll past, and one `git clean -fdx` from gone. Ignored here so the
+# working tree is honest about what this repo contains.
+experimental/
