@@ -14,3 +14,4 @@ issues/
 # easy to scroll past, and one `git clean -fdx` from gone. Ignored here so the
 # working tree is honest about what this repo contains.
 experimental/
+.claude/settings.local.json
